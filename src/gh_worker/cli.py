@@ -1,0 +1,202 @@
+"""CLI entry point using cyclopts."""
+
+from pathlib import Path
+
+import cyclopts
+
+from gh_worker.utils.logging import setup_logging
+
+app = cyclopts.App(name="gh-worker", help="Automated GitHub issue handling with LLM agents")
+
+
+@app.meta.default
+def main(
+    *tokens,
+    log_level: str = "INFO",
+) -> None:
+    """gh-worker: Automated GitHub issue handling with LLM agents.
+
+    Args:
+        log_level: Log level (DEBUG, INFO, WARNING, ERROR)
+    """
+    setup_logging(log_level)
+    app(tokens)
+
+
+@app.command
+def config(
+    key: str,
+    value: str | None = None,
+    config_path: Path | None = None,
+) -> None:
+    """Manage configuration.
+
+    Args:
+        key: Configuration key (e.g., 'issues-path', 'plan.parallelism')
+        value: Value to set (if None, gets the current value)
+        config_path: Path to config file (default: ~/.config/gh-worker/config.yaml)
+    """
+    from gh_worker.commands.config import config_command
+
+    config_command(
+        key=key,
+        value=value,
+        config_path=config_path,
+    )
+
+
+@app.command
+def add(
+    repos: list[str],
+    config_path: Path | None = None,
+) -> None:
+    """Add repositories to track.
+
+    Args:
+        repos: Repository names (e.g., 'owner/repo')
+        config_path: Path to config file (default: ~/.config/gh-worker/config.yaml)
+    """
+    from gh_worker.commands.add import add_command
+
+    add_command(
+        repos=repos,
+        config_path=config_path,
+    )
+
+
+@app.command
+def sync(
+    repo: str | None = None,
+    all_repos: bool = False,
+    since: str | None = None,
+    issue_numbers: list[int] | None = None,
+    search: str | None = None,
+    config_path: Path | None = None,
+) -> None:
+    """Sync GitHub issues to local files.
+
+    Args:
+        repo: Repository to sync (e.g., 'owner/repo')
+        all_repos: Sync all repositories
+        since: Only sync issues updated since this timestamp
+        issue_numbers: Specific issue numbers to sync
+        search: GitHub search query
+        config_path: Path to config file (default: ~/.config/gh-worker/config.yaml)
+    """
+    from gh_worker.commands.sync import sync_command
+
+    sync_command(
+        repo=repo,
+        all_repos=all_repos,
+        since=since,
+        issue_numbers=issue_numbers,
+        search=search,
+        config_path=config_path,
+    )
+
+
+@app.command
+def plan(
+    repo: str | None = None,
+    issue_numbers: list[int] | None = None,
+    parallelism: int | None = None,
+    config_path: Path | None = None,
+) -> None:
+    """Generate implementation plans for issues.
+
+    Args:
+        repo: Repository (e.g., 'owner/repo')
+        issue_numbers: Specific issue numbers to plan
+        parallelism: Number of parallel executions
+        config_path: Path to config file (default: ~/.config/gh-worker/config.yaml)
+    """
+    from gh_worker.commands.plan import plan_command
+
+    plan_command(
+        repo=repo,
+        issue_numbers=issue_numbers,
+        parallelism=parallelism,
+        config_path=config_path,
+    )
+
+
+@app.command
+def implement(
+    repo: str | None = None,
+    issue_numbers: list[int] | None = None,
+    parallelism: int | None = None,
+    config_path: Path | None = None,
+) -> None:
+    """Implement plans and create PRs.
+
+    Args:
+        repo: Repository (e.g., 'owner/repo')
+        issue_numbers: Specific issue numbers to implement
+        parallelism: Number of parallel executions
+        config_path: Path to config file (default: ~/.config/gh-worker/config.yaml)
+    """
+    from gh_worker.commands.implement import implement_command
+
+    implement_command(
+        repo=repo,
+        issue_numbers=issue_numbers,
+        parallelism=parallelism,
+        config_path=config_path,
+    )
+
+
+@app.command
+def monitor(
+    repo: str,
+    issue_number: int,
+    config_path: Path | None = None,
+) -> None:
+    """Monitor LLM agent session progress.
+
+    Args:
+        repo: Repository (e.g., 'owner/repo')
+        issue_number: Issue number to monitor
+        config_path: Path to config file (default: ~/.config/gh-worker/config.yaml)
+    """
+    from gh_worker.commands.monitor import monitor_command
+
+    monitor_command(
+        repo=repo,
+        issue_number=issue_number,
+        config_path=config_path,
+    )
+
+
+@app.command
+def work(
+    once: bool = False,
+    frequency: str | None = None,
+    repos: list[str] | None = None,
+    since: str | None = None,
+    issue_numbers: list[int] | None = None,
+    config_path: Path | None = None,
+) -> None:
+    """Run sync, plan, implement workflow.
+
+    Args:
+        once: Run once and exit (default: continuous mode)
+        frequency: Sync frequency (e.g., '10m', '1h', '1d')
+        repos: Repositories to process
+        since: Only process issues updated since this timestamp
+        issue_numbers: Specific issue numbers to process
+        config_path: Path to config file (default: ~/.config/gh-worker/config.yaml)
+    """
+    from gh_worker.commands.work import work_command
+
+    work_command(
+        once=once,
+        frequency=frequency,
+        repos=repos,
+        since=since,
+        issue_numbers=issue_numbers,
+        config_path=config_path,
+    )
+
+
+if __name__ == "__main__":
+    app.meta()
