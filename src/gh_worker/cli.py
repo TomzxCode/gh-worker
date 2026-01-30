@@ -1,8 +1,10 @@
 """CLI entry point using cyclopts."""
 
 from pathlib import Path
+from typing import Annotated
 
 import cyclopts
+from cyclopts import Parameter
 
 from gh_worker.utils.logging import setup_logging
 
@@ -11,7 +13,7 @@ app = cyclopts.App(name="gh-worker", help="Automated GitHub issue handling with 
 
 @app.meta.default
 def main(
-    *tokens,
+    *tokens: Annotated[str, Parameter(show=False, allow_leading_hyphen=True)],
     log_level: str = "INFO",
 ) -> None:
     """gh-worker: Automated GitHub issue handling with LLM agents.
@@ -21,6 +23,20 @@ def main(
     """
     setup_logging(log_level)
     app(tokens)
+
+
+@app.command
+def init(
+    config_path: Path | None = None,
+) -> None:
+    """Initialize configuration interactively.
+
+    Args:
+        config_path: Path to config file (default: ~/.config/gh-worker/config.yaml)
+    """
+    from gh_worker.commands.init import init_command
+
+    init_command(config_path=config_path)
 
 
 @app.command
@@ -67,9 +83,10 @@ def add(
 @app.command
 def sync(
     repo: str | None = None,
+    issue_numbers: list[int] | None = None,
+    *,
     all_repos: bool = False,
     since: str | None = None,
-    issue_numbers: list[int] | None = None,
     search: str | None = None,
     config_path: Path | None = None,
 ) -> None:
@@ -77,9 +94,9 @@ def sync(
 
     Args:
         repo: Repository to sync (e.g., 'owner/repo')
+        issue_numbers: Specific issue numbers to sync
         all_repos: Sync all repositories
         since: Only sync issues updated since this timestamp
-        issue_numbers: Specific issue numbers to sync
         search: GitHub search query
         config_path: Path to config file (default: ~/.config/gh-worker/config.yaml)
     """
@@ -99,7 +116,10 @@ def sync(
 def plan(
     repo: str | None = None,
     issue_numbers: list[int] | None = None,
+    *,
+    all_repos: bool = False,
     parallelism: int | None = None,
+    force: bool = False,
     config_path: Path | None = None,
 ) -> None:
     """Generate implementation plans for issues.
@@ -107,7 +127,9 @@ def plan(
     Args:
         repo: Repository (e.g., 'owner/repo')
         issue_numbers: Specific issue numbers to plan
+        all_repos: Generate plans for all repositories
         parallelism: Number of parallel executions
+        force: Generate plan even if one already exists
         config_path: Path to config file (default: ~/.config/gh-worker/config.yaml)
     """
     from gh_worker.commands.plan import plan_command
@@ -115,7 +137,9 @@ def plan(
     plan_command(
         repo=repo,
         issue_numbers=issue_numbers,
+        all_repos=all_repos,
         parallelism=parallelism,
+        force=force,
         config_path=config_path,
     )
 
@@ -124,7 +148,10 @@ def plan(
 def implement(
     repo: str | None = None,
     issue_numbers: list[int] | None = None,
+    *,
+    all_repos: bool = False,
     parallelism: int | None = None,
+    force: bool = False,
     config_path: Path | None = None,
 ) -> None:
     """Implement plans and create PRs.
@@ -132,7 +159,9 @@ def implement(
     Args:
         repo: Repository (e.g., 'owner/repo')
         issue_numbers: Specific issue numbers to implement
+        all_repos: Implement plans for all repositories
         parallelism: Number of parallel executions
+        force: Implement even if already completed
         config_path: Path to config file (default: ~/.config/gh-worker/config.yaml)
     """
     from gh_worker.commands.implement import implement_command
@@ -140,7 +169,9 @@ def implement(
     implement_command(
         repo=repo,
         issue_numbers=issue_numbers,
+        all_repos=all_repos,
         parallelism=parallelism,
+        force=force,
         config_path=config_path,
     )
 

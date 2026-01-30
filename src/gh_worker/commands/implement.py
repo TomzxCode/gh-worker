@@ -201,6 +201,7 @@ def find_issues_needing_implementation(
     issue_store: IssueStore,
     plan_store: PlanStore,
     issue_numbers: list[int] | None = None,
+    force: bool = False,
 ) -> list[ImplementTask]:
     """Find issues that need implementation.
 
@@ -209,6 +210,7 @@ def find_issues_needing_implementation(
         issue_store: IssueStore instance
         plan_store: PlanStore instance
         issue_numbers: Optional list of specific issue numbers to check
+        force: If True, implement even if already completed
 
     Returns:
         List of ImplementTask objects for issues needing implementation
@@ -233,8 +235,8 @@ def find_issues_needing_implementation(
 
         plan_file, metadata = plan_result
 
-        # Skip if already completed
-        if metadata.status == PlanStatus.COMPLETED:
+        # Skip if already completed (unless force is True)
+        if not force and metadata.status == PlanStatus.COMPLETED:
             logger.debug(
                 "issue_already_implemented",
                 repository=repository.full_name,
@@ -282,7 +284,9 @@ def find_issues_needing_implementation(
 async def implement_command_async(
     repo: str | None = None,
     issue_numbers: list[int] | None = None,
+    all_repos: bool = False,
     parallelism: int | None = None,
+    force: bool = False,
     config_path: Path | None = None,
 ) -> None:
     """Execute implement command asynchronously.
@@ -290,7 +294,9 @@ async def implement_command_async(
     Args:
         repo: Repository (e.g., 'owner/repo')
         issue_numbers: Specific issue numbers to implement
+        all_repos: Implement plans for all repositories
         parallelism: Number of parallel executions
+        force: Implement even if already completed
         config_path: Path to config file
     """
     config = ConfigManager(config_path)
@@ -308,20 +314,24 @@ async def implement_command_async(
     max_workers = parallelism if parallelism is not None else app_config.implement.parallelism
 
     # Determine which repositories to process
-    if repo:
-        repositories = [Repository.from_string(repo)]
-    else:
+    if all_repos:
         repositories = issue_store.list_repositories()
         if not repositories:
             logger.warning("no_repositories_found")
             print("No repositories found. Use 'gh-worker add' to add repositories.")
             return
+    elif repo:
+        repositories = [Repository.from_string(repo)]
+    else:
+        logger.error("no_repository_specified")
+        print("Error: Specify --repo or --all-repos")
+        return
 
     # Find all issues needing implementation
     all_tasks = []
     for repository in repositories:
         tasks = find_issues_needing_implementation(
-            repository, issue_store, plan_store, issue_numbers
+            repository, issue_store, plan_store, issue_numbers, force
         )
         all_tasks.extend(tasks)
 
@@ -372,7 +382,9 @@ async def implement_command_async(
 def implement_command(
     repo: str | None = None,
     issue_numbers: list[int] | None = None,
+    all_repos: bool = False,
     parallelism: int | None = None,
+    force: bool = False,
     config_path: Path | None = None,
 ) -> None:
     """Execute implement command.
@@ -380,14 +392,18 @@ def implement_command(
     Args:
         repo: Repository (e.g., 'owner/repo')
         issue_numbers: Specific issue numbers to implement
+        all_repos: Implement plans for all repositories
         parallelism: Number of parallel executions
+        force: Implement even if already completed
         config_path: Path to config file
     """
     asyncio.run(
         implement_command_async(
             repo=repo,
             issue_numbers=issue_numbers,
+            all_repos=all_repos,
             parallelism=parallelism,
+            force=force,
             config_path=config_path,
         )
     )

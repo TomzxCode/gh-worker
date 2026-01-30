@@ -77,7 +77,9 @@ class TestWorkOrchestrator:
             mock_plan.assert_called_once_with(
                 repo="owner/repo",
                 issue_numbers=None,
+                all_repos=False,
                 parallelism=None,
+                force=False,
                 config_path=tmp_config_path,
             )
 
@@ -85,7 +87,9 @@ class TestWorkOrchestrator:
             mock_implement.assert_called_once_with(
                 repo="owner/repo",
                 issue_numbers=None,
+                all_repos=False,
                 parallelism=None,
+                force=False,
                 config_path=tmp_config_path,
             )
 
@@ -154,19 +158,23 @@ class TestWorkOrchestrator:
                 config_path=tmp_config_path,
             )
 
-            # Verify plan was called with repo=None
+            # Verify plan was called with all_repos=True
             mock_plan.assert_called_once_with(
                 repo=None,
                 issue_numbers=None,
+                all_repos=True,
                 parallelism=None,
+                force=False,
                 config_path=tmp_config_path,
             )
 
-            # Verify implement was called with repo=None
+            # Verify implement was called with all_repos=True
             mock_implement.assert_called_once_with(
                 repo=None,
                 issue_numbers=None,
+                all_repos=True,
                 parallelism=None,
+                force=False,
                 config_path=tmp_config_path,
             )
 

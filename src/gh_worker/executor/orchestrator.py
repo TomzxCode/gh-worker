@@ -86,14 +86,18 @@ class WorkOrchestrator:
                 await plan_command_async(
                     repo=repo,
                     issue_numbers=self.issue_numbers,
+                    all_repos=False,
                     parallelism=None,  # Use config default
+                    force=False,
                     config_path=self.config_path,
                 )
         else:
             await plan_command_async(
                 repo=None,
                 issue_numbers=self.issue_numbers,
+                all_repos=True,
                 parallelism=None,  # Use config default
+                force=False,
                 config_path=self.config_path,
             )
 
@@ -105,14 +109,18 @@ class WorkOrchestrator:
                 await implement_command_async(
                     repo=repo,
                     issue_numbers=self.issue_numbers,
+                    all_repos=False,
                     parallelism=None,  # Use config default
+                    force=False,
                     config_path=self.config_path,
                 )
         else:
             await implement_command_async(
                 repo=None,
                 issue_numbers=self.issue_numbers,
+                all_repos=True,
                 parallelism=None,  # Use config default
+                force=False,
                 config_path=self.config_path,
             )
 

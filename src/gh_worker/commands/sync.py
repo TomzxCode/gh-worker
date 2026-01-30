@@ -131,4 +131,4 @@ def sync_command(
 
     else:
         logger.error("no_repository_specified")
-        print("Error: Specify --repo or --all")
+        print("Error: Specify --repo or --all-repos")
