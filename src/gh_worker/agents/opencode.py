@@ -1,7 +1,6 @@
 """OpenCode agent implementation (placeholder)."""
 
 from collections.abc import AsyncIterator
-from datetime import datetime
 from typing import Any
 
 import structlog
@@ -52,21 +51,19 @@ class OpenCodeAgent(BaseAgent):
         return True, None
 
     async def plan(
-        self, issue_content: str, repository_path: str, issue_number: int, plan_output_path: str, issue_updated_at: datetime
+        self, issue_content: str, repository_path: str
     ) -> AgentResult:
         """Generate an implementation plan for an issue using OpenCode.
 
         Args:
             issue_content: The full issue description
             repository_path: Path to the cloned repository
-            issue_number: Issue number
 
         Returns:
             AgentResult with the generated plan
         """
         logger.warning(
             "opencode_agent_not_implemented",
-            issue_number=issue_number,
             message="OpenCode agent is a placeholder and not yet implemented",
         )
 
@@ -74,7 +71,7 @@ class OpenCodeAgent(BaseAgent):
             success=False,
             output="",
             error="OpenCode agent is not yet implemented. Please use claude-code instead.",
-            metadata={"issue_number": issue_number, "agent": "opencode"},
+            metadata={"agent": "opencode"},
         )
 
     async def implement(

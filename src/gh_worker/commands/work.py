@@ -18,6 +18,7 @@ async def work_command_async(
     since: str | None = None,
     issue_numbers: list[int] | None = None,
     config_path: Path | None = None,
+    agent: str | None = None,
 ) -> None:
     """Execute work command asynchronously.
 
@@ -28,6 +29,7 @@ async def work_command_async(
         since: Only process issues updated since this timestamp
         issue_numbers: Specific issue numbers to process
         config_path: Path to config file
+        agent: Override agent to use (uses config default if None)
     """
     # Determine frequency
     if not once and frequency is None:
@@ -42,6 +44,7 @@ async def work_command_async(
         repos=repos,
         since=since,
         issue_numbers=issue_numbers,
+        agent=agent,
     )
 
     # Run in appropriate mode
@@ -60,6 +63,7 @@ def work_command(
     since: str | None = None,
     issue_numbers: list[int] | None = None,
     config_path: Path | None = None,
+    agent: str | None = None,
 ) -> None:
     """Execute work command.
 
@@ -70,6 +74,7 @@ def work_command(
         since: Only process issues updated since this timestamp
         issue_numbers: Specific issue numbers to process
         config_path: Path to config file
+        agent: Override agent to use (uses config default if None)
     """
     asyncio.run(
         work_command_async(
@@ -79,5 +84,6 @@ def work_command(
             since=since,
             issue_numbers=issue_numbers,
             config_path=config_path,
+            agent=agent,
         )
     )

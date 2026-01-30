@@ -288,6 +288,7 @@ async def implement_command_async(
     parallelism: int | None = None,
     force: bool = False,
     config_path: Path | None = None,
+    agent: str | None = None,
 ) -> None:
     """Execute implement command asynchronously.
 
@@ -298,6 +299,7 @@ async def implement_command_async(
         parallelism: Number of parallel executions
         force: Implement even if already completed
         config_path: Path to config file
+        agent: Override agent to use (uses config default if None)
     """
     config = ConfigManager(config_path)
     app_config = config.load()
@@ -347,8 +349,8 @@ async def implement_command_async(
     )
     print(f"Implementing {len(all_tasks)} issues (parallelism: {max_workers})")
 
-    # Get agent configuration
-    agent_name = app_config.agent.default
+    # Get agent configuration (use override if provided, otherwise use config default)
+    agent_name = agent if agent is not None else app_config.agent.default
     agent_config = {
         "claude_code_path": app_config.agent.claude_code_path,
     }
@@ -386,6 +388,7 @@ def implement_command(
     parallelism: int | None = None,
     force: bool = False,
     config_path: Path | None = None,
+    agent: str | None = None,
 ) -> None:
     """Execute implement command.
 
@@ -396,6 +399,7 @@ def implement_command(
         parallelism: Number of parallel executions
         force: Implement even if already completed
         config_path: Path to config file
+        agent: Override agent to use (uses config default if None)
     """
     asyncio.run(
         implement_command_async(
@@ -405,5 +409,6 @@ def implement_command(
             parallelism=parallelism,
             force=force,
             config_path=config_path,
+            agent=agent,
         )
     )

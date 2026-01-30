@@ -18,6 +18,7 @@ async def monitor_command_async(
     repo: str,
     issue_number: int,
     config_path: Path | None = None,
+    agent: str | None = None,
 ) -> None:
     """Execute monitor command asynchronously.
 
@@ -25,6 +26,7 @@ async def monitor_command_async(
         repo: Repository (e.g., 'owner/repo')
         issue_number: Issue number to monitor
         config_path: Path to config file
+        agent: Override agent to use (uses config default if None)
     """
     config = ConfigManager(config_path)
     app_config = config.load()
@@ -72,9 +74,9 @@ async def monitor_command_async(
     print(f"Monitoring {repository.full_name}#{issue_number} (session: {metadata.session_id})")
     print("=" * 80)
 
-    # Get agent
+    # Get agent (use override if provided, otherwise use config default)
     registry = get_registry()
-    agent_name = app_config.agent.default
+    agent_name = agent if agent is not None else app_config.agent.default
     agent_config = {
         "claude_code_path": app_config.agent.claude_code_path,
     }
@@ -122,6 +124,7 @@ def monitor_command(
     repo: str,
     issue_number: int,
     config_path: Path | None = None,
+    agent: str | None = None,
 ) -> None:
     """Execute monitor command.
 
@@ -129,11 +132,13 @@ def monitor_command(
         repo: Repository (e.g., 'owner/repo')
         issue_number: Issue number to monitor
         config_path: Path to config file
+        agent: Override agent to use (uses config default if None)
     """
     asyncio.run(
         monitor_command_async(
             repo=repo,
             issue_number=issue_number,
             config_path=config_path,
+            agent=agent,
         )
     )

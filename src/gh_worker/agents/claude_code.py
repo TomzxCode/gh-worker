@@ -5,7 +5,6 @@ import json
 import re
 import shutil
 from collections.abc import AsyncIterator
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -101,61 +100,60 @@ class ClaudeCodeAgent(BaseAgent):
         return True, None
 
     async def plan(
-        self, issue_content: str, repository_path: str, issue_number: int, plan_output_path: str, issue_updated_at: datetime
+        self, issue_content: str, repository_path: str
     ) -> AgentResult:
         """Generate an implementation plan for an issue using claude.
 
         Args:
             issue_content: The full issue description
             repository_path: Path to the cloned repository
-            issue_number: Issue number
-            plan_output_path: Path where the plan should be written
-            issue_updated_at: Timestamp when the issue was last updated
 
         Returns:
             AgentResult with the generated plan
         """
         logger.info(
             "generating_plan",
-            issue_number=issue_number,
             repository_path=repository_path,
-            plan_output_path=plan_output_path,
-            issue_updated_at=issue_updated_at.isoformat(),
         )
 
-        prompt = self._build_plan_prompt(issue_content, issue_number, plan_output_path, issue_updated_at)
+        prompt = self._build_plan_prompt(issue_content)
         logger.debug(
             "plan_prompt_built",
-            issue_number=issue_number,
             prompt_length=len(prompt),
         )
 
         try:
             # Run claude in the repository directory with streaming
-            logger.debug("running_claude_code_for_plan", issue_number=issue_number)
-            output_parts = []
+            logger.debug("running_claude_code_for_plan")
+            output = None
             session_id = None
             async for event in self._run_claude_code_streaming(prompt, repository_path):
-                # Collect all output content
-                if event.type in (AgentEventType.OUTPUT, AgentEventType.TOOL_USE):
-                    output_parts.append(event.content)
-                elif event.type == AgentEventType.ERROR:
-                    # Include errors in output for visibility
-                    output_parts.append(f"[ERROR] {event.content}")
+                # Extract result from RESULT event
+                if event.type == AgentEventType.RESULT:
+                    output = event.content
+                    logger.debug(
+                        "result_extracted",
+                        output_length=len(output) if output else 0,
+                    )
 
                 # Extract session_id from event metadata if present
                 if event.metadata and "session_id" in event.metadata:
                     session_id = event.metadata["session_id"]
                     logger.debug(
                         "session_id_found_in_event",
-                        issue_number=issue_number,
                         session_id=session_id,
                     )
 
-            output = "\n".join(output_parts)
+            if output is None:
+                logger.warning("no_result_event_found")
+                return AgentResult(
+                    success=False,
+                    output="",
+                    error="No result event found in agent output",
+                )
+
             logger.debug(
                 "claude_code_output_received",
-                issue_number=issue_number,
                 output_length=len(output),
             )
 
@@ -164,7 +162,6 @@ class ClaudeCodeAgent(BaseAgent):
                 session_id = self._extract_session_id(output)
                 logger.debug(
                     "session_id_extracted_from_output",
-                    issue_number=issue_number,
                     session_id=session_id,
                 )
 
@@ -172,16 +169,14 @@ class ClaudeCodeAgent(BaseAgent):
                 success=True,
                 output=output,
                 session_id=session_id,
-                metadata={"issue_number": issue_number},
             )
         except Exception as e:
-            logger.error("plan_generation_failed", error=str(e), issue_number=issue_number)
+            logger.error("plan_generation_failed", error=str(e))
             logger.debug("plan_generation_exception", exc_info=True)
             return AgentResult(
                 success=False,
                 output="",
                 error=str(e),
-                metadata={"issue_number": issue_number},
             )
 
     async def implement(
@@ -276,26 +271,17 @@ class ClaudeCodeAgent(BaseAgent):
             metadata={"session_id": session_id},
         )
 
-    def _build_plan_prompt(self, issue_content: str, issue_number: int, plan_output_path: str, issue_updated_at: datetime) -> str:
+    def _build_plan_prompt(self, issue_content: str) -> str:
         """Build the prompt for plan generation.
 
         Args:
             issue_content: The issue description
-            issue_number: Issue number
-            plan_output_path: Path where the plan should be written
-            issue_updated_at: Timestamp when the issue was last updated
 
         Returns:
             Formatted prompt string
         """
-        # Format timestamp for filename (ISO format, filesystem-safe)
-        timestamp_str = issue_updated_at.strftime("%Y%m%dT%H%M%S")
-        plan_filename = f"plan-{timestamp_str}.md"
-        plan_location = f"Write the plan to: {plan_output_path}/{plan_filename}"
+        prompt = f"""Please create a detailed implementation plan for the following issue:
 
-        prompt = f"""Please create a detailed implementation plan for the following GitHub issue:
-
-Issue #{issue_number}:
 {issue_content}
 
 Create a comprehensive plan that includes:
@@ -304,12 +290,9 @@ Create a comprehensive plan that includes:
 3. Files that need to be created or modified
 4. Testing strategy
 5. Any potential risks or considerations
-
-{plan_location}
 """
         logger.debug(
             "plan_prompt_built",
-            issue_number=issue_number,
             issue_content_length=len(issue_content),
             prompt_length=len(prompt),
         )
@@ -443,6 +426,7 @@ Please proceed with the implementation.
         json_parse_errors = 0
         event_count = 0
         event_counts_by_type = {}
+        result_parts = []  # Collect output for RESULT event
         if process.stdout:
             while True:
                 line = await process.stdout.readline()
@@ -503,6 +487,10 @@ Please proceed with the implementation.
                         elif "error" in text_content.lower():
                             event_type = AgentEventType.ERROR
 
+                        # Collect output for RESULT event (exclude errors and tool use)
+                        if event_type == AgentEventType.OUTPUT:
+                            result_parts.append(text_content)
+
                         # Extract session_id from JSON data if present
                         metadata = {}
                         session_id = data.get("session_id")
@@ -544,6 +532,10 @@ Please proceed with the implementation.
                             event_type = AgentEventType.ERROR
                         elif "using tool" in content.lower() or "tool:" in content.lower():
                             event_type = AgentEventType.TOOL_USE
+
+                        # Collect output for RESULT event (exclude errors and tool use)
+                        if event_type == AgentEventType.OUTPUT:
+                            result_parts.append(content)
 
                         event_count += 1
                         event_counts_by_type[event_type.value] = event_counts_by_type.get(event_type.value, 0) + 1
@@ -605,6 +597,23 @@ Please proceed with the implementation.
                 yield AgentEvent(
                     type=AgentEventType.ERROR,
                     content=error_content,
+                )
+        else:
+            # Emit RESULT event with collected output on successful completion
+            if result_parts:
+                result_content = "\n".join(result_parts)
+                event_count += 1
+                event_counts_by_type[AgentEventType.RESULT.value] = event_counts_by_type.get(AgentEventType.RESULT.value, 0) + 1
+
+                logger.info(
+                    "claude_code_streaming_event",
+                    event_number=event_count,
+                    event_type=AgentEventType.RESULT.value,
+                    content_length=len(result_content),
+                )
+                yield AgentEvent(
+                    type=AgentEventType.RESULT,
+                    content=result_content,
                 )
 
         # Log summary of all events

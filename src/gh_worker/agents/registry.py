@@ -8,6 +8,7 @@ from gh_worker.agents.base import BaseAgent
 from gh_worker.agents.claude_code import ClaudeCodeAgent
 from gh_worker.agents.codex import CodexAgent
 from gh_worker.agents.gemini import GeminiAgent
+from gh_worker.agents.mock import MockAgent
 from gh_worker.agents.opencode import OpenCodeAgent
 
 logger = structlog.get_logger()
@@ -30,6 +31,7 @@ class AgentRegistry:
         self.register("opencode", OpenCodeAgent)
         self.register("gemini", GeminiAgent)
         self.register("codex", CodexAgent)
+        self.register("mock", MockAgent)
 
     def register(
         self,

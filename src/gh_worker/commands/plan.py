@@ -50,36 +50,26 @@ async def generate_plan_for_issue(
         "generating_plan",
         repository=task.repository.full_name,
         issue_number=task.issue_number,
+        agent=agent_name,
     )
 
     # Load issue content
     issue_content = task.description_file.read_text()
 
-    # Get issue updated_at timestamp
-    issue_updated_at = issue_store.get_updated_at(task.repository, task.issue_number)
-    if not issue_updated_at:
-        logger.warning(
-            "issue_updated_at_not_found",
-            repository=task.repository.full_name,
-            issue_number=task.issue_number,
-        )
-        # Fallback to current time if not found
-        from datetime import datetime, UTC
-        issue_updated_at = datetime.now(UTC)
-
     # Get agent
     registry = get_registry()
     agent = registry.get(agent_name, agent_config)
 
-    # Validate agent environment
-    is_valid, error_msg = await agent.validate_environment()
-    if not is_valid:
-        logger.error(
-            "agent_environment_invalid",
-            agent=agent_name,
-            error=error_msg,
-        )
-        raise RuntimeError(f"Agent environment validation failed: {error_msg}")
+    # Validate agent environment (skip for mock agent)
+    if agent_name != "mock":
+        is_valid, error_msg = await agent.validate_environment()
+        if not is_valid:
+            logger.error(
+                "agent_environment_invalid",
+                agent=agent_name,
+                error=error_msg,
+            )
+            raise RuntimeError(f"Agent environment validation failed: {error_msg}")
 
     # Determine repository path
     if repository_path:
@@ -87,7 +77,8 @@ async def generate_plan_for_issue(
     else:
         repo_path = Path.cwd()
 
-    if not repo_path.exists():
+    # Skip repository path check for mock agent
+    if agent_name != "mock" and not repo_path.exists():
         logger.error(
             "repository_not_found",
             repository=task.repository.full_name,
@@ -95,16 +86,10 @@ async def generate_plan_for_issue(
         )
         raise FileNotFoundError(f"Repository not found at {repo_path}")
 
-    # Determine plan output path
-    plan_output_dir = plan_store.get_issue_dir(task.repository, task.issue_number)
-
     # Generate plan
     result = await agent.plan(
         issue_content=issue_content,
-        repository_path=str(repo_path),
-        issue_number=task.issue_number,
-        plan_output_path=str(plan_output_dir),
-        issue_updated_at=issue_updated_at,
+        repository_path=str(repo_path) if agent_name != "mock" else "",
     )
 
     if not result.success:
@@ -123,6 +108,7 @@ async def generate_plan_for_issue(
         "plan_generated",
         repository=task.repository.full_name,
         issue_number=task.issue_number,
+        agent=agent_name,
     )
 
 
@@ -192,6 +178,7 @@ async def plan_command_async(
     parallelism: int | None = None,
     force: bool = False,
     config_path: Path | None = None,
+    agent: str | None = None,
 ) -> None:
     """Execute plan command asynchronously.
 
@@ -202,6 +189,8 @@ async def plan_command_async(
         parallelism: Number of parallel executions
         force: Generate plan even if one already exists
         config_path: Path to config file
+        agent: Agent to use (e.g., 'mock', 'claude-code', 'opencode', 'gemini', 'codex')
+            Uses config default if None
     """
     config = ConfigManager(config_path)
     app_config = config.load()
@@ -242,23 +231,29 @@ async def plan_command_async(
         print("No issues need plans generated")
         return
 
-    logger.info(
-        "starting_plan_generation",
-        total_issues=len(all_tasks),
-        parallelism=max_workers,
-    )
-    print(f"Generating plans for {len(all_tasks)} issues (parallelism: {max_workers})")
-
-    # Get agent configuration
-    agent_name = app_config.agent.default
+    # Get agent configuration (use override if provided, otherwise use config default)
+    agent_name = agent if agent is not None else app_config.agent.default
     agent_config = {
         "claude_code_path": app_config.agent.claude_code_path,
     }
 
+    logger.info(
+        "starting_plan_generation",
+        total_issues=len(all_tasks),
+        parallelism=max_workers,
+        agent=agent_name,
+    )
+    print(f"Generating plans for {len(all_tasks)} issues using agent '{agent_name}' (parallelism: {max_workers})")
+
     # Create task function
     async def task_func(task: PlanTask):
         return await generate_plan_for_issue(
-            task, plan_store, issue_store, app_config.repository_path, agent_name, agent_config
+            task,
+            plan_store,
+            issue_store,
+            app_config.repository_path,
+            agent_name,
+            agent_config,
         )
 
     # Execute in parallel
@@ -288,6 +283,7 @@ def plan_command(
     parallelism: int | None = None,
     force: bool = False,
     config_path: Path | None = None,
+    agent: str | None = None,
 ) -> None:
     """Execute plan command.
 
@@ -298,6 +294,8 @@ def plan_command(
         parallelism: Number of parallel executions
         force: Generate plan even if one already exists
         config_path: Path to config file
+        agent: Agent to use (e.g., 'mock', 'claude-code', 'opencode', 'gemini', 'codex')
+            Uses config default if None
     """
     asyncio.run(
         plan_command_async(
@@ -307,5 +305,6 @@ def plan_command(
             parallelism=parallelism,
             force=force,
             config_path=config_path,
+            agent=agent,
         )
     )

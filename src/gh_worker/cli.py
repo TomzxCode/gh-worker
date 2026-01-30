@@ -121,6 +121,7 @@ def plan(
     parallelism: int | None = None,
     force: bool = False,
     config_path: Path | None = None,
+    agent: str | None = None,
 ) -> None:
     """Generate implementation plans for issues.
 
@@ -131,6 +132,8 @@ def plan(
         parallelism: Number of parallel executions
         force: Generate plan even if one already exists
         config_path: Path to config file (default: ~/.config/gh-worker/config.yaml)
+        agent: Agent to use (e.g., 'mock', 'claude-code', 'opencode', 'gemini', 'codex')
+            Uses config default if None. Use 'mock' for quick testing without LLM calls.
     """
     from gh_worker.commands.plan import plan_command
 
@@ -141,6 +144,7 @@ def plan(
         parallelism=parallelism,
         force=force,
         config_path=config_path,
+        agent=agent,
     )
 
 
@@ -153,6 +157,7 @@ def implement(
     parallelism: int | None = None,
     force: bool = False,
     config_path: Path | None = None,
+    agent: str | None = None,
 ) -> None:
     """Implement plans and create PRs.
 
@@ -163,6 +168,7 @@ def implement(
         parallelism: Number of parallel executions
         force: Implement even if already completed
         config_path: Path to config file (default: ~/.config/gh-worker/config.yaml)
+        agent: Override agent to use (e.g., 'claude-code', 'opencode', 'gemini', 'codex')
     """
     from gh_worker.commands.implement import implement_command
 
@@ -173,6 +179,7 @@ def implement(
         parallelism=parallelism,
         force=force,
         config_path=config_path,
+        agent=agent,
     )
 
 
@@ -181,6 +188,7 @@ def monitor(
     repo: str,
     issue_number: int,
     config_path: Path | None = None,
+    agent: str | None = None,
 ) -> None:
     """Monitor LLM agent session progress.
 
@@ -188,6 +196,7 @@ def monitor(
         repo: Repository (e.g., 'owner/repo')
         issue_number: Issue number to monitor
         config_path: Path to config file (default: ~/.config/gh-worker/config.yaml)
+        agent: Override agent to use (e.g., 'claude-code', 'opencode', 'gemini', 'codex')
     """
     from gh_worker.commands.monitor import monitor_command
 
@@ -195,6 +204,7 @@ def monitor(
         repo=repo,
         issue_number=issue_number,
         config_path=config_path,
+        agent=agent,
     )
 
 
@@ -206,6 +216,7 @@ def work(
     since: str | None = None,
     issue_numbers: list[int] | None = None,
     config_path: Path | None = None,
+    agent: str | None = None,
 ) -> None:
     """Run sync, plan, implement workflow.
 
@@ -216,6 +227,7 @@ def work(
         since: Only process issues updated since this timestamp
         issue_numbers: Specific issue numbers to process
         config_path: Path to config file (default: ~/.config/gh-worker/config.yaml)
+        agent: Override agent to use (e.g., 'claude-code', 'opencode', 'gemini', 'codex')
     """
     from gh_worker.commands.work import work_command
 
@@ -226,6 +238,7 @@ def work(
         since=since,
         issue_numbers=issue_numbers,
         config_path=config_path,
+        agent=agent,
     )
 
 

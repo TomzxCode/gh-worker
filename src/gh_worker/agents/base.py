@@ -3,7 +3,6 @@
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
-from datetime import datetime
 from enum import Enum
 from typing import Any
 
@@ -17,6 +16,7 @@ class AgentEventType(Enum):
     TOOL_USE = "tool_use"  # Agent is using a tool
     COMPLETION = "completion"  # Task completed successfully
     FAILURE = "failure"  # Task failed
+    RESULT = "result"  # Final result/output to extract
 
 
 @dataclass
@@ -54,16 +54,13 @@ class BaseAgent(ABC):
 
     @abstractmethod
     async def plan(
-        self, issue_content: str, repository_path: str, issue_number: int, plan_output_path: str, issue_updated_at: datetime
+        self, issue_content: str, repository_path: str
     ) -> AgentResult:
         """Generate an implementation plan for an issue.
 
         Args:
             issue_content: The full issue description
             repository_path: Path to the cloned repository
-            issue_number: Issue number
-            plan_output_path: Path where the plan should be written
-            issue_updated_at: Timestamp when the issue was last updated
 
         Returns:
             AgentResult with the generated plan

@@ -24,6 +24,7 @@ class WorkOrchestrator:
         repos: list[str] | None = None,
         since: str | None = None,
         issue_numbers: list[int] | None = None,
+        agent: str | None = None,
     ):
         """Initialize WorkOrchestrator.
 
@@ -32,11 +33,13 @@ class WorkOrchestrator:
             repos: List of repositories to process
             since: Only process issues updated since this timestamp
             issue_numbers: Specific issue numbers to process
+            agent: Override agent to use (uses config default if None)
         """
         self.config_path = config_path
         self.repos = repos
         self.since = since
         self.issue_numbers = issue_numbers
+        self.agent = agent
         self.config_manager = ConfigManager(config_path)
 
     async def run_cycle(self) -> None:
@@ -90,6 +93,7 @@ class WorkOrchestrator:
                     parallelism=None,  # Use config default
                     force=False,
                     config_path=self.config_path,
+                    agent=self.agent,
                 )
         else:
             await plan_command_async(
@@ -99,6 +103,7 @@ class WorkOrchestrator:
                 parallelism=None,  # Use config default
                 force=False,
                 config_path=self.config_path,
+                agent=self.agent,
             )
 
         # Phase 3: Implement
@@ -113,6 +118,7 @@ class WorkOrchestrator:
                     parallelism=None,  # Use config default
                     force=False,
                     config_path=self.config_path,
+                    agent=self.agent,
                 )
         else:
             await implement_command_async(
@@ -122,6 +128,7 @@ class WorkOrchestrator:
                 parallelism=None,  # Use config default
                 force=False,
                 config_path=self.config_path,
+                agent=self.agent,
             )
 
         logger.info("work_cycle_completed")
