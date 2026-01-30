@@ -6,7 +6,11 @@ from typing import Annotated
 import cyclopts
 from cyclopts import Parameter
 
+from gh_worker.agents.registry import get_registry
 from gh_worker.utils.logging import setup_logging
+
+# Get list of available agents for choices
+available_agents = ", ".join(sorted(get_registry().list_agents()))
 
 app = cyclopts.App(name="gh-worker", help="Automated GitHub issue handling with LLM agents")
 
@@ -14,26 +18,21 @@ app = cyclopts.App(name="gh-worker", help="Automated GitHub issue handling with 
 @app.meta.default
 def main(
     *tokens: Annotated[str, Parameter(show=False, allow_leading_hyphen=True)],
-    log_level: str = "INFO",
+    log_level: Annotated[str, Parameter(help="Log level (DEBUG, INFO, WARNING, ERROR)")] = "INFO",
 ) -> None:
-    """gh-worker: Automated GitHub issue handling with LLM agents.
-
-    Args:
-        log_level: Log level (DEBUG, INFO, WARNING, ERROR)
-    """
+    """gh-worker: Automated GitHub issue handling with LLM agents."""
     setup_logging(log_level)
     app(tokens)
 
 
 @app.command
 def init(
-    config_path: Path | None = None,
+    config_path: Annotated[
+        Path | None,
+        Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
+    ] = None,
 ) -> None:
-    """Initialize configuration interactively.
-
-    Args:
-        config_path: Path to config file (default: ~/.config/gh-worker/config.yaml)
-    """
+    """Initialize configuration interactively."""
     from gh_worker.commands.init import init_command
 
     init_command(config_path=config_path)
@@ -41,17 +40,14 @@ def init(
 
 @app.command
 def config(
-    key: str,
-    value: str | None = None,
-    config_path: Path | None = None,
+    key: Annotated[str, Parameter(help="Configuration key (e.g., 'issues-path', 'plan.parallelism')")],
+    value: Annotated[str | None, Parameter(help="Value to set (if None, gets the current value)")] = None,
+    config_path: Annotated[
+        Path | None,
+        Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
+    ] = None,
 ) -> None:
-    """Manage configuration.
-
-    Args:
-        key: Configuration key (e.g., 'issues-path', 'plan.parallelism')
-        value: Value to set (if None, gets the current value)
-        config_path: Path to config file (default: ~/.config/gh-worker/config.yaml)
-    """
+    """Manage configuration."""
     from gh_worker.commands.config import config_command
 
     config_command(
@@ -63,15 +59,13 @@ def config(
 
 @app.command
 def add(
-    repos: list[str],
-    config_path: Path | None = None,
+    repos: Annotated[list[str], Parameter(help="Repository names (e.g., 'owner/repo')")],
+    config_path: Annotated[
+        Path | None,
+        Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
+    ] = None,
 ) -> None:
-    """Add repositories to track.
-
-    Args:
-        repos: Repository names (e.g., 'owner/repo')
-        config_path: Path to config file (default: ~/.config/gh-worker/config.yaml)
-    """
+    """Add repositories to track."""
     from gh_worker.commands.add import add_command
 
     add_command(
@@ -82,24 +76,22 @@ def add(
 
 @app.command
 def sync(
-    repo: str | None = None,
-    issue_numbers: list[int] | None = None,
+    repo: Annotated[str | None, Parameter(help="Repository to sync (e.g., 'owner/repo')")] = None,
+    issue_numbers: Annotated[
+        list[int] | None, Parameter(help="Specific issue numbers to sync")
+    ] = None,
     *,
-    all_repos: bool = False,
-    since: str | None = None,
-    search: str | None = None,
-    config_path: Path | None = None,
+    all_repos: Annotated[bool, Parameter(help="Sync all repositories")] = False,
+    since: Annotated[
+        str | None, Parameter(help="Only sync issues updated since this timestamp")
+    ] = None,
+    search: Annotated[str | None, Parameter(help="GitHub search query")] = None,
+    config_path: Annotated[
+        Path | None,
+        Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
+    ] = None,
 ) -> None:
-    """Sync GitHub issues to local files.
-
-    Args:
-        repo: Repository to sync (e.g., 'owner/repo')
-        issue_numbers: Specific issue numbers to sync
-        all_repos: Sync all repositories
-        since: Only sync issues updated since this timestamp
-        search: GitHub search query
-        config_path: Path to config file (default: ~/.config/gh-worker/config.yaml)
-    """
+    """Sync GitHub issues to local files."""
     from gh_worker.commands.sync import sync_command
 
     sync_command(
@@ -114,27 +106,32 @@ def sync(
 
 @app.command
 def plan(
-    repo: str | None = None,
-    issue_numbers: list[int] | None = None,
+    repo: Annotated[str | None, Parameter(help="Repository (e.g., 'owner/repo')")] = None,
+    issue_numbers: Annotated[
+        list[int] | None, Parameter(help="Specific issue numbers to plan")
+    ] = None,
     *,
-    all_repos: bool = False,
-    parallelism: int | None = None,
-    force: bool = False,
-    config_path: Path | None = None,
-    agent: str | None = None,
+    all_repos: Annotated[
+        bool, Parameter(help="Generate plans for all repositories")
+    ] = False,
+    parallelism: Annotated[
+        int | None, Parameter(help="Number of parallel executions")
+    ] = None,
+    force: Annotated[
+        bool, Parameter(help="Generate plan even if one already exists")
+    ] = False,
+    config_path: Annotated[
+        Path | None,
+        Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
+    ] = None,
+    agent: Annotated[
+        str | None,
+        Parameter(
+            help="Override agent to use. Choices: " + available_agents + f". Uses config default if None.",
+        ),
+    ] = None,
 ) -> None:
-    """Generate implementation plans for issues.
-
-    Args:
-        repo: Repository (e.g., 'owner/repo')
-        issue_numbers: Specific issue numbers to plan
-        all_repos: Generate plans for all repositories
-        parallelism: Number of parallel executions
-        force: Generate plan even if one already exists
-        config_path: Path to config file (default: ~/.config/gh-worker/config.yaml)
-        agent: Agent to use (e.g., 'mock', 'claude-code', 'opencode', 'gemini', 'codex')
-            Uses config default if None. Use 'mock' for quick testing without LLM calls.
-    """
+    """Generate implementation plans for issues."""
     from gh_worker.commands.plan import plan_command
 
     plan_command(
@@ -150,26 +147,30 @@ def plan(
 
 @app.command
 def implement(
-    repo: str | None = None,
-    issue_numbers: list[int] | None = None,
+    repo: Annotated[str | None, Parameter(help="Repository (e.g., 'owner/repo')")] = None,
+    issue_numbers: Annotated[
+        list[int] | None, Parameter(help="Specific issue numbers to implement")
+    ] = None,
     *,
-    all_repos: bool = False,
-    parallelism: int | None = None,
-    force: bool = False,
-    config_path: Path | None = None,
-    agent: str | None = None,
+    all_repos: Annotated[
+        bool, Parameter(help="Implement plans for all repositories")
+    ] = False,
+    parallelism: Annotated[
+        int | None, Parameter(help="Number of parallel executions")
+    ] = None,
+    force: Annotated[
+        bool, Parameter(help="Implement even if already completed")
+    ] = False,
+    config_path: Annotated[
+        Path | None,
+        Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
+    ] = None,
+    agent: Annotated[
+        str | None,
+        Parameter(help="Override agent to use. Choices: " + available_agents + ". Uses config default if None."),
+    ] = None,
 ) -> None:
-    """Implement plans and create PRs.
-
-    Args:
-        repo: Repository (e.g., 'owner/repo')
-        issue_numbers: Specific issue numbers to implement
-        all_repos: Implement plans for all repositories
-        parallelism: Number of parallel executions
-        force: Implement even if already completed
-        config_path: Path to config file (default: ~/.config/gh-worker/config.yaml)
-        agent: Override agent to use (e.g., 'claude-code', 'opencode', 'gemini', 'codex')
-    """
+    """Implement plans and create PRs."""
     from gh_worker.commands.implement import implement_command
 
     implement_command(
@@ -185,19 +186,18 @@ def implement(
 
 @app.command
 def monitor(
-    repo: str,
-    issue_number: int,
-    config_path: Path | None = None,
-    agent: str | None = None,
+    repo: Annotated[str, Parameter(help="Repository (e.g., 'owner/repo')")],
+    issue_number: Annotated[int, Parameter(help="Issue number to monitor")],
+    config_path: Annotated[
+        Path | None,
+        Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
+    ] = None,
+    agent: Annotated[
+        str | None,
+        Parameter(help="Override agent to use. Choices: " + available_agents + ". Uses config default if None."),
+    ] = None,
 ) -> None:
-    """Monitor LLM agent session progress.
-
-    Args:
-        repo: Repository (e.g., 'owner/repo')
-        issue_number: Issue number to monitor
-        config_path: Path to config file (default: ~/.config/gh-worker/config.yaml)
-        agent: Override agent to use (e.g., 'claude-code', 'opencode', 'gemini', 'codex')
-    """
+    """Monitor LLM agent session progress."""
     from gh_worker.commands.monitor import monitor_command
 
     monitor_command(
@@ -210,25 +210,31 @@ def monitor(
 
 @app.command
 def work(
-    once: bool = False,
-    frequency: str | None = None,
-    repos: list[str] | None = None,
-    since: str | None = None,
-    issue_numbers: list[int] | None = None,
-    config_path: Path | None = None,
-    agent: str | None = None,
+    once: Annotated[
+        bool, Parameter(help="Run once and exit (default: continuous mode)")
+    ] = False,
+    frequency: Annotated[
+        str | None, Parameter(help="Sync frequency (e.g., '10m', '1h', '1d')")
+    ] = None,
+    repos: Annotated[
+        list[str] | None, Parameter(help="Repositories to process")
+    ] = None,
+    since: Annotated[
+        str | None, Parameter(help="Only process issues updated since this timestamp")
+    ] = None,
+    issue_numbers: Annotated[
+        list[int] | None, Parameter(help="Specific issue numbers to process")
+    ] = None,
+    config_path: Annotated[
+        Path | None,
+        Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
+    ] = None,
+    agent: Annotated[
+        str | None,
+        Parameter(help="Override agent to use. Choices: " + available_agents + ". Uses config default if None."),
+    ] = None,
 ) -> None:
-    """Run sync, plan, implement workflow.
-
-    Args:
-        once: Run once and exit (default: continuous mode)
-        frequency: Sync frequency (e.g., '10m', '1h', '1d')
-        repos: Repositories to process
-        since: Only process issues updated since this timestamp
-        issue_numbers: Specific issue numbers to process
-        config_path: Path to config file (default: ~/.config/gh-worker/config.yaml)
-        agent: Override agent to use (e.g., 'claude-code', 'opencode', 'gemini', 'codex')
-    """
+    """Run sync, plan, implement workflow."""
     from gh_worker.commands.work import work_command
 
     work_command(
