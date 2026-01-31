@@ -7,6 +7,7 @@ import structlog
 from gh_worker.agents.base import BaseAgent
 from gh_worker.agents.claude_code import ClaudeCodeAgent
 from gh_worker.agents.codex import CodexAgent
+from gh_worker.agents.cursor_agent import CursorAgent
 from gh_worker.agents.gemini import GeminiAgent
 from gh_worker.agents.mock import MockAgent
 from gh_worker.agents.opencode import OpenCodeAgent
@@ -28,6 +29,7 @@ class AgentRegistry:
     def _register_builtin_agents(self):
         """Register built-in agent implementations."""
         self.register("claude-code", ClaudeCodeAgent, default=True)
+        self.register("cursor-agent", CursorAgent)
         self.register("opencode", OpenCodeAgent)
         self.register("gemini", GeminiAgent)
         self.register("codex", CodexAgent)
@@ -55,7 +57,7 @@ class AgentRegistry:
         if not issubclass(agent_class, BaseAgent):
             raise TypeError("Agent class must be a subclass of BaseAgent")
 
-        logger.info("registering_agent", name=name, default=default)
+        logger.debug("registering_agent", name=name, default=default)
         self._agents[name] = agent_class
 
         if default or self._default_agent is None:

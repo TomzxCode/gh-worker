@@ -92,6 +92,8 @@ class TestFindIssuesNeedingPlans:
 
     def test_skip_issues_with_existing_plans(self, tmp_issues_path):
         """Test that issues with existing plans are skipped."""
+        from datetime import datetime
+
         repository = Repository(owner="owner", name="repo")
         issue_store = IssueStore(tmp_issues_path)
         plan_store = PlanStore(tmp_issues_path)
@@ -101,8 +103,11 @@ class TestFindIssuesNeedingPlans:
             issue_dir = issue_store.get_issue_dir(repository, issue_number)
             issue_dir.mkdir(parents=True, exist_ok=True)
             (issue_dir / "description.md").write_text(f"Issue {issue_number}")
+            # Create .updated-at file for each issue (use fixed past timestamp)
+            (issue_dir / ".updated-at").write_text(datetime(2024, 1, 1, 12, 0, 0).isoformat())
 
-        # Create plan for issue 2
+        # Create plan for issue 2 (plan will be created with current timestamp,
+        # which is >= the .updated-at timestamp)
         plan_store.create_plan(repository, 2, "Existing plan")
 
         tasks = find_issues_needing_plans(repository, issue_store, plan_store)

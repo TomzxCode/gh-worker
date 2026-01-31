@@ -243,6 +243,28 @@ class TestPlanStore:
         """Test checking if issue has plans."""
         assert not plan_store.has_plan(sample_repo, 123)
 
+        # Create .updated-at file before creating plan
+        issue_dir = plan_store.get_issue_dir(sample_repo, 123)
+        issue_dir.mkdir(parents=True, exist_ok=True)
+        updated_at_file = issue_dir / ".updated-at"
+        # Set updated_at to a time before plan creation (use a fixed past timestamp)
+        updated_at_file.write_text(datetime(2024, 1, 1, 12, 0, 0).isoformat())
+
         plan_store.create_plan(sample_repo, 123, "Plan content")
 
         assert plan_store.has_plan(sample_repo, 123)
+
+    def test_has_plan_no_matching_timestamp(self, plan_store, sample_repo):
+        """Test that has_plan returns False when .updated-at is newer than all plans."""
+        issue_dir = plan_store.get_issue_dir(sample_repo, 123)
+        issue_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create a plan with an old timestamp
+        plan_store.create_plan(sample_repo, 123, "Old plan")
+
+        # Set .updated-at to a time after the plan was created
+        updated_at_file = issue_dir / ".updated-at"
+        updated_at_file.write_text(datetime(2025, 1, 1, 12, 0, 0).isoformat())
+
+        # Should return False because plan is older than .updated-at
+        assert not plan_store.has_plan(sample_repo, 123)

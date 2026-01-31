@@ -1,4 +1,4 @@
-"""Claude Code agent implementation."""
+"""Cursor Agent implementation."""
 
 import asyncio
 import json
@@ -21,76 +21,46 @@ from gh_worker.agents.base import (
 logger = structlog.get_logger()
 
 
-class ClaudeCodeAgent(BaseAgent):
-    """Agent that uses the claude CLI tool."""
+class CursorAgent(BaseAgent):
+    """Agent that uses the cursor-agent CLI tool."""
 
     def __init__(self, config: dict[str, Any] | None = None):
-        """Initialize the Claude Code agent.
+        """Initialize the Cursor Agent.
 
         Args:
-            config: Agent configuration (e.g., model, temperature, add_dirs)
+            config: Agent configuration (e.g., cli_path, model, api_key)
         """
         super().__init__(config)
-        logger.debug("initializing_claude_code_agent", config=config)
-        # Support both cli_path and claude_code_path config keys
+        logger.debug("initializing_cursor_agent", config=config)
+
+        # Support both cli_path and cursor_agent_path config keys
         if config:
-            cli_path = config.get("cli_path") or config.get("claude_code_path")
-            # Support add_dirs as a list or single string
-            add_dirs = config.get("add_dirs") or config.get("add_dir")
-            if add_dirs:
-                if isinstance(add_dirs, str):
-                    self.add_dirs = [add_dirs]
-                elif isinstance(add_dirs, list):
-                    self.add_dirs = add_dirs
-                else:
-                    self.add_dirs = []
-                    logger.warning("invalid_add_dirs_type", add_dirs=add_dirs)
-            else:
-                self.add_dirs = []
+            cli_path = config.get("cli_path") or config.get("cursor_agent_path")
+            self.model = config.get("model")
+            self.api_key = config.get("api_key")
         else:
             cli_path = None
-            self.add_dirs = []
+            self.model = None
+            self.api_key = None
 
-        # Default to claude (without file reference)
+        # Default to cursor-agent (try both cursor-agent and agent)
         if not cli_path:
-            cli_path = "claude"
+            # Try cursor-agent first, then agent
+            if shutil.which("cursor-agent"):
+                cli_path = "cursor-agent"
+            elif shutil.which("agent"):
+                cli_path = "agent"
+            else:
+                cli_path = "cursor-agent"  # Default fallback
             logger.debug("using_default_cli_path", cli_path=cli_path)
 
         self.cli_path = cli_path
-        logger.debug("cli_path_set", cli_path=self.cli_path, add_dirs=self.add_dirs)
-        # Parse the command: if it contains @, split into command and args
-        self._parse_cli_command()
+        logger.debug("cli_path_set", cli_path=self.cli_path)
 
     @property
     def name(self) -> str:
         """Return the agent name."""
-        return "claude-code"
-
-    def _parse_cli_command(self):
-        """Parse the CLI command string into executable and arguments.
-
-        Handles formats like:
-        - "claude-code" -> ["claude-code"]
-        - "claude@path/to/file.py" -> ["claude", "@path/to/file.py"]
-        """
-        logger.debug("parsing_cli_command", cli_path=self.cli_path)
-        if "@" in self.cli_path:
-            parts = self.cli_path.split("@", 1)
-            self.cli_executable = parts[0]
-            self.cli_args = [f"@{parts[1]}"]
-            logger.debug(
-                "cli_command_parsed",
-                executable=self.cli_executable,
-                args=self.cli_args,
-            )
-        else:
-            self.cli_executable = self.cli_path
-            self.cli_args = []
-            logger.debug(
-                "cli_command_parsed",
-                executable=self.cli_executable,
-                args=self.cli_args,
-            )
+        return "cursor-agent"
 
     @property
     def requires_cli(self) -> bool:
@@ -98,16 +68,19 @@ class ClaudeCodeAgent(BaseAgent):
         return True
 
     async def validate_environment(self) -> tuple[bool, str | None]:
-        """Validate that claude CLI is available.
+        """Validate that cursor-agent CLI is available.
 
         Returns:
             Tuple of (is_valid, error_message)
         """
-        logger.debug("validating_environment", executable=self.cli_executable)
-        cli_location = shutil.which(self.cli_executable)
-        logger.debug("cli_location_check", executable=self.cli_executable, found=cli_location)
+        logger.debug("validating_environment", executable=self.cli_path)
+        cli_location = shutil.which(self.cli_path)
+        logger.debug("cli_location_check", executable=self.cli_path, found=cli_location)
         if cli_location is None:
-            error_msg = f"claude CLI not found at '{self.cli_executable}'. Please install it first."
+            error_msg = (
+                f"cursor-agent CLI not found at '{self.cli_path}'. "
+                "Please install it first. Try: npm install -g @cursor/agent"
+            )
             logger.debug("environment_validation_failed", error=error_msg)
             return (False, error_msg)
         logger.debug("environment_validation_success", cli_path=cli_location)
@@ -116,7 +89,7 @@ class ClaudeCodeAgent(BaseAgent):
     async def plan(
         self, issue_content: str, repository_path: str
     ) -> AgentResult:
-        """Generate an implementation plan for an issue using claude.
+        """Generate an implementation plan for an issue using cursor-agent.
 
         Args:
             issue_content: The full issue description
@@ -130,28 +103,39 @@ class ClaudeCodeAgent(BaseAgent):
             repository_path=repository_path,
         )
 
-        # Generate a temporary directory for the plan
-        temp_dir = tempfile.mkdtemp()
-        plan_file_path = str(Path(temp_dir) / "PLAN.md")
-        logger.debug("temp_dir_generated", temp_dir=temp_dir, plan_file_path=plan_file_path)
+        # Generate a temporary file path for the plan
+        temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False)
+        plan_file_path = temp_file.name
+        temp_file.close()
+        logger.debug("plan_file_path_generated", plan_file_path=plan_file_path)
 
         prompt = self._build_plan_prompt(issue_content, plan_file_path)
+        prompt_length = len(prompt)
+        issue_content_length = len(issue_content)
+
         logger.debug(
             "plan_prompt_built",
-            prompt_length=len(prompt),
-            temp_dir=temp_dir,
+            prompt_length=prompt_length,
+            issue_content_length=issue_content_length,
+            plan_file_path=plan_file_path,
         )
 
+        # Warn if prompt is very large (likely to cause issues)
+        if prompt_length > 100000:  # ~100KB
+            logger.warning(
+                "large_prompt_detected",
+                prompt_length=prompt_length,
+                issue_content_length=issue_content_length,
+                message="Prompt is very large and may exceed CLI tool limits",
+            )
+
         try:
-            # Run claude in the repository directory with streaming
-            # Add the temporary directory so claude can access the plan file
-            logger.debug("running_claude_code_for_plan")
+            # Run cursor-agent in plan mode with streaming
+            logger.debug("running_cursor_agent_for_plan")
             agent_output = None
             session_id = None
-            # Combine config add_dirs with the temporary directory
-            add_dirs = self.add_dirs + [temp_dir] if self.add_dirs else [temp_dir]
-            async for event in self._run_claude_code_streaming(
-                prompt, repository_path, add_dirs=add_dirs, permission_mode="plan"
+            async for event in self._run_cursor_agent_streaming(
+                prompt, repository_path, mode="plan"
             ):
                 # Extract result from RESULT event (for session_id extraction)
                 if event.type == AgentEventType.RESULT:
@@ -207,20 +191,36 @@ class ClaudeCodeAgent(BaseAgent):
                 session_id=session_id,
             )
         except Exception as e:
-            logger.error("plan_generation_failed", error=str(e))
+            error_msg = str(e)
+            # Check if this is the chunking error
+            if "separator" in error_msg.lower() and "chunk" in error_msg.lower():
+                logger.error(
+                    "plan_generation_failed_chunking_error",
+                    error=error_msg,
+                    prompt_length=prompt_length,
+                    issue_content_length=issue_content_length,
+                    message="Prompt is too large for the CLI tool to process. Consider truncating or summarizing the issue content.",
+                )
+                enhanced_error = (
+                    f"Prompt too large for processing (length: {prompt_length} chars, "
+                    f"issue content: {issue_content_length} chars). "
+                    f"Original error: {error_msg}"
+                )
+            else:
+                logger.error(
+                    "plan_generation_failed",
+                    error=error_msg,
+                    prompt_length=prompt_length,
+                    issue_content_length=issue_content_length,
+                )
+                enhanced_error = error_msg
+
             logger.debug("plan_generation_exception", exc_info=True)
             return AgentResult(
                 success=False,
                 output="",
-                error=str(e),
+                error=enhanced_error,
             )
-        finally:
-            # Clean up the temporary directory
-            try:
-                shutil.rmtree(temp_dir)
-                logger.debug("temp_dir_cleaned_up", temp_dir=temp_dir)
-            except Exception as e:
-                logger.warning("temp_dir_cleanup_failed", temp_dir=temp_dir, error=str(e))
 
     async def implement(
         self,
@@ -230,7 +230,7 @@ class ClaudeCodeAgent(BaseAgent):
         issue_number: int,
         branch_name: str,
     ) -> AsyncIterator[AgentEvent]:
-        """Implement the plan using claude.
+        """Implement the plan using cursor-agent.
 
         Args:
             issue_content: The full issue description
@@ -261,10 +261,12 @@ class ClaudeCodeAgent(BaseAgent):
         )
 
         try:
-            # Stream output from claude
-            logger.debug("starting_claude_code_streaming", issue_number=issue_number)
+            # Stream output from cursor-agent
+            logger.debug("starting_cursor_agent_streaming", issue_number=issue_number)
             event_count = 0
-            async for event in self._run_claude_code_streaming(prompt, repository_path):
+            async for event in self._run_cursor_agent_streaming(
+                prompt, repository_path
+            ):
                 event_count += 1
                 logger.debug(
                     "streaming_event_received",
@@ -295,24 +297,31 @@ class ClaudeCodeAgent(BaseAgent):
             )
 
     async def monitor(self, session_id: str) -> AsyncIterator[AgentEvent]:
-        """Monitor an ongoing claude session.
+        """Monitor an ongoing cursor-agent session.
 
         Args:
-            session_id: The session ID to monitor
+            session_id: The session ID (chat ID) to monitor
 
         Yields:
             AgentEvent objects from the session
         """
         logger.info("monitoring_session", session_id=session_id)
-        logger.debug("monitor_not_implemented", session_id=session_id)
 
-        # Note: claude CLI may not support session monitoring directly
-        # This would need to be implemented based on the actual CLI capabilities
-        yield AgentEvent(
-            type=AgentEventType.STATUS,
-            content=f"Monitoring session {session_id} (not yet implemented)",
-            metadata={"session_id": session_id},
-        )
+        # Use --resume to continue the session
+        try:
+            async for event in self._run_cursor_agent_streaming(
+                "",  # Empty prompt when resuming
+                None,  # No specific workspace needed
+                resume_session_id=session_id,
+            ):
+                yield event
+        except Exception as e:
+            logger.error("monitoring_failed", error=str(e), session_id=session_id)
+            yield AgentEvent(
+                type=AgentEventType.ERROR,
+                content=f"Failed to monitor session: {e}",
+                metadata={"session_id": session_id, "error": str(e)},
+            )
 
     def _build_plan_prompt(self, issue_content: str, plan_file_path: str) -> str:
         """Build the prompt for plan generation.
@@ -386,62 +395,68 @@ Please proceed with the implementation.
         )
         return prompt
 
-    async def _run_claude_code_streaming(
+    async def _run_cursor_agent_streaming(
         self,
         prompt: str,
-        cwd: str,
-        add_dirs: list[str] | None = None,
-        permission_mode: str | None = None,
+        cwd: str | None,
+        mode: str | None = None,
+        resume_session_id: str | None = None,
     ) -> AsyncIterator[AgentEvent]:
-        """Run claude CLI and stream output.
+        """Run cursor-agent CLI and stream output.
 
         Args:
-            prompt: The prompt to send to claude
-            cwd: Working directory for the command
-            add_dirs: Optional list of directories to add with --add-dir flags.
-                     If None, uses self.add_dirs from config.
-            permission_mode: Optional permission mode (e.g., "plan") to pass as --permission-mode flag.
+            prompt: The prompt to send to cursor-agent
+            cwd: Working directory for the command (None for resume)
+            mode: Execution mode (e.g., "plan", "ask")
+            resume_session_id: Session ID to resume (if provided)
 
         Yields:
             AgentEvent objects with output chunks
         """
-        # Use provided add_dirs or fall back to instance config
-        if add_dirs is None:
-            add_dirs = self.add_dirs
-
         # Build command with --print and --output-format=stream-json for streaming
-        # Pass prompt as argument for better compatibility
-        cmd = [
-            self.cli_executable
-        ] + self.cli_args + [
-            "--print",
-            "--output-format=stream-json",
-            "--verbose",
-            prompt,
-        ]
+        cmd = [self.cli_path, "--print", "--output-format=stream-json"]
 
-        # Add --add-dir flags for each directory (after the prompt)
-        for add_dir in add_dirs:
-            cmd.extend(["--add-dir", add_dir])
+        # Add workspace if cwd is provided
+        if cwd:
+            cmd.extend(["--workspace", cwd])
 
-        # Add --permission-mode flag if provided
-        if permission_mode:
-            cmd.extend(["--permission-mode", permission_mode])
+        # Add model if configured
+        if self.model:
+            cmd.extend(["--model", self.model])
+
+        # Add API key if configured
+        if self.api_key:
+            cmd.extend(["--api-key", self.api_key])
+
+        # Add mode if specified
+        if mode:
+            cmd.extend(["--mode", mode])
+
+        # Add resume if session ID is provided
+        if resume_session_id:
+            cmd.extend(["--resume", resume_session_id])
+
+        # Add prompt if provided (not when resuming)
+        if prompt and not resume_session_id:
+            cmd.append(prompt)
+
         logger.debug(
-            "executing_claude_code_streaming_command",
+            "executing_cursor_agent_streaming_command",
             command=cmd,
             cwd=cwd,
-            prompt_length=len(prompt),
-            add_dirs=add_dirs,
+            prompt_length=len(prompt) if prompt else 0,
+            mode=mode,
+            resume_session_id=resume_session_id,
         )
+
         process = await asyncio.create_subprocess_exec(
             *cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            cwd=cwd,
+            cwd=cwd if cwd else None,
             limit=10 * 2**20,  # 10MB buffer limit to prevent "Separator is not found, and chunk exceed the limit" errors
         )
-        logger.debug("claude_code_streaming_process_started", pid=process.pid)
+        logger.debug("cursor_agent_streaming_process_started", pid=process.pid)
 
         # Stream stdout (JSON lines format)
         line_count = 0
@@ -449,6 +464,7 @@ Please proceed with the implementation.
         event_count = 0
         event_counts_by_type = {}
         result_parts = []  # Collect output for RESULT event
+
         if process.stdout:
             while True:
                 line = await process.stdout.readline()
@@ -469,8 +485,8 @@ Please proceed with the implementation.
                     data = json.loads(content)
                     logger.debug("json_line_parsed", line_number=line_count, data_keys=list(data.keys()))
 
-                    # Extract text content from the message.content array
-                    # Structure: {'type': 'assistant', 'message': {'content': [{'type': 'text', 'text': '...'}]}, ...}
+                    # Extract text content from the message structure
+                    # Structure may vary, so we'll handle different formats
                     text_content = None
                     message = data.get("message", {})
                     if message:
@@ -493,6 +509,10 @@ Please proceed with the implementation.
                         if text_parts:
                             text_content = "".join(text_parts)
 
+                    # Also check for direct text content
+                    if not text_content:
+                        text_content = data.get("text") or data.get("content")
+
                     if text_content:
                         # Determine event type based on data structure
                         event_type = AgentEventType.OUTPUT
@@ -513,9 +533,9 @@ Please proceed with the implementation.
                         if event_type == AgentEventType.OUTPUT:
                             result_parts.append(text_content)
 
-                        # Extract session_id from JSON data if present
+                        # Extract session_id/chat_id from JSON data if present
                         metadata = {}
-                        session_id = data.get("session_id")
+                        session_id = data.get("session_id") or data.get("chat_id") or data.get("chatId")
                         if session_id:
                             metadata["session_id"] = session_id
 
@@ -523,7 +543,7 @@ Please proceed with the implementation.
                         event_counts_by_type[event_type.value] = event_counts_by_type.get(event_type.value, 0) + 1
 
                         logger.info(
-                            "claude_code_streaming_event",
+                            "cursor_agent_streaming_event",
                             event_number=event_count,
                             event_type=event_type.value,
                             content_length=len(text_content),
@@ -539,6 +559,7 @@ Please proceed with the implementation.
                         )
                     else:
                         logger.debug("no_text_content_in_json", line_number=line_count, data=data)
+
                 except json.JSONDecodeError as e:
                     json_parse_errors += 1
                     logger.debug(
@@ -563,7 +584,7 @@ Please proceed with the implementation.
                         event_counts_by_type[event_type.value] = event_counts_by_type.get(event_type.value, 0) + 1
 
                         logger.info(
-                            "claude_code_streaming_event",
+                            "cursor_agent_streaming_event",
                             event_number=event_count,
                             event_type=event_type.value,
                             content_length=len(content),
@@ -609,7 +630,7 @@ Please proceed with the implementation.
 
                 error_content = f"Process failed with exit code {process.returncode}: {stderr_output}"
                 logger.info(
-                    "claude_code_streaming_event",
+                    "cursor_agent_streaming_event",
                     event_number=event_count,
                     event_type=AgentEventType.ERROR.value,
                     content_length=len(error_content),
@@ -628,7 +649,7 @@ Please proceed with the implementation.
                 event_counts_by_type[AgentEventType.RESULT.value] = event_counts_by_type.get(AgentEventType.RESULT.value, 0) + 1
 
                 logger.info(
-                    "claude_code_streaming_event",
+                    "cursor_agent_streaming_event",
                     event_number=event_count,
                     event_type=AgentEventType.RESULT.value,
                     content_length=len(result_content),
@@ -640,7 +661,7 @@ Please proceed with the implementation.
 
         # Log summary of all events
         logger.info(
-            "claude_code_streaming_completed",
+            "cursor_agent_streaming_completed",
             total_events=event_count,
             events_by_type=event_counts_by_type,
             total_lines=line_count,
@@ -649,10 +670,10 @@ Please proceed with the implementation.
         )
 
     def _extract_session_id(self, output: str) -> str | None:
-        """Extract session ID from claude output.
+        """Extract session ID (chat ID) from cursor-agent output.
 
         Args:
-            output: Output from claude
+            output: Output from cursor-agent
 
         Returns:
             Session ID if found, None otherwise
@@ -660,14 +681,18 @@ Please proceed with the implementation.
         logger.debug("extracting_session_id", output_length=len(output))
 
         # First, try to extract from JSON structures in the output
-        # Look for JSON lines with session_id field
+        # Look for JSON lines with session_id, chat_id, or chatId field
         for line in output.splitlines():
             line = line.strip()
             if not line:
                 continue
             try:
                 data = json.loads(line)
-                session_id = data.get("session_id")
+                session_id = (
+                    data.get("session_id")
+                    or data.get("chat_id")
+                    or data.get("chatId")
+                )
                 if session_id:
                     logger.debug("session_id_found_in_json", session_id=session_id)
                     return session_id
@@ -675,9 +700,11 @@ Please proceed with the implementation.
                 # Not JSON, continue to next line
                 continue
 
-        # Fallback: Try to find session ID pattern in text (adjust based on actual claude output)
+        # Fallback: Try to find session ID pattern in text
         patterns = [
             r"session[_\s]id[:\s]+([a-f0-9-]+)",
+            r"chat[_\s]id[:\s]+([a-f0-9-]+)",
+            r"chatId[:\s]+([a-f0-9-]+)",
             r"session[:\s]+([a-f0-9-]+)",
             r"id[:\s]+([a-f0-9-]+)",
         ]

@@ -1,6 +1,6 @@
 """Plan storage management."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from gh_worker.models.plan import PlanMetadata
@@ -44,7 +44,7 @@ class PlanStore:
         issue_dir = self.get_issue_dir(repository, issue_number)
         issue_dir.mkdir(parents=True, exist_ok=True)
 
-        timestamp = datetime.now()
+        timestamp = datetime.now(timezone.utc)
         plan_filename = f"plan-{timestamp.strftime('%Y%m%d-%H%M%S')}.md"
         plan_file = issue_dir / plan_filename
 
@@ -97,7 +97,7 @@ class PlanStore:
             metadata = PlanMetadata(
                 issue_number=issue_number,
                 repository=repository.full_name,
-                created_at=datetime.fromtimestamp(latest_plan.stat().st_mtime),
+                created_at=datetime.fromtimestamp(latest_plan.stat().st_mtime, tz=timezone.utc),
                 plan_file=latest_plan,
             )
         else:
@@ -137,7 +137,7 @@ class PlanStore:
                 metadata = PlanMetadata(
                     issue_number=issue_number,
                     repository=repository.full_name,
-                    created_at=datetime.fromtimestamp(plan_file.stat().st_mtime),
+                    created_at=datetime.fromtimestamp(plan_file.stat().st_mtime, tz=timezone.utc),
                     plan_file=plan_file,
                 )
 
@@ -158,18 +158,50 @@ class PlanStore:
         metadata.save(metadata_file)
 
     def has_plan(self, repository: Repository, issue_number: int) -> bool:
-        """Check if an issue has any plans.
+        """Check if an issue has a plan matching its .updated-at timestamp.
 
         Args:
             repository: Repository object
             issue_number: Issue number
 
         Returns:
-            True if at least one plan exists
+            True if a plan exists that matches the issue's .updated-at timestamp
         """
         issue_dir = self.get_issue_dir(repository, issue_number)
 
         if not issue_dir.exists():
             return False
 
-        return len(list(issue_dir.glob("plan-*.md"))) > 0
+        # Check if .updated-at file exists
+        updated_at_file = issue_dir / ".updated-at"
+        if not updated_at_file.exists():
+            return False
+
+        # Read the updated-at timestamp
+        try:
+            timestamp_str = updated_at_file.read_text().strip()
+            updated_at = datetime.fromisoformat(timestamp_str)
+            # Normalize to UTC-aware datetime for comparison
+            if updated_at.tzinfo is None:
+                updated_at = updated_at.replace(tzinfo=timezone.utc)
+            else:
+                updated_at = updated_at.astimezone(timezone.utc)
+        except (ValueError, OSError):
+            return False
+
+        # Check if there's a plan matching this timestamp
+        # A plan matches if it was created at or after the updated-at timestamp
+        plans = self.list_plans(repository, issue_number)
+        for plan_file, metadata in plans:
+            # Normalize plan created_at to UTC-aware datetime for comparison
+            plan_created_at = metadata.created_at
+            if plan_created_at.tzinfo is None:
+                plan_created_at = plan_created_at.replace(tzinfo=timezone.utc)
+            else:
+                plan_created_at = plan_created_at.astimezone(timezone.utc)
+
+            # Plan matches if created_at is at or after the updated_at timestamp
+            if plan_created_at >= updated_at:
+                return True
+
+        return False
