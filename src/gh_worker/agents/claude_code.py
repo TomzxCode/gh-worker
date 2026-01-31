@@ -28,28 +28,15 @@ class ClaudeCodeAgent(BaseAgent):
         """Initialize the Claude Code agent.
 
         Args:
-            config: Agent configuration (e.g., model, temperature, add_dirs)
+            config: Agent configuration (e.g., model, temperature)
         """
         super().__init__(config)
         logger.debug("initializing_claude_code_agent", config=config)
         # Support both cli_path and claude_code_path config keys
         if config:
             cli_path = config.get("cli_path") or config.get("claude_code_path")
-            # Support add_dirs as a list or single string
-            add_dirs = config.get("add_dirs") or config.get("add_dir")
-            if add_dirs:
-                if isinstance(add_dirs, str):
-                    self.add_dirs = [add_dirs]
-                elif isinstance(add_dirs, list):
-                    self.add_dirs = add_dirs
-                else:
-                    self.add_dirs = []
-                    logger.warning("invalid_add_dirs_type", add_dirs=add_dirs)
-            else:
-                self.add_dirs = []
         else:
             cli_path = None
-            self.add_dirs = []
 
         # Default to claude (without file reference)
         if not cli_path:
@@ -57,7 +44,7 @@ class ClaudeCodeAgent(BaseAgent):
             logger.debug("using_default_cli_path", cli_path=cli_path)
 
         self.cli_path = cli_path
-        logger.debug("cli_path_set", cli_path=self.cli_path, add_dirs=self.add_dirs)
+        logger.debug("cli_path_set", cli_path=self.cli_path)
         # Parse the command: if it contains @, split into command and args
         self._parse_cli_command()
 
@@ -148,10 +135,13 @@ class ClaudeCodeAgent(BaseAgent):
             logger.debug("running_claude_code_for_plan")
             agent_output = None
             session_id = None
-            # Combine config add_dirs with the temporary directory
-            add_dirs = self.add_dirs + [temp_dir] if self.add_dirs else [temp_dir]
+            # Allow Edit tool for the temporary directory
+            # Claude expects absolute paths to start with /, so //tmp -> /tmp (/tmp would point to <cwd>/tmp)
+            allowed_tools = [
+                f"Edit(/{temp_dir}/**)",
+            ]
             async for event in self._run_claude_code_streaming(
-                prompt, repository_path, add_dirs=add_dirs, permission_mode="plan"
+                prompt, repository_path, permission_mode="plan", allowed_tools=allowed_tools
             ):
                 # Extract result from RESULT event (for session_id extraction)
                 if event.type == AgentEventType.RESULT:
@@ -294,6 +284,71 @@ class ClaudeCodeAgent(BaseAgent):
                 metadata={"issue_number": issue_number, "error": str(e)},
             )
 
+    async def commit(
+        self,
+        repository_path: str,
+        issue_number: int,
+        branch_name: str,
+    ) -> AsyncIterator[AgentEvent]:
+        """Commit changes with a descriptive message using claude.
+
+        Args:
+            repository_path: Path to the cloned repository
+            issue_number: Issue number
+            branch_name: Branch name
+
+        Yields:
+            AgentEvent objects as the commit progresses
+        """
+        logger.info(
+            "starting_commit",
+            issue_number=issue_number,
+            branch_name=branch_name,
+            repository_path=repository_path,
+        )
+
+        prompt = self._build_commit_prompt(issue_number, branch_name)
+        logger.debug(
+            "commit_prompt_built",
+            issue_number=issue_number,
+            branch_name=branch_name,
+            prompt_length=len(prompt),
+        )
+
+        try:
+            # Stream output from claude
+            logger.debug("starting_claude_code_streaming_for_commit", issue_number=issue_number)
+            event_count = 0
+            async for event in self._run_claude_code_streaming(prompt, repository_path):
+                event_count += 1
+                logger.debug(
+                    "streaming_event_received",
+                    issue_number=issue_number,
+                    event_type=event.type.value,
+                    event_count=event_count,
+                )
+                yield event
+
+            logger.debug(
+                "streaming_completed",
+                issue_number=issue_number,
+                total_events=event_count,
+            )
+            yield AgentEvent(
+                type=AgentEventType.COMPLETION,
+                content="Commit completed",
+                metadata={"issue_number": issue_number, "branch": branch_name},
+            )
+
+        except Exception as e:
+            logger.error("commit_failed", error=str(e), issue_number=issue_number)
+            logger.debug("commit_exception", exc_info=True)
+            yield AgentEvent(
+                type=AgentEventType.FAILURE,
+                content=f"Commit failed: {e}",
+                metadata={"issue_number": issue_number, "error": str(e)},
+            )
+
     async def monitor(self, session_id: str) -> AsyncIterator[AgentEvent]:
         """Monitor an ongoing claude session.
 
@@ -368,11 +423,11 @@ Implementation Plan:
 {plan_content}
 
 Steps:
-1. Create and checkout branch: {branch_name}
-2. Implement the changes according to the plan
-3. Run tests to ensure everything works
-4. Commit the changes with a descriptive message
-5. Create a pull request
+1. Implement the changes according to the plan
+2. Run tests to ensure everything works
+
+Note: You are already on branch {branch_name}. Do not create or checkout branches.
+Do not commit changes yet - that will be done separately after implementation.
 
 Please proceed with the implementation.
 """
@@ -386,53 +441,80 @@ Please proceed with the implementation.
         )
         return prompt
 
+    def _build_commit_prompt(self, issue_number: int, branch_name: str) -> str:
+        """Build the prompt for generating a commit message.
+
+        Args:
+            issue_number: Issue number
+            branch_name: Branch name
+
+        Returns:
+            Formatted prompt string
+        """
+        prompt = f"""Please generate a descriptive commit message for the changes made.
+
+You are working on branch {branch_name} for issue #{issue_number}.
+
+Requirements:
+- The commit message should be clear and descriptive
+- It should explain what was implemented
+- It should reference issue #{issue_number}
+- Provide only the commit message text, nothing else
+
+Please provide the commit message.
+"""
+        logger.debug(
+            "commit_prompt_built",
+            issue_number=issue_number,
+            branch_name=branch_name,
+            prompt_length=len(prompt),
+        )
+        return prompt
+
     async def _run_claude_code_streaming(
         self,
         prompt: str,
         cwd: str,
-        add_dirs: list[str] | None = None,
         permission_mode: str | None = None,
+        allowed_tools: list[str] | None = None,
     ) -> AsyncIterator[AgentEvent]:
         """Run claude CLI and stream output.
 
         Args:
             prompt: The prompt to send to claude
             cwd: Working directory for the command
-            add_dirs: Optional list of directories to add with --add-dir flags.
-                     If None, uses self.add_dirs from config.
             permission_mode: Optional permission mode (e.g., "plan") to pass as --permission-mode flag.
+            allowed_tools: Optional list of allowed tools to pass as --allowedTools flags.
 
         Yields:
             AgentEvent objects with output chunks
         """
-        # Use provided add_dirs or fall back to instance config
-        if add_dirs is None:
-            add_dirs = self.add_dirs
 
         # Build command with --print and --output-format=stream-json for streaming
         # Pass prompt as argument for better compatibility
         cmd = [
             self.cli_executable
         ] + self.cli_args + [
+            "--debug",
             "--print",
             "--output-format=stream-json",
             "--verbose",
             prompt,
         ]
 
-        # Add --add-dir flags for each directory (after the prompt)
-        for add_dir in add_dirs:
-            cmd.extend(["--add-dir", add_dir])
-
         # Add --permission-mode flag if provided
         if permission_mode:
             cmd.extend(["--permission-mode", permission_mode])
+
+        # Add --allowedTools flags for each allowed tool
+        if allowed_tools:
+            cmd.extend(["--allowedTools", " ".join(allowed_tools)])
+
         logger.debug(
             "executing_claude_code_streaming_command",
             command=cmd,
             cwd=cwd,
             prompt_length=len(prompt),
-            add_dirs=add_dirs,
         )
         process = await asyncio.create_subprocess_exec(
             *cmd,

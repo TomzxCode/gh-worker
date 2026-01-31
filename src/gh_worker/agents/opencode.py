@@ -106,6 +106,34 @@ class OpenCodeAgent(BaseAgent):
             metadata={"issue_number": issue_number, "agent": "opencode"},
         )
 
+    async def commit(
+        self,
+        repository_path: str,
+        issue_number: int,
+        branch_name: str,
+    ) -> AsyncIterator[AgentEvent]:
+        """Commit changes using OpenCode.
+
+        Args:
+            repository_path: Path to the cloned repository
+            issue_number: Issue number
+            branch_name: Branch name
+
+        Yields:
+            AgentEvent objects as the commit progresses
+        """
+        logger.warning(
+            "opencode_agent_not_implemented",
+            issue_number=issue_number,
+            message="OpenCode agent is a placeholder and not yet implemented",
+        )
+
+        yield AgentEvent(
+            type=AgentEventType.ERROR,
+            content="OpenCode agent is not yet implemented. Please use claude-code instead.",
+            metadata={"issue_number": issue_number, "agent": "opencode"},
+        )
+
     async def monitor(self, session_id: str) -> AsyncIterator[AgentEvent]:
         """Monitor an ongoing OpenCode session.
 

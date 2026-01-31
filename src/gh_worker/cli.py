@@ -161,6 +161,22 @@ def implement(
     force: Annotated[
         bool, Parameter(help="Implement even if already completed")
     ] = False,
+    use_worktree: Annotated[
+        bool | None,
+        Parameter(help="Use git worktree for isolated implementation (overrides config)"),
+    ] = None,
+    push_branch: Annotated[
+        bool | None,
+        Parameter(help="Push branch to remote after implementation (overrides config)"),
+    ] = None,
+    create_pr: Annotated[
+        bool | None,
+        Parameter(help="Create pull request after implementation (overrides config)"),
+    ] = None,
+    delete_worktree: Annotated[
+        bool | None,
+        Parameter(help="Delete worktree after implementation (overrides config)"),
+    ] = None,
     config_path: Annotated[
         Path | None,
         Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
@@ -179,6 +195,10 @@ def implement(
         all_repos=all_repos,
         parallelism=parallelism,
         force=force,
+        use_worktree=use_worktree,
+        push_branch=push_branch,
+        create_pr=create_pr,
+        delete_worktree=delete_worktree,
         config_path=config_path,
         agent=agent,
     )

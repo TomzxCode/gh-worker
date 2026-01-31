@@ -102,6 +102,25 @@ class BaseAgent(ABC):
         """
         pass
 
+    @abstractmethod
+    async def commit(
+        self,
+        repository_path: str,
+        issue_number: int,
+        branch_name: str,
+    ) -> AsyncIterator[AgentEvent]:
+        """Commit changes with a descriptive message.
+
+        Args:
+            repository_path: Path to the cloned repository
+            issue_number: Issue number
+            branch_name: Branch name
+
+        Yields:
+            AgentEvent objects as the commit progresses
+        """
+        pass
+
     @property
     @abstractmethod
     def name(self) -> str:

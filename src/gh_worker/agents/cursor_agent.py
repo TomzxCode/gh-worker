@@ -296,6 +296,71 @@ class CursorAgent(BaseAgent):
                 metadata={"issue_number": issue_number, "error": str(e)},
             )
 
+    async def commit(
+        self,
+        repository_path: str,
+        issue_number: int,
+        branch_name: str,
+    ) -> AsyncIterator[AgentEvent]:
+        """Commit changes with a descriptive message using cursor-agent.
+
+        Args:
+            repository_path: Path to the cloned repository
+            issue_number: Issue number
+            branch_name: Branch name
+
+        Yields:
+            AgentEvent objects as the commit progresses
+        """
+        logger.info(
+            "starting_commit",
+            issue_number=issue_number,
+            branch_name=branch_name,
+            repository_path=repository_path,
+        )
+
+        prompt = self._build_commit_prompt(issue_number, branch_name)
+        logger.debug(
+            "commit_prompt_built",
+            issue_number=issue_number,
+            branch_name=branch_name,
+            prompt_length=len(prompt),
+        )
+
+        try:
+            # Stream output from cursor-agent
+            logger.debug("starting_cursor_agent_streaming_for_commit", issue_number=issue_number)
+            event_count = 0
+            async for event in self._run_cursor_agent_streaming(prompt, repository_path):
+                event_count += 1
+                logger.debug(
+                    "streaming_event_received",
+                    issue_number=issue_number,
+                    event_type=event.type.value,
+                    event_count=event_count,
+                )
+                yield event
+
+            logger.debug(
+                "streaming_completed",
+                issue_number=issue_number,
+                total_events=event_count,
+            )
+            yield AgentEvent(
+                type=AgentEventType.COMPLETION,
+                content="Commit completed",
+                metadata={"issue_number": issue_number, "branch": branch_name},
+            )
+
+        except Exception as e:
+            logger.error("commit_failed", error=str(e), issue_number=issue_number)
+            logger.debug("commit_exception", exc_info=True)
+            yield AgentEvent(
+                type=AgentEventType.FAILURE,
+                content=f"Commit failed: {e}",
+                metadata={"issue_number": issue_number, "error": str(e)},
+            )
+
     async def monitor(self, session_id: str) -> AsyncIterator[AgentEvent]:
         """Monitor an ongoing cursor-agent session.
 
@@ -377,11 +442,11 @@ Implementation Plan:
 {plan_content}
 
 Steps:
-1. Create and checkout branch: {branch_name}
-2. Implement the changes according to the plan
-3. Run tests to ensure everything works
-4. Commit the changes with a descriptive message
-5. Create a pull request
+1. Implement the changes according to the plan
+2. Run tests to ensure everything works
+
+Note: You are already on branch {branch_name}. Do not create or checkout branches.
+Do not commit changes yet - that will be done separately after implementation.
 
 Please proceed with the implementation.
 """
@@ -391,6 +456,36 @@ Please proceed with the implementation.
             branch_name=branch_name,
             issue_content_length=len(issue_content),
             plan_content_length=len(plan_content),
+            prompt_length=len(prompt),
+        )
+        return prompt
+
+    def _build_commit_prompt(self, issue_number: int, branch_name: str) -> str:
+        """Build the prompt for generating a commit message.
+
+        Args:
+            issue_number: Issue number
+            branch_name: Branch name
+
+        Returns:
+            Formatted prompt string
+        """
+        prompt = f"""Please generate a descriptive commit message for the changes made.
+
+You are working on branch {branch_name} for issue #{issue_number}.
+
+Requirements:
+- The commit message should be clear and descriptive
+- It should explain what was implemented
+- It should reference issue #{issue_number}
+- Provide only the commit message text, nothing else
+
+Please provide the commit message.
+"""
+        logger.debug(
+            "commit_prompt_built",
+            issue_number=issue_number,
+            branch_name=branch_name,
             prompt_length=len(prompt),
         )
         return prompt

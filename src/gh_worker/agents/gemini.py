@@ -107,6 +107,34 @@ class GeminiAgent(BaseAgent):
             metadata={"issue_number": issue_number, "agent": "gemini"},
         )
 
+    async def commit(
+        self,
+        repository_path: str,
+        issue_number: int,
+        branch_name: str,
+    ) -> AsyncIterator[AgentEvent]:
+        """Commit changes using Gemini.
+
+        Args:
+            repository_path: Path to the cloned repository
+            issue_number: Issue number
+            branch_name: Branch name
+
+        Yields:
+            AgentEvent objects as the commit progresses
+        """
+        logger.warning(
+            "gemini_agent_not_implemented",
+            issue_number=issue_number,
+            message="Gemini agent is a placeholder and not yet implemented",
+        )
+
+        yield AgentEvent(
+            type=AgentEventType.ERROR,
+            content="Gemini agent is not yet implemented. Please use claude-code instead.",
+            metadata={"issue_number": issue_number, "agent": "gemini"},
+        )
+
     async def monitor(self, session_id: str) -> AsyncIterator[AgentEvent]:
         """Monitor an ongoing Gemini session.
 

@@ -45,6 +45,10 @@ def config_command(key: str, value: str | None = None, config_path: Path | None 
             if "parallelism" in key.lower():
                 typed_value = int(value)
 
+            # Handle boolean types
+            if isinstance(typed_value, str) and typed_value.lower() in ("true", "false", "1", "0", "yes", "no"):
+                typed_value = typed_value.lower() in ("true", "1", "yes")
+
             manager.set(key, typed_value)
             print(f"Set {key} = {typed_value}")
             logger.info("config_updated", key=key, value=str(typed_value))

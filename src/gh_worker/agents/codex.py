@@ -107,6 +107,34 @@ class CodexAgent(BaseAgent):
             metadata={"issue_number": issue_number, "agent": "codex"},
         )
 
+    async def commit(
+        self,
+        repository_path: str,
+        issue_number: int,
+        branch_name: str,
+    ) -> AsyncIterator[AgentEvent]:
+        """Commit changes using Codex.
+
+        Args:
+            repository_path: Path to the cloned repository
+            issue_number: Issue number
+            branch_name: Branch name
+
+        Yields:
+            AgentEvent objects as the commit progresses
+        """
+        logger.warning(
+            "codex_agent_not_implemented",
+            issue_number=issue_number,
+            message="Codex agent is a placeholder and not yet implemented",
+        )
+
+        yield AgentEvent(
+            type=AgentEventType.ERROR,
+            content="Codex agent is not yet implemented. Please use claude-code instead.",
+            metadata={"issue_number": issue_number, "agent": "codex"},
+        )
+
     async def monitor(self, session_id: str) -> AsyncIterator[AgentEvent]:
         """Monitor an ongoing Codex session.
 

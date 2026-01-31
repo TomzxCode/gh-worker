@@ -15,6 +15,18 @@ class ImplementConfig(BaseModel):
     """Configuration for implement command."""
 
     parallelism: int = Field(default=1, ge=1, description="Number of parallel implementations")
+    use_worktree: bool = Field(
+        default=True, description="Use git worktree for isolated implementation branches"
+    )
+    push_branch: bool = Field(
+        default=False, description="Push branch to remote after implementation"
+    )
+    create_pr: bool = Field(
+        default=False, description="Create pull request after implementation"
+    )
+    delete_worktree: bool = Field(
+        default=True, description="Delete worktree after implementation completes"
+    )
 
 
 class SyncConfig(BaseModel):

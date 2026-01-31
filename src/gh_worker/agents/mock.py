@@ -88,6 +88,28 @@ Use a real agent (e.g., claude-code) for actual plan generation.
             metadata={"agent": "mock", "issue_number": issue_number},
         )
 
+    async def commit(
+        self,
+        repository_path: str,
+        issue_number: int,
+        branch_name: str,
+    ) -> AsyncIterator[AgentEvent]:
+        """Commit changes (mock implementation).
+
+        Args:
+            repository_path: Path to the cloned repository
+            issue_number: Issue number
+            branch_name: Branch name
+
+        Yields:
+            AgentEvent objects as the commit progresses
+        """
+        yield AgentEvent(
+            type=AgentEventType.ERROR,
+            content="Mock agent does not support committing. Use a real agent for committing.",
+            metadata={"agent": "mock", "issue_number": issue_number},
+        )
+
     async def monitor(self, session_id: str) -> AsyncIterator[AgentEvent]:
         """Monitor an ongoing agent session (mock implementation).
 
