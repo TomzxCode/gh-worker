@@ -22,6 +22,11 @@ jobs:
       - name: Install dependencies
         run: uv sync --locked --dev
 
+      - name: Configure Git for tests
+        run: |
+          git config --global user.email "ci@gh-worker.test"
+          git config --global user.name "CI"
+
       - name: Ruff check
         run: uv run ruff check
 
