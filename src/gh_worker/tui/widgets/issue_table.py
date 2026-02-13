@@ -1,6 +1,37 @@
 """Issues DataTable widget."""
 
+from rich.text import Text
+from textual import events
 from textual.widgets import DataTable
+from textual.widgets.data_table import ColumnKey
+
+# Column keys for sorting (must match add_columns)
+COL_ISSUE_NUM = "#"
+COL_REPOSITORY = "Repository"
+COL_TITLE = "Title"
+COL_AUTHOR = "Author"
+COL_ASSIGNEES = "Assignees"
+COL_STATE = "State"
+COL_PLAN = "Plan"
+COL_IMPLEMENTATION = "Implementation"
+
+
+def _numeric_sort_key(val: str) -> int:
+    """Sort key for issue numbers - parses as int for correct ordering."""
+    s = str(val).strip()
+    return int(s) if s.isdigit() else 0
+
+
+class _ReverseStr:
+    """Wrapper that inverts string comparison for descending sort."""
+
+    __slots__ = ("value",)
+
+    def __init__(self, value: str) -> None:
+        self.value = str(value)
+
+    def __lt__(self, other: "_ReverseStr") -> bool:
+        return self.value > other.value
 
 
 class IssueTable(DataTable):
@@ -10,8 +41,26 @@ class IssueTable(DataTable):
         super().__init__(**kwargs)
         self.cursor_type = "cell"
         self.add_columns(
-            "#", "Repository", "Title", "Author", "Assignees", "State", "Plan", "Implementation"
+            ("#", COL_ISSUE_NUM),
+            ("Repository", COL_REPOSITORY),
+            ("Title", COL_TITLE),
+            ("Author", COL_AUTHOR),
+            ("Assignees", COL_ASSIGNEES),
+            ("State", COL_STATE),
+            ("Plan", COL_PLAN),
+            ("Implementation", COL_IMPLEMENTATION),
         )
+        self._sort_columns: list[tuple[str, bool]] = []  # (column_key, reverse)
+        self._last_header_click_shift = False
+
+    async def _on_click(self, event: events.Click) -> None:
+        """Capture shift state for header clicks before delegating."""
+        meta = event.style.meta or {}
+        if "row" in meta and "column" in meta:
+            row_index = meta["row"]
+            if self.show_header and row_index == -1:
+                self._last_header_click_shift = event.shift
+        await super()._on_click(event)
 
     def clear_and_populate(
         self,
@@ -59,3 +108,84 @@ class IssueTable(DataTable):
                 impl_display,
                 key=row_key,
             )
+        self._apply_sort()
+
+    def on_data_table_header_selected(self, event: DataTable.HeaderSelected) -> None:
+        """Handle column header click. Shift+click adds to sort, click toggles or replaces."""
+        if event.control != self:
+            return
+        col_key = event.column_key
+        key_str = col_key.value if isinstance(col_key, ColumnKey) else str(col_key)
+        shift = self._last_header_click_shift
+
+        # If column is already in sort: toggle its direction (works with or without shift)
+        for i, (k, rev) in enumerate(self._sort_columns):
+            if k == key_str:
+                if rev:
+                    self._sort_columns.pop(i)
+                else:
+                    self._sort_columns[i] = (k, True)
+                self._apply_sort()
+                return
+
+        if shift:
+            self._sort_columns.append((key_str, False))
+        else:
+            self._sort_columns = [(key_str, False)]
+        self._apply_sort()
+
+    def _update_header_labels(self) -> None:
+        """Update column headers to show sort direction (↑ asc, ↓ desc) and order (1, 2, …)."""
+        sort_map = {k: (i + 1, rev) for i, (k, rev) in enumerate(self._sort_columns)}
+        show_order = len(self._sort_columns) > 1
+        for column in self.ordered_columns:
+            key_str = column.key.value if hasattr(column.key, "value") else str(column.key)
+            base = key_str
+            if key_str in sort_map:
+                order, rev = sort_map[key_str]
+                arrow = " ↓" if rev else " ↑"
+                order_str = f" {order}" if show_order else ""
+                column.label = Text(base + order_str + arrow)
+            else:
+                column.label = Text(base)
+
+    def _apply_sort(self) -> None:
+        """Apply current sort state to the table."""
+        self._update_header_labels()
+        if not self._sort_columns or self.row_count == 0:
+            self.refresh()
+            return
+        # Single sort with composite key - DataTable.sort() uses _data.items()
+        # so multiple sort() calls would lose previous order.
+        # Use ColumnKey from table to match row_data dict keys
+        col_key_map = {}
+        for c in self.ordered_columns:
+            k = c.key.value if hasattr(c.key, "value") and c.key.value else str(c.key)
+            if k:
+                col_key_map[k] = c.key
+        sort_col_keys = []
+        for k, _ in self._sort_columns:
+            if k in col_key_map:
+                sort_col_keys.append(col_key_map[k])
+
+        if not sort_col_keys:
+            self.refresh()
+            return
+
+        def composite_key(vals: str | tuple) -> tuple:
+            if len(sort_col_keys) == 1:
+                vals = (vals,)
+            result = []
+            for i, (col, rev) in enumerate(self._sort_columns):
+                if col not in col_key_map or i >= len(vals):
+                    continue
+                val = vals[i]
+                s = str(val).strip() if val is not None else ""
+                if col == COL_ISSUE_NUM:
+                    v = _numeric_sort_key(s)
+                    result.append(-v if rev else v)
+                else:
+                    result.append(_ReverseStr(s) if rev else s)
+            return tuple(result)
+
+        self.sort(*sort_col_keys, key=composite_key, reverse=False)
