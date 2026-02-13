@@ -91,6 +91,84 @@ def _find_implementations_waiting_review(
     return results
 
 
+def _find_issues_with_approved_plans(
+    repository: Repository,
+    issue_store: IssueStore,
+    plan_store: PlanStore,
+    issue_numbers: list[int] | None,
+) -> list[tuple[Path, PlanMetadata]]:
+    """Find issues with approved plans (status APPROVED, plan file exists)."""
+    results = []
+
+    if issue_numbers:
+        issues_to_check = issue_numbers
+    else:
+        issues_to_check = issue_store.list_issues(repository)
+
+    for issue_number in issues_to_check:
+        plan_result = plan_store.get_latest_plan(repository, issue_number)
+        if not plan_result:
+            continue
+
+        plan_file, metadata = plan_result
+        if not plan_file.exists():
+            continue
+        if metadata.status != PlanStatus.APPROVED:
+            continue
+
+        results.append((plan_file, metadata))
+
+    return results
+
+
+def unapprove_plan_command(
+    repo: str,
+    issue_number: int,
+    *,
+    config_path: Path | None = None,
+) -> bool:
+    """Revert plan status from approved to pending.
+
+    Args:
+        repo: Repository (e.g., 'owner/repo')
+        issue_number: Issue number to unapprove
+        config_path: Path to config file
+
+    Returns:
+        True if unapproved, False if no approved plan found
+    """
+    config = ConfigManager(config_path)
+    app_config = config.load()
+
+    if not app_config.issues_path:
+        logger.error("Issues path not configured. Run: gh-worker config issues-path <path>")
+        return False
+
+    issue_store = IssueStore(app_config.issues_path)
+    plan_store = PlanStore(app_config.issues_path)
+
+    try:
+        repository = issue_store.resolve_repo(repo)
+    except ValueError as e:
+        logger.error("Invalid repository", repo=repo, error=str(e))
+        return False
+
+    items = _find_issues_with_approved_plans(repository, issue_store, plan_store, [issue_number])
+    if not items:
+        logger.info("No approved plan for this issue")
+        return False
+
+    _plan_file, metadata = items[0]
+    metadata.status = PlanStatus.PENDING
+    plan_store.update_metadata(metadata)
+    logger.info(
+        "Unapproved plan",
+        repository=repository.full_name,
+        issue_number=metadata.issue_number,
+    )
+    return True
+
+
 def review_plan_command(
     repo: str,
     issue_number: int,
@@ -101,7 +179,7 @@ def review_plan_command(
     """Create a worktree with the plan symlinked for review, or approve a plan.
 
     By default, creates a planning worktree and symlinks the plan file so the
-    user can open it in their editor and iterate. With --approve, skips
+    user can open it in their editor and iterate. With approve=True, skips
     worktree creation and only updates the plan status to approved.
 
     Args:

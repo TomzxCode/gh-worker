@@ -29,12 +29,15 @@ gh-worker
 │   ├── add           - Add repositories to track
 │   ├── list          - List all repositories under management
 │   └── remove        - Remove repositories from tracking
+├── plans             - Approve or unapprove implementation plans
+│   ├── approve       - Mark plan as approved
+│   └── unapprove     - Revert plan to pending
 ├── issues            - Sync, plan, review, and implement issues
 │   ├── sync          - Sync issues from GitHub
 │   ├── list          - List synced issues with plan/implementation status
 │   ├── plan          - Generate implementation plans
-│   ├── review        - Review and approve plans or implementations
-│   │   ├── plan      - Review/approve plans
+│   ├── review        - Review plans or implementations
+│   │   ├── plan      - Create worktree with plan for editing
 │   │   └── implementation - Push branch and create PR for implementations
 │   └── implement     - Implement plans and create PRs
 ├── monitor           - Monitor agent sessions (plan or implement)
@@ -299,9 +302,63 @@ gh-worker issues plan
 - Saves plans with timestamps and metadata
 - Parallelizes based on configuration or `--parallelism`
 
+#### plans approve
+
+Mark a plan as approved.
+
+**Syntax:**
+
+```bash
+gh-worker plans approve --repo REPO <issue-number> [OPTIONS]
+```
+
+**Arguments:**
+
+- `--repo REPO` (required) - Repository (format: "owner/repo")
+- `issue-number` (required) - Issue number to approve
+
+**Options:**
+
+- `--config-path PATH` - Custom config file path
+
+**Examples:**
+
+```bash
+gh-worker plans approve --repo octocat/hello-world 42
+```
+
+**Behavior:**
+
+- Updates plan metadata status to APPROVED
+- Only plans with status PENDING (waiting for review) and existing plan file can be approved
+
+#### plans unapprove
+
+Revert plan status to pending (waiting for review).
+
+**Syntax:**
+
+```bash
+gh-worker plans unapprove --repo REPO <issue-number> [OPTIONS]
+```
+
+**Arguments:**
+
+- `--repo REPO` (required) - Repository (format: "owner/repo")
+- `issue-number` (required) - Issue number to unapprove
+
+**Options:**
+
+- `--config-path PATH` - Custom config file path
+
+**Behavior:**
+
+- Updates plan metadata status to PENDING
+- Only plans with status APPROVED can be unapproved
+
 #### issues review plan
 
-Review and approve implementation plans.
+Create worktree with plan symlinked for review/editing.
 
 **Syntax:**
 
@@ -316,7 +373,6 @@ gh-worker issues review plan --repo REPO <issue-number> [OPTIONS]
 
 **Options:**
 
-- `--approve` - Mark the plan as approved (skip worktree creation)
 - `--config-path PATH` - Custom config file path
 
 **Examples:**
@@ -324,15 +380,11 @@ gh-worker issues review plan --repo REPO <issue-number> [OPTIONS]
 ```bash
 # Create worktree with plan symlinked for review
 gh-worker issues review plan --repo octocat/hello-world 42
-
-# Approve plan without opening worktree
-gh-worker issues review plan --repo octocat/hello-world 42 --approve
 ```
 
 **Behavior:**
 
-- Without `--approve`: Creates a git worktree with the plan file symlinked for editing
-- With `--approve`: Updates plan metadata status to APPROVED
+- Creates a git worktree with the plan file symlinked for editing
 - Only plans with status PENDING and existing plan file can be reviewed
 
 #### issues review implementation
@@ -684,7 +736,7 @@ gh-worker issues sync --all-repos
 gh-worker issues plan
 
 # Review and approve plans (optional)
-gh-worker issues review plan --repo octocat/hello-world 42 --approve
+gh-worker plans approve --repo octocat/hello-world 42
 
 # Implement plans
 gh-worker issues implement

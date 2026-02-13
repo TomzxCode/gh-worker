@@ -83,6 +83,10 @@ repositories_app = cyclopts.App(name="repositories", help="Manage tracked reposi
 app.command(repositories_app)
 app["repositories"].sort_key = 1
 
+plans_app = cyclopts.App(name="plans", help="Approve or unapprove implementation plans")
+app.command(plans_app)
+app["plans"].sort_key = 1.5
+
 
 @repositories_app.command
 def add(
@@ -287,9 +291,50 @@ def plan(
     )
 
 
-review_app = cyclopts.App(name="review", help="Review and approve plans or implementations")
+review_app = cyclopts.App(name="review", help="Review plans or implementations")
 issues_app.command(review_app)
 issues_app["review"].sort_key = 3.5
+
+
+@plans_app.command
+def approve(
+    repo: Annotated[str, Parameter(help="Repository (e.g., 'owner/repo')")],
+    issue_number: Annotated[int, Parameter(help="Issue number to approve")],
+    *,
+    config_path: Annotated[
+        Path | None,
+        Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
+    ] = None,
+) -> None:
+    """Mark the plan as approved."""
+    from gh_worker.commands.review import review_plan_command
+
+    review_plan_command(
+        repo=repo,
+        issue_number=issue_number,
+        approve=True,
+        config_path=config_path,
+    )
+
+
+@plans_app.command
+def unapprove(
+    repo: Annotated[str, Parameter(help="Repository (e.g., 'owner/repo')")],
+    issue_number: Annotated[int, Parameter(help="Issue number to unapprove")],
+    *,
+    config_path: Annotated[
+        Path | None,
+        Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
+    ] = None,
+) -> None:
+    """Revert plan status to pending (waiting for review)."""
+    from gh_worker.commands.review import unapprove_plan_command
+
+    unapprove_plan_command(
+        repo=repo,
+        issue_number=issue_number,
+        config_path=config_path,
+    )
 
 
 @review_app.command(name="plan")
@@ -297,22 +342,18 @@ def review_plan(
     repo: Annotated[str, Parameter(help="Repository (e.g., 'owner/repo')")],
     issue_number: Annotated[int, Parameter(help="Issue number to review")],
     *,
-    approve: Annotated[
-        bool,
-        Parameter(help="Mark the plan as approved"),
-    ] = False,
     config_path: Annotated[
         Path | None,
         Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
     ] = None,
 ) -> None:
-    """Create worktree with plan symlinked for editing. Use --approve to approve."""
+    """Create worktree with plan symlinked for editing."""
     from gh_worker.commands.review import review_plan_command
 
     review_plan_command(
         repo=repo,
         issue_number=issue_number,
-        approve=approve,
+        approve=False,
         config_path=config_path,
     )
 

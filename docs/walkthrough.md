@@ -199,7 +199,7 @@ This creates a git worktree with the plan symlinked so you can inspect it in con
 **Approve the plan** when ready:
 
 ```bash
-ghw issues review plan --repo owner/repo 42 --approve
+ghw plans approve --repo owner/repo 42
 ```
 
 Approved plans are eligible for implementation. You can also edit the plan file directly before approving.
@@ -304,7 +304,7 @@ ghw config implement.create_pr true
 | `ghw issues sync --repo owner/repo` | Sync issues |
 | `ghw issues list --repo owner/repo` | List issues |
 | `ghw issues plan --repo owner/repo` | Generate plans |
-| `ghw issues review plan --repo owner/repo 42 --approve` | Approve plan |
+| `ghw plans approve --repo owner/repo 42` | Approve plan |
 | `ghw issues implement --repo owner/repo` | Implement plans |
 | `ghw issues review implementation --repo owner/repo 42` | Push & create PR |
 | `ghw monitor --repo owner/repo --issue-number 42` | Monitor progress |

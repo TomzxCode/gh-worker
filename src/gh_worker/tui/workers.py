@@ -5,7 +5,11 @@ from pathlib import Path
 from gh_worker.commands.add import add_command
 from gh_worker.commands.implement import implement_command_async
 from gh_worker.commands.plan import plan_command_async
-from gh_worker.commands.review import review_implementation_command, review_plan_command
+from gh_worker.commands.review import (
+    review_implementation_command,
+    review_plan_command,
+    unapprove_plan_command,
+)
 from gh_worker.commands.sync import sync_command
 
 
@@ -109,6 +113,24 @@ def run_review_plan(
         return True, "Review plan completed", None
     except Exception as e:
         return False, str(e), None
+
+
+def run_unapprove_plan(
+    repo: str,
+    issue_number: int,
+    *,
+    config_path: Path | None = None,
+) -> tuple[bool, str]:
+    """Run unapprove plan command. Returns (success, message)."""
+    try:
+        ok = unapprove_plan_command(
+            repo=repo,
+            issue_number=issue_number,
+            config_path=config_path,
+        )
+        return ok, "Plan unapproved" if ok else "No approved plan for this issue"
+    except Exception as e:
+        return False, str(e)
 
 
 def run_review_implementation(

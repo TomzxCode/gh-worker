@@ -250,15 +250,15 @@ Reviews and approves implementation plans.
 
 **Operations:**
 
-- Create worktree with plan symlinked for review (without `--approve`)
-- Mark plan as approved (with `--approve`)
+- Create worktree with plan symlinked for review
+- Use `plans approve` to mark plan as approved, `plans unapprove` to revert
 - Updates plan metadata status to APPROVED
 
 **Example:**
 
 ```bash
 gh-worker issues review plan --repo octocat/hello-world 42
-gh-worker issues review plan --repo octocat/hello-world 42 --approve
+gh-worker plans approve --repo octocat/hello-world 42
 ```
 
 **Flow:**
@@ -266,8 +266,8 @@ gh-worker issues review plan --repo octocat/hello-world 42 --approve
 1. Load configuration and validate issues_path
 1. Initialize IssueStore and PlanStore
 1. Find plan with status PENDING and existing plan file
-1. If `--approve`: Update metadata status to APPROVED
-1. If not `--approve`: Create worktree, symlink plan, open for editing
+1. `plans approve`: Update metadata status to APPROVED
+1. `issues review plan`: Create worktree, symlink plan, open for editing
 
 #### issues review implementation
 

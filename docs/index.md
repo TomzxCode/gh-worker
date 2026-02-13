@@ -69,7 +69,7 @@ ghw issues sync --repo owner/repo
 ghw issues plan --repo owner/repo
 
 # Review and approve plans (optional)
-ghw issues review plan --repo owner/repo 42 --approve
+ghw plans approve --repo owner/repo 42
 
 # Implement
 ghw issues implement --repo owner/repo

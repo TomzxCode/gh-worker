@@ -375,7 +375,7 @@ Review and approve implementation plans before running the implement step.
 ghw issues review plan --repo owner/repo 42
 
 # Approve a plan
-ghw issues review plan --repo owner/repo 42 --approve
+ghw plans approve --repo owner/repo 42
 ```
 
 #### review implementation
@@ -635,7 +635,7 @@ ghw issues sync --repo owner/repo
 ghw issues plan --repo owner/repo
 
 # 5. (Optional) Review and approve plans
-ghw issues review plan --repo owner/repo 42 --approve
+ghw plans approve --repo owner/repo 42
 
 # 6. Implement with full automation
 ghw issues implement --repo owner/repo --push-branch --create-pr
@@ -711,8 +711,8 @@ ghw issues sync --repo owner/repo
 ghw issues plan --repo owner/repo
 
 # 3. Review and approve plans
-ghw issues review plan --repo owner/repo 42 --approve
-ghw issues review plan --repo owner/repo 43 --approve
+ghw plans approve --repo owner/repo 42
+ghw plans approve --repo owner/repo 43
 
 # 4. Implement approved issues
 ghw issues implement --repo owner/repo --issue-numbers 42 43
@@ -770,7 +770,7 @@ Use the review command to approve plans before implementing:
 
 ```bash
 # Review and approve a plan
-ghw issues review plan --repo owner/repo 42 --approve
+ghw plans approve --repo owner/repo 42
 ```
 
 Or inspect plans manually:

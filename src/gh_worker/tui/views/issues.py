@@ -85,6 +85,8 @@ class IssuesView(Container):
             yield Button("Implement", id="action-implement")
             yield Button("Monitor", id="action-monitor")
             yield Button("Review plan", id="action-review-plan")
+            yield Button("Approve plan", id="action-approve-plan")
+            yield Button("Unapprove plan", id="action-unapprove-plan")
             yield Button("Review implementation", id="action-review-impl")
 
     def on_mount(self) -> None:
@@ -325,11 +327,15 @@ class IssuesView(Container):
                 "action-implement",
                 "action-monitor",
                 "action-review-plan",
+                "action-approve-plan",
+                "action-unapprove-plan",
                 "action-review-impl",
             ]:
                 btn = actions.query_one(f"#{bid}", Button)
-                if bid == "action-review-plan":
+                if bid in ("action-review-plan", "action-approve-plan"):
                     btn.disabled = plan_status != PLAN_WAITING_FOR_REVIEW
+                elif bid == "action-unapprove-plan":
+                    btn.disabled = plan_status != PLAN_APPROVED
                 elif bid == "action-review-impl":
                     btn.disabled = impl_status != IMPL_WAITING_FOR_REVIEW
                 else:
@@ -391,6 +397,10 @@ class IssuesView(Container):
             self._open_monitor(repo_name, issue_number)
         elif bid == "action-review-plan":
             self._run_review_plan(repo_name, issue_number)
+        elif bid == "action-approve-plan":
+            self._run_approve_plan(repo_name, issue_number)
+        elif bid == "action-unapprove-plan":
+            self._run_unapprove_plan(repo_name, issue_number)
         elif bid == "action-review-impl":
             self._run_review_implementation(repo_name, issue_number)
 
@@ -497,6 +507,49 @@ class IssuesView(Container):
         )
         self.notify("Review plan started...")
 
+    def _run_approve_plan(self, repo: str, issue_number: int) -> None:
+        """Approve plan for selected issue (no worktree/editor)."""
+        from gh_worker.tui.workers import run_review_plan
+
+        def _approve() -> tuple[bool, str, Path | None]:
+            return run_review_plan(
+                repo=repo,
+                issue_number=issue_number,
+                approve=True,
+                config_path=self.config_path,
+            )
+
+        self.run_worker(
+            _approve,
+            name="approve-plan",
+            group="commands",
+            exit_on_error=False,
+            exclusive=True,
+            thread=True,
+        )
+        self.notify("Approving plan...")
+
+    def _run_unapprove_plan(self, repo: str, issue_number: int) -> None:
+        """Unapprove plan for selected issue."""
+        from gh_worker.tui.workers import run_unapprove_plan
+
+        def _unapprove() -> tuple[bool, str]:
+            return run_unapprove_plan(
+                repo=repo,
+                issue_number=issue_number,
+                config_path=self.config_path,
+            )
+
+        self.run_worker(
+            _unapprove,
+            name="unapprove-plan",
+            group="commands",
+            exit_on_error=False,
+            exclusive=True,
+            thread=True,
+        )
+        self.notify("Unapproving plan...")
+
     def _run_review_implementation(self, repo: str, issue_number: int) -> None:
         """Run review implementation (push branch, create PR)."""
         from gh_worker.tui.workers import run_review_implementation
@@ -565,4 +618,20 @@ class IssuesView(Container):
                         self.notify(f"Opened worktree in {editor}")
                     except FileNotFoundError:
                         self.notify(f"Editor not found: {editor}", severity="error")
+        if event.worker.name == "approve-plan" and event.worker.state == WorkerState.SUCCESS:
+            result = event.worker.result
+            if isinstance(result, tuple) and len(result) >= 2:
+                success, msg = result[0], result[1]
+                if success:
+                    self.notify("Plan approved")
+                else:
+                    self.notify(msg or "Approve failed", severity="error")
+        if event.worker.name == "unapprove-plan" and event.worker.state == WorkerState.SUCCESS:
+            result = event.worker.result
+            if isinstance(result, tuple) and len(result) >= 2:
+                success, msg = result[0], result[1]
+                if success:
+                    self.notify("Plan unapproved")
+                else:
+                    self.notify(msg or "Unapprove failed", severity="error")
         self._refresh_issues()
