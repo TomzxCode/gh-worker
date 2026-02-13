@@ -180,6 +180,54 @@ def sync(
     )
 
 
+@issues_app.command(name="list")
+def issues_list(
+    repo: Annotated[str | None, Parameter(help="Repository to list (e.g., 'owner/repo')")] = None,
+    *,
+    all_repos: Annotated[bool, Parameter(help="List issues from all repositories")] = False,
+    title: Annotated[
+        str | None,
+        Parameter(help="Filter by title (substring match)"),
+    ] = None,
+    author: Annotated[
+        str | None,
+        Parameter(help="Filter by author (substring match). Use @me for current user"),
+    ] = None,
+    assignee: Annotated[
+        str | None,
+        Parameter(help="Filter by assignee (substring match). Use @me for current user"),
+    ] = None,
+    plan: Annotated[
+        str | None,
+        Parameter(help="Filter by plan: none, being generated, waiting for local review, approved"),
+    ] = None,
+    impl: Annotated[
+        str | None,
+        Parameter(
+            help="Filter by impl: none, being generated, waiting for local review, "
+            "PR opened, merged, failed"
+        ),
+    ] = None,
+    config_path: Annotated[
+        Path | None,
+        Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
+    ] = None,
+) -> None:
+    """List synced issues with plan and implementation status."""
+    from gh_worker.commands.issues_list import issues_list_command
+
+    issues_list_command(
+        repo=repo,
+        all_repos=all_repos,
+        title=title,
+        author=author,
+        assignee=assignee,
+        plan=plan,
+        impl=impl,
+        config_path=config_path,
+    )
+
+
 @issues_app.command
 def plan(
     repo: Annotated[str | None, Parameter(help="Repository (e.g., 'owner/repo')")] = None,

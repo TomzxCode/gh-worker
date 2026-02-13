@@ -75,36 +75,83 @@ async def generate_plan_for_issue(
         agent=agent_name,
     )
 
-    # Load issue content
-    issue_content = task.description_file.read_text()
+    plan_file, metadata = plan_store.start_plan_generation(task.repository, task.issue_number)
 
-    # Get agent
-    registry = get_registry()
-    agent = registry.get(agent_name, agent_config)
+    try:
+        # Load issue content
+        issue_content = task.description_file.read_text()
 
-    # Validate agent environment (skip for mock agent)
-    if agent_name != "mock":
-        is_valid, error_msg = await agent.validate_environment()
-        if not is_valid:
-            logger.error(
-                "agent_environment_invalid",
-                agent=agent_name,
-                error=error_msg,
-            )
-            raise RuntimeError(f"Agent environment validation failed: {error_msg}")
+        # Get agent
+        registry = get_registry()
+        agent = registry.get(agent_name, agent_config)
 
-    # Determine repository path and set up worktree for planning (latest origin/main)
-    repo_path = (
-        repository_path / task.repository.owner / task.repository.name
-        if repository_path
-        else Path.cwd()
-    )
-    worktree_path: Path | None = None
-    gh_client: GHClient | None = None
+        # Validate agent environment (skip for mock agent)
+        if agent_name != "mock":
+            is_valid, error_msg = await agent.validate_environment()
+            if not is_valid:
+                logger.error(
+                    "agent_environment_invalid",
+                    agent=agent_name,
+                    error=error_msg,
+                )
+                raise RuntimeError(f"Agent environment validation failed: {error_msg}")
 
-    # For non-mock agents with repository_path: fetch, create worktree at origin/main
-    if agent_name != "mock" and repository_path:
-        if not repo_path.exists():
+        # Determine repository path and set up worktree for planning (latest origin/main)
+        repo_path = (
+            repository_path / task.repository.owner / task.repository.name
+            if repository_path
+            else Path.cwd()
+        )
+        worktree_path: Path | None = None
+        gh_client: GHClient | None = None
+
+        # For non-mock agents with repository_path: fetch, create worktree at origin/main
+        if agent_name != "mock" and repository_path:
+            if not repo_path.exists():
+                logger.error(
+                    "repository_not_found",
+                    repository=task.repository.full_name,
+                    path=repo_path,
+                )
+                raise FileNotFoundError(f"Repository not found at {repo_path}")
+
+            try:
+                gh_client = GHClient(repository_path)
+                gh_client.fetch_repository(task.repository)
+
+                timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+                worktree_path = (
+                    repository_path
+                    / "plan-worktrees"
+                    / task.repository.owner
+                    / task.repository.name
+                    / f"issue-{task.issue_number}-{timestamp}"
+                )
+                repo_path = gh_client.create_planning_worktree(task.repository, worktree_path)
+                logger.info(
+                    "using_planning_worktree",
+                    repository=task.repository.full_name,
+                    issue_number=task.issue_number,
+                    worktree_path=str(worktree_path),
+                )
+            except Exception as e:
+                logger.error(
+                    "planning_worktree_creation_failed",
+                    repository=task.repository.full_name,
+                    issue_number=task.issue_number,
+                    error=str(e),
+                )
+                logger.info(
+                    "falling_back_to_direct_repository",
+                    repository=task.repository.full_name,
+                    issue_number=task.issue_number,
+                )
+                worktree_path = None
+                gh_client = None
+                repo_path = repository_path / task.repository.owner / task.repository.name
+
+        # Skip repository path check for mock agent
+        if agent_name != "mock" and not repo_path.exists():
             logger.error(
                 "repository_not_found",
                 repository=task.repository.full_name,
@@ -113,108 +160,71 @@ async def generate_plan_for_issue(
             raise FileNotFoundError(f"Repository not found at {repo_path}")
 
         try:
-            gh_client = GHClient(repository_path)
-            gh_client.fetch_repository(task.repository)
-
-            timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-            worktree_path = (
-                repository_path
-                / "plan-worktrees"
-                / task.repository.owner
-                / task.repository.name
-                / f"issue-{task.issue_number}-{timestamp}"
+            # Generate plan
+            result = await agent.plan(
+                issue_content=issue_content,
+                repository_path=str(repo_path) if agent_name != "mock" else "",
             )
-            repo_path = gh_client.create_planning_worktree(task.repository, worktree_path)
-            logger.info(
-                "using_planning_worktree",
-                repository=task.repository.full_name,
-                issue_number=task.issue_number,
-                worktree_path=str(worktree_path),
-            )
-        except Exception as e:
-            logger.error(
-                "planning_worktree_creation_failed",
-                repository=task.repository.full_name,
-                issue_number=task.issue_number,
-                error=str(e),
-            )
-            logger.info(
-                "falling_back_to_direct_repository",
-                repository=task.repository.full_name,
-                issue_number=task.issue_number,
-            )
-            worktree_path = None
-            gh_client = None
-            repo_path = repository_path / task.repository.owner / task.repository.name
 
-    # Skip repository path check for mock agent
-    if agent_name != "mock" and not repo_path.exists():
-        logger.error(
-            "repository_not_found",
-            repository=task.repository.full_name,
-            path=repo_path,
-        )
-        raise FileNotFoundError(f"Repository not found at {repo_path}")
-
-    try:
-        # Generate plan
-        result = await agent.plan(
-            issue_content=issue_content,
-            repository_path=str(repo_path) if agent_name != "mock" else "",
-        )
-
-        if not result.success:
-            logger.error(
-                "plan_generation_failed",
-                repository=task.repository.full_name,
-                issue_number=task.issue_number,
-                error=result.error,
-            )
-            raise RuntimeError(f"Plan generation failed: {result.error}")
-
-        # Get model from agent config or agent instance (ensure string for serialization)
-        model_val = agent_config.get("model") or getattr(agent, "model", None)
-        model = model_val if isinstance(model_val, str) else None
-
-        # Get repository commit hash for plan metadata
-        commit_hash = _get_repo_commit_hash(repo_path)
-
-        # Save plan
-        metadata = plan_store.create_plan(
-            task.repository,
-            task.issue_number,
-            result.output,
-            agent=agent_name,
-            model=model,
-            commit_hash=commit_hash,
-        )
-
-        logger.info(
-            "plan_generated",
-            repository=task.repository.full_name,
-            issue_number=task.issue_number,
-            agent=agent_name,
-            plan_path=str(metadata.plan_file),
-        )
-    finally:
-        # Remove planning worktree when done
-        if worktree_path and gh_client:
-            try:
-                gh_client.remove_worktree(task.repository, worktree_path)
-                logger.info(
-                    "planning_worktree_removed",
+            if not result.success:
+                logger.error(
+                    "plan_generation_failed",
                     repository=task.repository.full_name,
                     issue_number=task.issue_number,
-                    worktree_path=str(worktree_path),
+                    error=result.error,
                 )
-            except Exception as e:
-                logger.warning(
-                    "planning_worktree_removal_failed",
-                    repository=task.repository.full_name,
-                    issue_number=task.issue_number,
-                    worktree_path=str(worktree_path),
-                    error=str(e),
-                )
+                raise RuntimeError(f"Plan generation failed: {result.error}")
+
+            # Get model from agent config or agent instance (ensure string for serialization)
+            model_val = agent_config.get("model") or getattr(agent, "model", None)
+            model = model_val if isinstance(model_val, str) else None
+
+            # Get repository commit hash for plan metadata
+            commit_hash = _get_repo_commit_hash(repo_path)
+
+            # Complete plan: write content and update metadata
+            plan_store.complete_plan(
+                plan_file,
+                metadata,
+                result.output,
+                agent=agent_name,
+                model=model,
+                commit_hash=commit_hash,
+            )
+
+            logger.info(
+                "plan_generated",
+                repository=task.repository.full_name,
+                issue_number=task.issue_number,
+                agent=agent_name,
+                plan_path=str(plan_file),
+            )
+        finally:
+            # Remove planning worktree when done
+            if worktree_path and gh_client:
+                try:
+                    gh_client.remove_worktree(task.repository, worktree_path)
+                    logger.info(
+                        "planning_worktree_removed",
+                        repository=task.repository.full_name,
+                        issue_number=task.issue_number,
+                        worktree_path=str(worktree_path),
+                    )
+                except Exception as e:
+                    logger.warning(
+                        "planning_worktree_removal_failed",
+                        repository=task.repository.full_name,
+                        issue_number=task.issue_number,
+                        worktree_path=str(worktree_path),
+                        error=str(e),
+                    )
+    except Exception:
+        # Clean up metadata stub on failure (only .yaml was created, no .md yet)
+        try:
+            plan_file.with_suffix(".yaml").unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
 
 
 def find_issues_needing_plans(

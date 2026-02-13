@@ -80,6 +80,29 @@ class IssueStore:
         # This is a simplified implementation
         return None
 
+    def get_issue_author(self, repository: Repository, issue_number: int) -> str | None:
+        """Get author for an issue from its description file.
+
+        Args:
+            repository: Repository object
+            issue_number: Issue number
+
+        Returns:
+            Author username or None if not found
+        """
+        issue_dir = self.get_issue_dir(repository, issue_number)
+        description_file = issue_dir / "description.md"
+
+        if not description_file.exists():
+            return None
+
+        content = description_file.read_text()
+        match = re.search(r"\*\*Author\*\*:\s*(.+)", content)
+        if not match:
+            return None
+
+        return match.group(1).strip() or None
+
     def get_issue_assignees(self, repository: Repository, issue_number: int) -> list[str]:
         """Get assignees for an issue from its description file.
 

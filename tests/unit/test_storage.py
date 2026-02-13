@@ -127,6 +127,17 @@ class TestIssueStore:
         assignees = issue_store.get_issue_assignees(sample_repo, 999)
         assert assignees == []
 
+    def test_get_issue_author(self, issue_store, sample_issue, sample_repo):
+        """Test getting author from issue description."""
+        issue_store.save_issue(sample_issue)
+        author = issue_store.get_issue_author(sample_repo, sample_issue.number)
+        assert author == "testuser"
+
+    def test_get_issue_author_not_found(self, issue_store, sample_repo):
+        """Test getting author for non-existent issue."""
+        author = issue_store.get_issue_author(sample_repo, 999)
+        assert author is None
+
     def test_set_repo_updated_at(self, issue_store, sample_repo):
         """Test setting repository updated timestamp."""
         timestamp = datetime(2024, 1, 1, 12, 0, 0)

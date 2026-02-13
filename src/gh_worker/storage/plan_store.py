@@ -80,46 +80,98 @@ class PlanStore:
 
         return metadata
 
-    def get_latest_plan(
+    def start_plan_generation(
         self, repository: Repository, issue_number: int
-    ) -> tuple[Path, PlanMetadata] | None:
-        """Get the latest plan for an issue.
+    ) -> tuple[Path, PlanMetadata]:
+        """Create plan metadata at start of generation. Call complete_plan when done.
+
+        Creates metadata only (no .md yet). If metadata exists but .md doesn't,
+        plan is being generated (or failed).
 
         Args:
             repository: Repository object
             issue_number: Issue number
 
         Returns:
-            Tuple of (plan_file, metadata) or None if no plan exists
+            Tuple of (plan_file, metadata) - plan_file is the .md path to create in complete_plan
+        """
+        issue_dir = self.get_issue_dir(repository, issue_number)
+        issue_dir.mkdir(parents=True, exist_ok=True)
+
+        timestamp = datetime.now(timezone.utc)
+        plan_filename = f"plan-{timestamp.strftime('%Y%m%d-%H%M%S')}.md"
+        plan_file = issue_dir / plan_filename
+
+        metadata = PlanMetadata(
+            issue_number=issue_number,
+            repository=repository.full_name,
+            created_at=timestamp,
+            plan_file=plan_file,
+        )
+        metadata.save(plan_file.with_suffix(".yaml"))
+        return (plan_file, metadata)
+
+    def complete_plan(
+        self,
+        plan_file: Path,
+        metadata: PlanMetadata,
+        content: str,
+        *,
+        agent: str | None = None,
+        model: str | None = None,
+        commit_hash: str | None = None,
+    ) -> PlanMetadata:
+        """Complete plan generation: write content and update metadata.
+
+        Args:
+            plan_file: Plan file path (from start_plan_generation)
+            metadata: Metadata from start_plan_generation
+            content: Plan content
+            agent: Agent name
+            model: Model name
+            commit_hash: Repository commit hash
+
+        Returns:
+            Updated metadata
+        """
+        plan_file.write_text(content)
+        metadata.agent = agent
+        metadata.model = model
+        metadata.commit_hash = commit_hash
+        metadata.save(plan_file.with_suffix(".yaml"))
+        return metadata
+
+    def get_latest_plan(
+        self, repository: Repository, issue_number: int
+    ) -> tuple[Path, PlanMetadata] | None:
+        """Get the latest plan for an issue.
+
+        Returns metadata even if .md doesn't exist yet (plan being generated).
+        plan_file may not exist - callers should check plan_file.exists() for complete plans.
+
+        Args:
+            repository: Repository object
+            issue_number: Issue number
+
+        Returns:
+            Tuple of (plan_file, metadata) or None if no plan metadata exists
         """
         issue_dir = self.get_issue_dir(repository, issue_number)
 
         if not issue_dir.exists():
             return None
 
-        # Find all plan files
-        plan_files = sorted(issue_dir.glob("plan-*.md"), reverse=True)
+        # Find all plan metadata files (source of truth - created first during generation)
+        metadata_files = sorted(issue_dir.glob("plan-*.yaml"), reverse=True)
 
-        if not plan_files:
+        if not metadata_files:
             return None
 
-        # Get the latest plan
-        latest_plan = plan_files[0]
-        metadata_file = latest_plan.with_suffix(".yaml")
+        metadata = PlanMetadata.load(metadata_files[0])
+        plan_file = metadata_files[0].with_suffix(".md")
+        metadata.plan_file = plan_file
 
-        if not metadata_file.exists():
-            # Create default metadata if it doesn't exist
-            metadata = PlanMetadata(
-                issue_number=issue_number,
-                repository=repository.full_name,
-                created_at=datetime.fromtimestamp(latest_plan.stat().st_mtime, tz=timezone.utc),
-                plan_file=latest_plan,
-            )
-        else:
-            metadata = PlanMetadata.load(metadata_file)
-            metadata.plan_file = latest_plan
-
-        return (latest_plan, metadata)
+        return (plan_file, metadata)
 
     def list_plans(
         self, repository: Repository, issue_number: int

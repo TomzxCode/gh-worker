@@ -31,6 +31,7 @@ class PlanMetadata:
     pr_url: str | None = None
     error_message: str | None = None
     completed_at: datetime | None = None
+    merged_at: datetime | None = None
     agent: str | None = None
     model: str | None = None
     commit_hash: str | None = None
@@ -52,6 +53,7 @@ class PlanMetadata:
             "pr_url": self.pr_url,
             "error_message": self.error_message,
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+            "merged_at": self.merged_at.isoformat() if self.merged_at else None,
             "agent": self.agent,
             "model": self.model,
             "commit_hash": self.commit_hash,
@@ -78,6 +80,9 @@ class PlanMetadata:
             error_message=data.get("error_message"),
             completed_at=(
                 datetime.fromisoformat(data["completed_at"]) if data.get("completed_at") else None
+            ),
+            merged_at=(
+                datetime.fromisoformat(data["merged_at"]) if data.get("merged_at") else None
             ),
             agent=data.get("agent"),
             model=data.get("model"),
