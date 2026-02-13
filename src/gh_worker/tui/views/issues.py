@@ -2,6 +2,7 @@
 
 import os
 import subprocess
+import webbrowser
 from pathlib import Path
 
 from textual.containers import Container, Horizontal, HorizontalScroll
@@ -21,6 +22,7 @@ from gh_worker.commands.issues_list import (
 )
 from gh_worker.tui.data import get_issues, get_repositories
 from gh_worker.tui.state import load_state, save_state
+from gh_worker.tui.widgets.activity_log import ActivityLog
 from gh_worker.tui.widgets.issue_table import IssueTable
 
 PLAN_OPTIONS = [
@@ -39,6 +41,12 @@ IMPL_OPTIONS = [
     (IMPL_PR_OPENED, IMPL_PR_OPENED),
     (IMPL_MERGED, IMPL_MERGED),
     (IMPL_FAILED, IMPL_FAILED),
+]
+
+STATE_OPTIONS = [
+    ("all", None),
+    ("open", "open"),
+    ("closed", "closed"),
 ]
 
 
@@ -65,6 +73,8 @@ class IssuesView(Container):
                 yield Input(placeholder="Assignee", id="filter-assignee")
                 yield Select(PLAN_OPTIONS, prompt="Plan", allow_blank=True, id="filter-plan")
                 yield Select(IMPL_OPTIONS, prompt="Impl", allow_blank=True, id="filter-impl")
+                yield Select(STATE_OPTIONS, prompt="State", allow_blank=True, id="filter-state")
+                yield Button("Sync", id="filter-sync")
                 yield Button("Refresh", id="filter-refresh")
         yield Label("Issues", classes="section-title")
         yield IssueTable(id="issues-table")
@@ -124,6 +134,10 @@ class IssuesView(Container):
                 IMPL_FAILED,
             ):
                 impl_select.value = impl_val
+            state_select = self.query_one("#filter-state", Select)
+            state_val = state.get("state_filter")
+            if state_val in (None, "open", "closed"):
+                state_select.value = state_val
             author_input = self.query_one("#filter-author", Input)
             if state.get("author_filter"):
                 author_input.value = state["author_filter"]
@@ -137,8 +151,12 @@ class IssuesView(Container):
 
     def _get_filter_values(
         self,
-    ) -> tuple[str | None, bool, str | None, str | None, str | None, str | None, str | None]:
-        """Get filter values. Returns (repo, all_repos, title, plan, impl, assignee, author)."""
+    ) -> tuple[
+        str | None, bool, str | None, str | None, str | None, str | None, str | None, str | None
+    ]:
+        """Get filter values. Returns (repo, all_repos, title, plan, impl, assignee,
+        author, state).
+        """
         try:
             repo_select = self.query_one("#filter-repo", Select)
             title_input = self.query_one("#filter-title", Input)
@@ -146,6 +164,7 @@ class IssuesView(Container):
             assignee_input = self.query_one("#filter-assignee", Input)
             plan_select = self.query_one("#filter-plan", Select)
             impl_select = self.query_one("#filter-impl", Select)
+            state_select = self.query_one("#filter-state", Select)
             repo_val = repo_select.value
             if repo_val is Select.BLANK or repo_val is None:
                 repo_val = None
@@ -158,6 +177,9 @@ class IssuesView(Container):
             impl_val = impl_select.value
             if impl_val is Select.BLANK or impl_val is None:
                 impl_val = None
+            state_val = state_select.value
+            if state_val is Select.BLANK or state_val is None:
+                state_val = None
             return (
                 str(repo_val) if repo_val else None,
                 repo_val is None,
@@ -166,6 +188,7 @@ class IssuesView(Container):
                 str(impl_val) if impl_val else None,
                 assignee_val,
                 author_val,
+                str(state_val) if state_val else None,
             )
         except Exception:
             return (
@@ -176,13 +199,21 @@ class IssuesView(Container):
                 None,
                 None,
                 None,
+                None,
             )
 
     def _refresh_issues(self) -> None:
         """Refresh issues table."""
-        repo, all_repos, title_filter, plan_filter, impl_filter, assignee_filter, author_filter = (
-            self._get_filter_values()
-        )
+        (
+            repo,
+            all_repos,
+            title_filter,
+            plan_filter,
+            impl_filter,
+            assignee_filter,
+            author_filter,
+            state_filter,
+        ) = self._get_filter_values()
         issues = get_issues(
             repo=repo,
             all_repos=all_repos,
@@ -191,16 +222,26 @@ class IssuesView(Container):
             implementation_filter=impl_filter,
             assignee_filter=assignee_filter,
             author_filter=author_filter,
+            state_filter=state_filter,
             config_path=self.config_path,
         )
         self._issue_status.clear()
         table = self.query_one("#issues-table", IssueTable)
         rows = []
-        for repo, issue_number, title, author, assignees, plan_status, impl_status in issues:
+        for repo, issue_number, title, author, assignees, plan_status, impl_status, state in issues:
             row_key = f"{repo.full_name}#{issue_number}"
             self._issue_status[row_key] = (plan_status, impl_status)
             rows.append(
-                (repo.full_name, issue_number, title, author, assignees, plan_status, impl_status)
+                (
+                    repo.full_name,
+                    issue_number,
+                    title,
+                    author,
+                    assignees,
+                    plan_status,
+                    impl_status,
+                    state,
+                )
             )
         table.clear_and_populate(rows)
         self._update_action_buttons()
@@ -230,19 +271,43 @@ class IssuesView(Container):
         log.write(desc or "(no description)", expand=False)
         self._update_action_buttons()
 
-    def on_data_table_row_highlighted(self, event) -> None:
-        """Handle row highlight (arrow keys / click) - show description."""
+    def on_data_table_cell_highlighted(self, event) -> None:
+        """Handle cell highlight (arrow keys / hover) - show description."""
         table = event.control
         if table.id != "issues-table":
             return
-        self._show_issue_description(event.row_key)
+        row_key, _ = table.coordinate_to_cell_key(event.coordinate)
+        self._show_issue_description(row_key)
 
-    def on_data_table_row_selected(self, event) -> None:
-        """Handle issue selection (Enter) - show description."""
+    def on_data_table_cell_selected(self, event) -> None:
+        """Handle cell selection - open browser if # column clicked, else show description."""
         table = event.control
         if table.id != "issues-table":
             return
-        self._show_issue_description(event.row_key)
+        row_key, column_key = table.coordinate_to_cell_key(event.coordinate)
+        # Column "#" is the issue number - clicking it opens the issue URL in browser
+        if column_key == "#" and row_key:
+            self._open_issue_in_browser(row_key)
+        else:
+            self._show_issue_description(row_key)
+
+    def _open_issue_in_browser(self, row_key) -> None:
+        """Open the GitHub issue URL in the default browser."""
+        key_str = getattr(row_key, "value", None) or str(row_key)
+        try:
+            parts = str(key_str).rsplit("#", 1)
+            if len(parts) != 2:
+                return
+            repo_name, issue_str = parts
+            issue_number = int(issue_str)
+        except (ValueError, TypeError):
+            return
+        url = f"https://github.com/{repo_name}/issues/{issue_number}"
+        try:
+            webbrowser.open(url)
+            self.notify(f"Opened {url}")
+        except webbrowser.Error:
+            self.notify("Could not open browser", severity="error")
 
     def _update_action_buttons(self) -> None:
         """Enable/disable action buttons based on selected issue status."""
@@ -283,6 +348,8 @@ class IssuesView(Container):
             save_state(plan_filter=filter_val)
         elif event.select.id == "filter-impl":
             save_state(implementation_filter=filter_val)
+        elif event.select.id == "filter-state":
+            save_state(state_filter=filter_val)
         self._refresh_issues()
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
@@ -296,11 +363,18 @@ class IssuesView(Container):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button presses."""
+        if event.button.id == "filter-sync":
+            self._run_sync()
+            return
         if event.button.id == "filter-refresh":
+            state_select = self.query_one("#filter-state", Select)
+            state_val = state_select.value
+            state_filter = str(state_val) if state_val not in (Select.BLANK, None) else None
             save_state(
                 title_filter=self.query_one("#filter-title", Input).value.strip() or None,
                 author_filter=self.query_one("#filter-author", Input).value.strip() or None,
                 assignee_filter=self.query_one("#filter-assignee", Input).value.strip() or None,
+                state_filter=state_filter,
             )
             self._refresh_issues()
             self.notify("Refreshed")
@@ -319,6 +393,33 @@ class IssuesView(Container):
             self._run_review_plan(repo_name, issue_number)
         elif bid == "action-review-impl":
             self._run_review_implementation(repo_name, issue_number)
+
+    def _run_sync(self) -> None:
+        """Run sync for filtered repositories."""
+        from gh_worker.tui.workers import run_sync
+
+        repo, all_repos, *_ = self._get_filter_values()
+        if not all_repos and not repo:
+            self.notify("Select a repository or 'all' to sync", severity="warning")
+            return
+
+        def _sync() -> tuple[bool, str]:
+            return run_sync(
+                repo=repo,
+                all_repos=all_repos,
+                config_path=self.config_path,
+            )
+
+        self.run_worker(
+            _sync,
+            name="sync",
+            group="commands",
+            exit_on_error=False,
+            exclusive=True,
+            thread=True,
+        )
+        self._log_activity("Sync started...")
+        self.notify("Sync started...")
 
     def _run_plan(self, repo: str, issue_number: int) -> None:
         """Run plan for selected issue."""
@@ -419,6 +520,14 @@ class IssuesView(Container):
         )
         self.notify("Review implementation started...")
 
+    def _log_activity(self, msg: str) -> None:
+        """Append to dashboard activity log."""
+        try:
+            log = self.app.query_one("#activity-log", ActivityLog)
+            log.append_line(msg)
+        except Exception:
+            pass
+
     def on_worker_state_changed(self, event) -> None:
         """Handle worker completion - refresh and optionally open editor."""
         from textual.worker import WorkerState
@@ -429,6 +538,22 @@ class IssuesView(Container):
             WorkerState.CANCELLED,
         ):
             return
+        if event.worker.name == "sync":
+            if event.worker.state == WorkerState.SUCCESS:
+                result = event.worker.result
+                if isinstance(result, tuple):
+                    success, msg = result
+                    activity_msg = "Sync completed" if success else f"Failed: {msg}"
+                    self._log_activity(activity_msg)
+                    self.notify(activity_msg, severity="error" if not success else "information")
+            elif event.worker.state == WorkerState.ERROR:
+                err = getattr(event.worker, "error", None)
+                err_msg = f"Sync failed: {err}" if err else "Sync failed"
+                self._log_activity(err_msg)
+                self.notify(err_msg, severity="error")
+            elif event.worker.state == WorkerState.CANCELLED:
+                self._log_activity("Sync cancelled")
+                self.notify("Sync cancelled")
         if event.worker.name == "review-plan" and event.worker.state == WorkerState.SUCCESS:
             result = event.worker.result
             if isinstance(result, tuple) and len(result) >= 3:

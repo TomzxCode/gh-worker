@@ -8,20 +8,20 @@ class IssueTable(DataTable):
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
-        self.cursor_type = "row"
+        self.cursor_type = "cell"
         self.add_columns(
-            "#", "Repository", "Title", "Author", "Assignees", "Plan", "Implementation"
+            "#", "Repository", "Title", "Author", "Assignees", "State", "Plan", "Implementation"
         )
 
     def clear_and_populate(
         self,
-        rows: list[tuple[str, int, str, str | None, list[str], str, str]],
+        rows: list[tuple[str, int, str, str | None, list[str], str, str, str | None]],
     ) -> None:
         """Clear table and populate with issue rows.
 
         Args:
             rows: List of (repo_full_name, issue_number, title, author, assignees,
-                  plan_status, impl_status)
+                  plan_status, impl_status, state)
         """
         self.clear()
         for (
@@ -32,6 +32,7 @@ class IssueTable(DataTable):
             assignees,
             plan_status,
             impl_status,
+            state,
         ) in rows:
             author_str = author or "—"
             assignees_str = ", ".join(assignees) if assignees else "—"
@@ -39,6 +40,7 @@ class IssueTable(DataTable):
                 assignees_str = assignees_str[:17] + "..."
             plan_display = "—" if plan_status == "none" else plan_status
             impl_display = "—" if impl_status == "none" else impl_status
+            state_display = state or "—"
             if len(title) > 50:
                 title = title[:47] + "..."
             if len(repo_full_name) > 25:
@@ -52,6 +54,7 @@ class IssueTable(DataTable):
                 title,
                 author_str,
                 assignees_str,
+                state_display,
                 plan_display,
                 impl_display,
                 key=row_key,

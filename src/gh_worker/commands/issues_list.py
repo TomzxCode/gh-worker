@@ -71,11 +71,13 @@ def _matches_filters(
     assignees: list[str],
     plan_status: str,
     implementation_status: str,
+    state: str | None,
     title_filter: str | None,
     author_filter: str | None,
     assignee_filter: str | None,
     plan_filter: str | None,
     implementation_filter: str | None,
+    state_filter: str | None,
 ) -> bool:
     """Check if issue matches all specified filters (case-insensitive substring match)."""
     if title_filter and title_filter.lower() not in (title or "").lower():
@@ -91,6 +93,8 @@ def _matches_filters(
     if plan_filter and plan_filter.lower() != plan_status.lower():
         return False
     if implementation_filter and implementation_filter.lower() != implementation_status.lower():
+        return False
+    if state_filter and (state or "").lower() != state_filter.lower():
         return False
     return True
 
@@ -211,6 +215,7 @@ def issues_list_command(
             issue_assignees = issue_store.get_issue_assignees(repository, issue_number)
             plan_status = _get_plan_status(plan_store, repository, issue_number)
             implementation_status = _get_implementation_status(plan_store, repository, issue_number)
+            issue_state = issue_store.get_issue_state(repository, issue_number)
 
             if not _matches_filters(
                 issue_title,
@@ -218,11 +223,13 @@ def issues_list_command(
                 issue_assignees,
                 plan_status,
                 implementation_status,
+                issue_state,
                 title,
                 author_filter,
                 assignee_filter,
                 plan,
                 implementation,
+                None,  # state_filter - CLI doesn't support state filter yet
             ):
                 continue
 

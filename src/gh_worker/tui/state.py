@@ -20,7 +20,7 @@ def load_state() -> dict:
 
     Returns:
         Dict with keys: last_repo, title_filter, plan_filter, implementation_filter,
-        assignee_filter, author_filter
+        assignee_filter, author_filter, state_filter
     """
     path = _state_path()
     if not path.exists():
@@ -31,6 +31,7 @@ def load_state() -> dict:
             "implementation_filter": None,
             "assignee_filter": None,
             "author_filter": None,
+            "state_filter": None,
             "last_tab": None,
         }
 
@@ -43,6 +44,7 @@ def load_state() -> dict:
             "implementation_filter": data.get("implementation_filter"),
             "assignee_filter": data.get("assignee_filter"),
             "author_filter": data.get("author_filter"),
+            "state_filter": data.get("state_filter"),
             "last_tab": data.get("last_tab"),
         }
     except (json.JSONDecodeError, OSError):
@@ -53,6 +55,7 @@ def load_state() -> dict:
             "implementation_filter": None,
             "assignee_filter": None,
             "author_filter": None,
+            "state_filter": None,
             "last_tab": None,
         }
 
@@ -64,6 +67,7 @@ def save_state(
     implementation_filter: str | None = _UNCHANGED,
     assignee_filter: str | None = _UNCHANGED,
     author_filter: str | None = _UNCHANGED,
+    state_filter: str | None = _UNCHANGED,
     last_tab: str | None = _UNCHANGED,
 ) -> None:
     """Save session state to disk.
@@ -75,6 +79,7 @@ def save_state(
         implementation_filter: Last implementation status filter, or None for "all"
         assignee_filter: Last assignee filter
         author_filter: Last author filter
+        state_filter: Last issue state filter (open/closed), or None for "all"
         last_tab: Last active tab id
     """
     path = _state_path()
@@ -98,6 +103,8 @@ def save_state(
         data["assignee_filter"] = assignee_filter
     if author_filter is not _UNCHANGED:
         data["author_filter"] = author_filter
+    if state_filter is not _UNCHANGED:
+        data["state_filter"] = state_filter
     if last_tab is not _UNCHANGED:
         data["last_tab"] = last_tab
 

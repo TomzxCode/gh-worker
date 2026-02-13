@@ -13,6 +13,7 @@ from gh_worker.tui.views.dashboard import DashboardView
 from gh_worker.tui.views.issues import IssuesView
 from gh_worker.tui.views.repos import ReposView
 from gh_worker.tui.views.work import WorkView
+from gh_worker.utils.logging import setup_logging_for_tui
 
 VALID_TAB_IDS = {"dashboard", "repos", "issues", "work", "config"}
 
@@ -156,6 +157,9 @@ class GhWorkerApp(App):
 
     def on_mount(self) -> None:
         """Check config on mount."""
+        # Route logging through Textual so plan/implement output doesn't overwrite the TUI
+        setup_logging_for_tui()
+
         repos = get_repositories(self.config_path)
         if not repos:
             self.notify(

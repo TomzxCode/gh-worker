@@ -103,6 +103,30 @@ class IssueStore:
 
         return match.group(1).strip() or None
 
+    def get_issue_state(self, repository: Repository, issue_number: int) -> str | None:
+        """Get state for an issue from its description file.
+
+        Args:
+            repository: Repository object
+            issue_number: Issue number
+
+        Returns:
+            Issue state (open/closed) or None if not found
+        """
+        issue_dir = self.get_issue_dir(repository, issue_number)
+        description_file = issue_dir / "description.md"
+
+        if not description_file.exists():
+            return None
+
+        content = description_file.read_text()
+        match = re.search(r"\*\*State\*\*:\s*(.+)", content)
+        if not match:
+            return None
+
+        state = match.group(1).strip().lower()
+        return state if state in ("open", "closed") else None
+
     def get_issue_assignees(self, repository: Repository, issue_number: int) -> list[str]:
         """Get assignees for an issue from its description file.
 

@@ -42,6 +42,12 @@ IMPL_OPTIONS = [
     (IMPL_FAILED, IMPL_FAILED),
 ]
 
+STATE_OPTIONS = [
+    ("all", None),
+    ("open", "open"),
+    ("closed", "closed"),
+]
+
 
 class DashboardView(Container):
     """Dashboard with repos list, issues table, quick actions, and activity log."""
@@ -71,6 +77,9 @@ class DashboardView(Container):
                         )
                         yield Select(
                             IMPL_OPTIONS, prompt="Impl", allow_blank=True, id="filter-impl"
+                        )
+                        yield Select(
+                            STATE_OPTIONS, prompt="State", allow_blank=True, id="filter-state"
                         )
                 self._issues_table = IssueTable(id="issues-table")
                 yield self._issues_table
@@ -107,6 +116,10 @@ class DashboardView(Container):
                 IMPL_FAILED,
             ):
                 impl_select.value = impl_val
+            state_select = self.query_one("#filter-state", Select)
+            state_val = state.get("state_filter")
+            if state_val in (None, "open", "closed"):
+                state_select.value = state_val
             author_input = self.query_one("#filter-author", Input)
             if state.get("author_filter"):
                 author_input.value = state["author_filter"]
@@ -146,11 +159,30 @@ class DashboardView(Container):
             implementation_filter=state.get("implementation_filter"),
             assignee_filter=state.get("assignee_filter"),
             author_filter=state.get("author_filter"),
+            state_filter=state.get("state_filter"),
             config_path=self.config_path,
         )
         rows = [
-            (repo.full_name, issue_number, title, author, assignees, plan_status, impl_status)
-            for repo, issue_number, title, author, assignees, plan_status, impl_status in issues
+            (
+                repo.full_name,
+                issue_number,
+                title,
+                author,
+                assignees,
+                plan_status,
+                impl_status,
+                state,
+            )
+            for (
+                repo,
+                issue_number,
+                title,
+                author,
+                assignees,
+                plan_status,
+                impl_status,
+                state,
+            ) in issues
         ]
         self._issues_table.clear_and_populate(rows)
 
@@ -162,6 +194,8 @@ class DashboardView(Container):
             save_state(plan_filter=filter_val)
         elif event.select.id == "filter-impl":
             save_state(implementation_filter=filter_val)
+        elif event.select.id == "filter-state":
+            save_state(state_filter=filter_val)
         self._refresh_issues()
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
