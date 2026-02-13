@@ -91,6 +91,10 @@ def add(
         Path | None,
         Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
     ] = None,
+    clone: Annotated[
+        bool,
+        Parameter(help="Clone the repository to repository-path (default: no)"),
+    ] = False,
 ) -> None:
     """Add repositories to track."""
     from gh_worker.commands.add import add_command
@@ -98,6 +102,7 @@ def add(
     add_command(
         repos=repos,
         config_path=config_path,
+        clone=clone,
     )
 
 

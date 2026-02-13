@@ -103,11 +103,13 @@ Adds repositories to track.
 - Validate repository access
 - Initialize storage structure
 - Create repository metadata
+- Optionally clone to repository-path when `--clone` is passed
 
 **Example:**
 
 ```bash
 gh-worker repositories add octocat/hello-world
+gh-worker repositories add octocat/hello-world --clone
 ```
 
 #### list

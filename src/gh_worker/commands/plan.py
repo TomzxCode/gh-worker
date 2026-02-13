@@ -105,18 +105,30 @@ async def generate_plan_for_issue(
         worktree_path: Path | None = None
         gh_client: GHClient | None = None
 
-        # For non-mock agents with repository_path: fetch, create worktree at origin/main
+        # For non-mock agents with repository_path: clone if needed, fetch, create worktree
         if agent_name != "mock" and repository_path:
+            gh_client = GHClient(repository_path)
             if not repo_path.exists():
-                logger.error(
-                    "repository_not_found",
-                    repository=task.repository.full_name,
-                    path=repo_path,
-                )
-                raise FileNotFoundError(f"Repository not found at {repo_path}")
+                # Clone on-demand when repository wasn't cloned during add
+                try:
+                    gh_client.clone_repo(task.repository)
+                    logger.info(
+                        "repository_cloned_for_planning",
+                        repository=task.repository.full_name,
+                        path=str(repo_path),
+                    )
+                except Exception as e:
+                    logger.error(
+                        "repository_clone_failed",
+                        repository=task.repository.full_name,
+                        path=repo_path,
+                        error=str(e),
+                    )
+                    raise FileNotFoundError(
+                        f"Repository not found at {repo_path}. Clone failed: {e}"
+                    ) from e
 
             try:
-                gh_client = GHClient(repository_path)
                 gh_client.fetch_repository(task.repository)
 
                 timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")

@@ -123,7 +123,7 @@ Add a repository to track:
 ghw repositories add owner/repo
 ```
 
-This creates the necessary directory structure and clones the repository.
+This creates the necessary directory structure. Use `--clone` to clone immediately, or the repository will be cloned on-demand when you run `ghw issues plan` or `ghw issues implement`.
 
 ### 3. List and Manage Repositories
 

@@ -117,7 +117,7 @@ Add repositories to track.
 **Syntax:**
 
 ```bash
-gh-worker repositories add <repo>... [--config-path PATH]
+gh-worker repositories add <repo>... [--config-path PATH] [--clone]
 ```
 
 **Arguments:**
@@ -127,12 +127,14 @@ gh-worker repositories add <repo>... [--config-path PATH]
 **Options:**
 
 - `--config-path PATH` - Custom config file path
+- `--clone` - Clone the repository to repository-path (default: no; repository is cloned on-demand when running `ghw issues plan` or `ghw issues implement`)
 
 **Examples:**
 
 ```bash
 gh-worker repositories add octocat/hello-world
 gh-worker repositories add octocat/hello-world octocat/spoon-knife
+gh-worker repositories add octocat/hello-world --clone
 ```
 
 **Behavior:**
@@ -140,6 +142,7 @@ gh-worker repositories add octocat/hello-world octocat/spoon-knife
 - Initializes repository in storage
 - Creates directory structure
 - Validates repository access via GitHub CLI
+- Optionally clones to repository-path when `--clone` is passed
 
 #### repositories list
 

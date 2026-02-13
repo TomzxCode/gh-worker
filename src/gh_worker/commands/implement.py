@@ -106,15 +106,39 @@ async def implement_issue(
         repo_path = Path.cwd()
 
     if not repo_path.exists():
-        logger.error(
-            "repository_not_found",
-            repository=task.repository.full_name,
-            path=repo_path,
-        )
-        metadata.status = PlanStatus.FAILED
-        metadata.error_message = f"Repository not found at {repo_path}"
-        plan_store.update_metadata(metadata)
-        raise FileNotFoundError(f"Repository not found at {repo_path}")
+        # Clone on-demand when repository wasn't cloned during add
+        if repository_path:
+            try:
+                gh_client = GHClient(repository_path)
+                gh_client.clone_repo(task.repository)
+                logger.info(
+                    "repository_cloned_for_implementation",
+                    repository=task.repository.full_name,
+                    path=str(repo_path),
+                )
+            except Exception as e:
+                logger.error(
+                    "repository_clone_failed",
+                    repository=task.repository.full_name,
+                    path=repo_path,
+                    error=str(e),
+                )
+                metadata.status = PlanStatus.FAILED
+                metadata.error_message = f"Repository not found at {repo_path}. Clone failed: {e}"
+                plan_store.update_metadata(metadata)
+                raise FileNotFoundError(
+                    f"Repository not found at {repo_path}. Clone failed: {e}"
+                ) from e
+        else:
+            logger.error(
+                "repository_not_found",
+                repository=task.repository.full_name,
+                path=repo_path,
+            )
+            metadata.status = PlanStatus.FAILED
+            metadata.error_message = f"Repository not found at {repo_path}"
+            plan_store.update_metadata(metadata)
+            raise FileNotFoundError(f"Repository not found at {repo_path}")
 
     # Create branch name with timestamp
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")

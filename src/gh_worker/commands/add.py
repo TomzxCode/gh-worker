@@ -12,12 +12,17 @@ from gh_worker.storage.issue_store import IssueStore
 logger = structlog.get_logger()
 
 
-def add_command(repos: list[str], config_path: Path | None = None) -> None:
+def add_command(
+    repos: list[str],
+    config_path: Path | None = None,
+    clone: bool = False,
+) -> None:
     """Execute add command.
 
     Args:
         repos: Repository names (e.g., 'owner/repo')
         config_path: Path to config file
+        clone: If True, clone the repository to repository-path
     """
     config = ConfigManager(config_path)
     app_config = config.load()
@@ -46,19 +51,23 @@ def add_command(repos: list[str], config_path: Path | None = None) -> None:
             logger.info("created_repository_directory", repository=repository.full_name)
             print(f"Added repository: {repository.full_name}")
 
-            # Clone repository if repository_path is configured
-            if app_config.repository_path:
+            # Clone repository only if --clone was passed and repository_path is configured
+            if clone and app_config.repository_path:
                 try:
                     gh_client.clone_repo(repository)
                     print(f"Cloned repository to: {gh_client._get_repo_path(repository)}")
                 except Exception as e:
                     logger.warning("failed_to_clone_repository", error=str(e))
                     print(f"Warning: Failed to clone repository: {e}")
-            else:
+            elif clone and not app_config.repository_path:
                 print(
                     "Note: repository-path not configured. "
-                    "Set it to enable automatic cloning of repositories. "
-                    "Run: gh-worker config repository-path <path>"
+                    "Set it to enable cloning. Run: gh-worker config repository-path <path>"
+                )
+            elif app_config.repository_path:
+                print(
+                    "Note: Repository not cloned. Use --clone to clone now, "
+                    "or it will be cloned when you run 'ghw issues plan'."
                 )
 
         except ValueError as e:

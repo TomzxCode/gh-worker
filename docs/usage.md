@@ -133,14 +133,17 @@ ghw repositories remove <repo> [<repo2> ...]
 Add repositories to track.
 
 1. Creates the necessary directory structure
-1. Clones the repository to `repository-path`
 1. Initializes issue storage in `issues-path`
+1. Optionally clones to `repository-path` with `--clone` (otherwise cloned on-demand when running `ghw issues plan` or `ghw issues implement`)
 
 **Examples**:
 
 ```bash
-# Add a single repository
+# Add a single repository (no clone by default)
 ghw repositories add owner/repo
+
+# Add and clone immediately
+ghw repositories add owner/repo --clone
 
 # Add multiple repositories
 ghw repositories add owner/repo1 owner/repo2 owner/repo3
