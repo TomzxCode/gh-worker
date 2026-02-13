@@ -117,6 +117,31 @@ plan_command(
 )
 ```
 
+### `gh_worker.commands.review`
+
+#### `review_plan_command(repo, issue_number, approve, config_path)`
+
+Review and approve implementation plans.
+
+**Parameters**:
+
+- `repo` (str): Repository (format: "owner/repo")
+- `issue_number` (int): Issue number to review
+- `approve` (bool): Mark plan as approved (skip worktree creation)
+- `config_path` (Path | None): Custom config file path
+
+#### `review_implementation_command(repo, issue_number, push_branch, create_pr, config_path)`
+
+Approve implementations: push branch and create PR.
+
+**Parameters**:
+
+- `repo` (str): Repository (format: "owner/repo")
+- `issue_number` (int): Issue number to review
+- `push_branch` (bool): Push branch to remote
+- `create_pr` (bool): Create pull request
+- `config_path` (Path | None): Custom config file path
+
 ### `gh_worker.commands.implement`
 
 #### `implement_command(repo, issue_numbers, all_repos, parallelism, force, assignee, use_worktree, push_branch, create_pr, delete_worktree, config_path, agent)`
@@ -155,7 +180,7 @@ implement_command(
 
 #### `monitor_command(repo, issue_number, config_path, agent)`
 
-Monitor an ongoing agent session.
+Monitor an ongoing agent session (plan or implementation).
 
 **Parameters**:
 

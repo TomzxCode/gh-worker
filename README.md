@@ -49,17 +49,19 @@ ghw --help
 ### Commands
 
 ```
-ghw init                    Initialize configuration
-ghw repositories add        Add repositories to track
-ghw repositories list      List tracked repositories
-ghw repositories remove    Remove repositories from tracking
-ghw issues sync             Sync issues from GitHub
-ghw issues list             List synced issues with plan/implementation status
-ghw issues plan             Generate implementation plans
-ghw issues implement        Implement plans and create PRs
-ghw monitor                 Monitor ongoing implementations
-ghw work                    Run sync → plan → implement workflow
-ghw config                  Manage configuration
+ghw init                         Initialize configuration
+ghw repositories add             Add repositories to track
+ghw repositories list            List tracked repositories
+ghw repositories remove          Remove repositories from tracking
+ghw issues sync                  Sync issues from GitHub
+ghw issues list                  List synced issues with plan/implementation status
+ghw issues plan                  Generate implementation plans
+ghw issues review plan            Review and approve plans
+ghw issues review implementation Review implementations (push branch, create PR)
+ghw issues implement             Implement plans and create PRs
+ghw monitor                      Monitor ongoing plan or implementation progress
+ghw work                         Run sync → plan → implement workflow
+ghw config                       Manage configuration
 ```
 
 ### Global Options
@@ -171,7 +173,19 @@ ghw issues list --all-repos
 ghw issues list --repo owner/repo --plan approved --implementation none
 ```
 
-### 6. Generate Plans
+### 6. Review and Approve Plans (Optional)
+
+Review plans before implementation and approve them:
+
+```bash
+# Create worktree with plan symlinked for review
+ghw issues review plan --repo owner/repo 42
+
+# Approve a plan
+ghw issues review plan --repo owner/repo 42 --approve
+```
+
+### 7. Generate Plans
 
 Generate implementation plans for synced issues using LLM agents:
 
@@ -192,7 +206,7 @@ ghw issues plan --repo owner/repo --issue-numbers 42 --force
 ghw issues plan --repo owner/repo --agent cursor-agent
 ```
 
-### 7. Implement Plans
+### 8. Implement Plans
 
 Execute plans and create pull requests with git worktree support:
 
@@ -219,15 +233,27 @@ ghw issues implement --repo owner/repo --delete-worktree=false
 ghw issues implement --repo owner/repo --issue-numbers 42 --force
 ```
 
-### 8. Monitor Progress
+### 9. Review Implementations (Optional)
 
-Monitor an ongoing implementation:
+If implementation completes without auto-push/PR, review and push:
+
+```bash
+# Push branch and create PR
+ghw issues review implementation --repo owner/repo 42
+
+# Push only (no PR)
+ghw issues review implementation --repo owner/repo 42 --no-pr
+```
+
+### 10. Monitor Progress
+
+Monitor an ongoing plan or implementation:
 
 ```bash
 ghw monitor --repo owner/repo --issue-number 42
 ```
 
-### 9. Run Full Workflow
+### 11. Run Full Workflow
 
 Run the complete sync → plan → implement workflow:
 
@@ -494,12 +520,16 @@ ghw issues sync --repo owner/repo --since 7d
 # 3. Generate plans
 ghw issues plan --repo owner/repo
 
-# 4. Review plans in ~/gh-worker/issues/owner/repo/*/plan-*.md
+# 4. Review and approve plans
+ghw issues review plan --repo owner/repo 42 --approve
 
 # 5. Implement a specific issue with full automation
 ghw issues implement --repo owner/repo --issue-numbers 42 --push-branch --create-pr
 
-# 6. Monitor progress
+# 6. (If implement doesn't push/PR) Review implementation
+ghw issues review implementation --repo owner/repo 42
+
+# 7. Monitor progress
 ghw monitor --repo owner/repo --issue-number 42
 ```
 

@@ -10,8 +10,9 @@ gh-worker streamlines software development workflows by automating routine issue
 
 - **Sync** issues from GitHub to local storage
 - **Plan** implementations using AI agents (Claude Code, OpenCode, Gemini, Codex)
+- **Review** and approve plans before implementation
 - **Implement** plans automatically and create pull requests
-- **Monitor** ongoing implementations in real-time
+- **Monitor** ongoing plan or implementation progress in real-time
 
 ## Key Features
 
@@ -67,6 +68,9 @@ ghw issues sync --repo owner/repo
 
 # Generate plans
 ghw issues plan --repo owner/repo
+
+# Review and approve plans (optional)
+ghw issues review plan --repo owner/repo 42 --approve
 
 # Implement
 ghw issues implement --repo owner/repo

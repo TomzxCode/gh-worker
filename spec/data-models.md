@@ -71,6 +71,10 @@ Tracks implementation plan status and results, located in [src/gh_worker/models/
 - `pr_url: str | None` - Pull request URL (optional)
 - `error_message: str | None` - Error details if failed (optional)
 - `completed_at: datetime | None` - Completion timestamp (optional)
+- `merged_at: datetime | None` - PR merge timestamp (optional)
+- `agent: str | None` - Agent name used (optional)
+- `model: str | None` - Model used by agent (optional)
+- `commit_hash: str | None` - Repository commit when plan was generated (optional)
 - `plan_file: Path | None` - Path to plan file (not serialized)
 
 **Methods:**
@@ -82,9 +86,10 @@ Tracks implementation plan status and results, located in [src/gh_worker/models/
 
 **Status Lifecycle:**
 
-1. `PENDING` - Plan created, not yet implemented
+1. `PENDING` - Plan created, waiting for review/approval
+1. `APPROVED` - Plan approved, ready for implementation
 1. `IN_PROGRESS` - Implementation in progress
-1. `COMPLETED` - Successfully implemented with PR
+1. `COMPLETED` - Successfully implemented (may have PR or be waiting for review)
 1. `FAILED` - Implementation failed
 
 ### PlanStatus
@@ -94,6 +99,7 @@ Enumeration for plan status values.
 **Values:**
 
 - `PENDING = "pending"`
+- `APPROVED = "approved"`
 - `IN_PROGRESS = "in_progress"`
 - `COMPLETED = "completed"`
 - `FAILED = "failed"`
@@ -180,6 +186,10 @@ branch_name: fix-issue-42
 pr_url: https://github.com/octocat/hello-world/pull/43
 error_message: null
 completed_at: '2024-01-15T15:45:30.987654+00:00'
+merged_at: null
+agent: claude-code
+model: claude-sonnet-4
+commit_hash: abc123def456
 ```
 
 ### YAML → PlanMetadata
@@ -247,7 +257,7 @@ Uses `from_string()`:
 **MUST:**
 
 - Track issue association (issue_number, repository)
-- Support status lifecycle (PENDING → IN_PROGRESS → COMPLETED/FAILED)
+- Support status lifecycle (PENDING → APPROVED → IN_PROGRESS → COMPLETED/FAILED)
 - Store agent results (session_id, branch_name, pr_url)
 - Record timestamps (created_at, completed_at)
 - Support YAML serialization and deserialization

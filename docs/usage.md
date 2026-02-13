@@ -25,7 +25,7 @@ gh-worker provides the following commands (in help order):
 
 - [`init`](#init-command) - Initialize configuration interactively
 - [`repositories`](#repositories-commands) - Manage tracked repositories (add, list, remove)
-- [`issues`](#issues-commands) - Sync, plan, implement, and list issues (sync, list, plan, implement)
+- [`issues`](#issues-commands) - Sync, plan, review, implement, and list issues (sync, list, plan, review, implement)
 - [`monitor`](#monitor-command) - Monitor ongoing implementations
 - [`work`](#work-command) - Run complete workflow (sync → plan → implement)
 - [`config`](#config-command) - Manage configuration
@@ -191,6 +191,8 @@ Sync, plan, and implement issues with `ghw issues`:
 ghw issues sync [--repo REPO | --all-repos] [OPTIONS]
 ghw issues list [--repo REPO | --all-repos] [OPTIONS]
 ghw issues plan [--repo REPO] [OPTIONS]
+ghw issues review plan [--repo REPO] <issue-number> [OPTIONS]
+ghw issues review implementation [--repo REPO] <issue-number> [OPTIONS]
 ghw issues implement [--repo REPO] [OPTIONS]
 ```
 
@@ -364,6 +366,33 @@ ghw issues plan --repo owner/repo --agent mock
 ghw issues plan --repo owner/repo --assignee @me
 ```
 
+#### review plan
+
+Review and approve implementation plans before running the implement step.
+
+```bash
+# Review a plan (creates worktree with plan symlinked)
+ghw issues review plan --repo owner/repo 42
+
+# Approve a plan
+ghw issues review plan --repo owner/repo 42 --approve
+```
+
+#### review implementation
+
+Approve implementations that completed without auto-push/PR: push the branch and create a pull request.
+
+```bash
+# Push branch and create PR (default)
+ghw issues review implementation --repo owner/repo 42
+
+# Push branch only (no PR)
+ghw issues review implementation --repo owner/repo 42 --no-pr
+
+# Create PR only (branch already pushed)
+ghw issues review implementation --repo owner/repo 42 --no-push
+```
+
 #### implement
 
 Execute implementation plans and create pull requests using git worktree for isolated development.
@@ -494,7 +523,7 @@ ghw issues implement --repo owner/repo --assignee @me
 
 ### Monitor Command
 
-Monitor an ongoing LLM agent session in real-time.
+Monitor an ongoing LLM agent session (plan or implementation) in real-time.
 
 ```bash
 ghw monitor --repo <owner/repo> --issue-number <number>
@@ -517,9 +546,11 @@ ghw monitor --repo owner/repo --issue-number 42
 
 **Use Cases**:
 
-- Watch long-running implementations
+- Watch long-running plan generation or implementations
 - Debug implementation issues
 - Understand what the agent is doing
+
+**Note**: Monitor requires a session ID in the plan metadata. It works for implementations; support for monitoring plan generation depends on the agent.
 
 ### Work Command
 
@@ -603,7 +634,10 @@ ghw issues sync --repo owner/repo
 # 4. Generate plans
 ghw issues plan --repo owner/repo
 
-# 5. Implement with full automation
+# 5. (Optional) Review and approve plans
+ghw issues review plan --repo owner/repo 42 --approve
+
+# 6. Implement with full automation
 ghw issues implement --repo owner/repo --push-branch --create-pr
 ```
 
@@ -667,7 +701,7 @@ ghw issues implement --repo owner/repo --issue-numbers 42 43 44 45 46 --parallel
 
 ### Review-Before-Implement Workflow
 
-Generate plans for review before implementation:
+Generate plans, review and approve them, then implement:
 
 ```bash
 # 1. Sync issues
@@ -676,8 +710,9 @@ ghw issues sync --repo owner/repo
 # 2. Generate plans
 ghw issues plan --repo owner/repo
 
-# 3. Review plans manually
-ls ~/gh-worker/issues/owner/repo/*/plan-*.md
+# 3. Review and approve plans
+ghw issues review plan --repo owner/repo 42 --approve
+ghw issues review plan --repo owner/repo 43 --approve
 
 # 4. Implement approved issues
 ghw issues implement --repo owner/repo --issue-numbers 42 43
@@ -731,7 +766,14 @@ When starting with a new repository:
 
 ### Review Plans Before Implementation
 
-Plans are stored as markdown files. Review them before implementing:
+Use the review command to approve plans before implementing:
+
+```bash
+# Review and approve a plan
+ghw issues review plan --repo owner/repo 42 --approve
+```
+
+Or inspect plans manually:
 
 ```bash
 # View a plan

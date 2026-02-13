@@ -47,10 +47,12 @@ Manages plan storage and versioning, located in [src/gh_worker/storage/plan_stor
 **Methods:**
 
 - `create_plan()` - Create new plan with metadata
-- `get_latest_plan()` - Retrieve most recent plan for issue
+- `start_plan_generation()` - Create metadata at start of generation (no .md yet)
+- `complete_plan()` - Write plan content and update metadata after generation
+- `get_latest_plan()` - Retrieve most recent plan for issue (returns metadata even if .md doesn't exist yet)
 - `list_plans()` - List all plans for issue (sorted newest first)
 - `update_metadata()` - Update plan metadata
-- `has_plan()` - Check if issue has any plans
+- `has_plan()` - Check if issue has plan matching its .updated-at timestamp
 - `get_issue_dir()` - Resolve issue directory path
 
 ## Data Storage
@@ -99,11 +101,16 @@ Stored as YAML with fields:
 - `issue_number` - Associated issue number
 - `repository` - Full repository name (owner/name)
 - `created_at` - Plan creation timestamp
-- `status` - Plan status (PENDING, IN_PROGRESS, COMPLETED, FAILED)
+- `status` - Plan status (PENDING, APPROVED, IN_PROGRESS, COMPLETED, FAILED)
 - `session_id` - Agent session ID (optional)
 - `branch_name` - Implementation branch (optional)
 - `pr_url` - Pull request URL (optional)
-- `error` - Error message if failed (optional)
+- `error_message` - Error message if failed (optional)
+- `completed_at` - Implementation completion timestamp (optional)
+- `merged_at` - PR merge timestamp (optional)
+- `agent` - Agent name used (optional)
+- `model` - Model used by agent (optional)
+- `commit_hash` - Repository commit when plan was generated (optional)
 
 ### Repository Metadata
 

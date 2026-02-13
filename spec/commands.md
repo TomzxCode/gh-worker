@@ -242,6 +242,64 @@ Generates implementation plans using LLM agents.
    - Log results
 1. Report success/failure counts
 
+#### issues review plan
+
+Reviews and approves implementation plans.
+
+**Location:** [src/gh_worker/commands/review.py](src/gh_worker/commands/review.py)
+
+**Operations:**
+
+- Create worktree with plan symlinked for review (without `--approve`)
+- Mark plan as approved (with `--approve`)
+- Updates plan metadata status to APPROVED
+
+**Example:**
+
+```bash
+gh-worker issues review plan --repo octocat/hello-world 42
+gh-worker issues review plan --repo octocat/hello-world 42 --approve
+```
+
+**Flow:**
+
+1. Load configuration and validate issues_path
+1. Initialize IssueStore and PlanStore
+1. Find plan with status PENDING and existing plan file
+1. If `--approve`: Update metadata status to APPROVED
+1. If not `--approve`: Create worktree, symlink plan, open for editing
+
+#### issues review implementation
+
+Approves implementations waiting for review: push branch and create PR.
+
+**Location:** [src/gh_worker/commands/review.py](src/gh_worker/commands/review.py)
+
+**Operations:**
+
+- Find implementations with status COMPLETED, no PR URL, and branch name
+- Push branch to remote
+- Create pull request via GitHub CLI
+- Update plan metadata with PR URL
+
+**Example:**
+
+```bash
+gh-worker issues review implementation --repo octocat/hello-world 42
+gh-worker issues review implementation --repo octocat/hello-world 42 --no-pr
+```
+
+**Flow:**
+
+1. Load configuration and validate issues_path
+1. Initialize IssueStore, PlanStore, GHClient
+1. Find implementation with COMPLETED status, branch_name, no pr_url
+1. Create worktree at branch
+1. Push branch to remote (if `--push`)
+1. Create PR via gh CLI (if `--pr`)
+1. Update metadata with PR URL
+1. Remove worktree
+
 #### issues implement
 
 Executes plans and creates pull requests with git worktree support.
@@ -296,7 +354,7 @@ Executes plans and creates pull requests with git worktree support.
 
 #### monitor
 
-Monitors ongoing agent sessions.
+Monitors ongoing agent sessions (plan or implementation).
 
 **Location:** [src/gh_worker/commands/monitor.py](src/gh_worker/commands/monitor.py)
 
@@ -306,13 +364,14 @@ Monitors ongoing agent sessions.
 - Connect to agent session
 - Stream session events
 - Display progress
+- Supports `--agent` override
 
 **Flow:**
 
 1. Load configuration
-1. Initialize agent and PlanStore
+1. Initialize agent (with optional override) and PlanStore
 1. Load plan metadata for issue
-1. Extract session ID
+1. Extract session ID (required; typically set during implementation)
 1. Call agent.monitor() (streaming)
 1. Display events to console
 

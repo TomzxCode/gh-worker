@@ -29,12 +29,15 @@ gh-worker
 │   ├── add           - Add repositories to track
 │   ├── list          - List all repositories under management
 │   └── remove        - Remove repositories from tracking
-├── issues            - Sync, plan, and implement issues
+├── issues            - Sync, plan, review, and implement issues
 │   ├── sync          - Sync issues from GitHub
 │   ├── list          - List synced issues with plan/implementation status
 │   ├── plan          - Generate implementation plans
+│   ├── review        - Review and approve plans or implementations
+│   │   ├── plan      - Review/approve plans
+│   │   └── implementation - Push branch and create PR for implementations
 │   └── implement     - Implement plans and create PRs
-├── monitor           - Monitor agent sessions
+├── monitor           - Monitor agent sessions (plan or implement)
 ├── work              - Run complete workflow (sync → plan → implement)
 └── config            - Manage configuration
 ```
@@ -296,6 +299,82 @@ gh-worker issues plan
 - Saves plans with timestamps and metadata
 - Parallelizes based on configuration or `--parallelism`
 
+#### issues review plan
+
+Review and approve implementation plans.
+
+**Syntax:**
+
+```bash
+gh-worker issues review plan --repo REPO <issue-number> [OPTIONS]
+```
+
+**Arguments:**
+
+- `--repo REPO` (required) - Repository (format: "owner/repo")
+- `issue-number` (required) - Issue number to review
+
+**Options:**
+
+- `--approve` - Mark the plan as approved (skip worktree creation)
+- `--config-path PATH` - Custom config file path
+
+**Examples:**
+
+```bash
+# Create worktree with plan symlinked for review
+gh-worker issues review plan --repo octocat/hello-world 42
+
+# Approve plan without opening worktree
+gh-worker issues review plan --repo octocat/hello-world 42 --approve
+```
+
+**Behavior:**
+
+- Without `--approve`: Creates a git worktree with the plan file symlinked for editing
+- With `--approve`: Updates plan metadata status to APPROVED
+- Only plans with status PENDING and existing plan file can be reviewed
+
+#### issues review implementation
+
+Approve implementations waiting for review: push branch and create PR.
+
+**Syntax:**
+
+```bash
+gh-worker issues review implementation --repo REPO <issue-number> [OPTIONS]
+```
+
+**Arguments:**
+
+- `--repo REPO` (required) - Repository (format: "owner/repo")
+- `issue-number` (required) - Issue number to review
+
+**Options:**
+
+- `--push` - Push branch to remote (default: true)
+- `--pr` - Create pull request (default: true)
+- `--no-push` - Skip pushing branch
+- `--no-pr` - Skip creating PR
+- `--config-path PATH` - Custom config file path
+
+**Examples:**
+
+```bash
+# Push branch and create PR (default)
+gh-worker issues review implementation --repo octocat/hello-world 42
+
+# Push only, no PR
+gh-worker issues review implementation --repo octocat/hello-world 42 --no-pr
+```
+
+**Behavior:**
+
+- Applies to implementations with status COMPLETED, no PR URL, and a branch name
+- Pushes the implementation branch to remote
+- Creates a pull request via GitHub CLI
+- Updates plan metadata with PR URL
+
 #### issues implement
 
 Execute plans and create pull requests.
@@ -400,6 +479,7 @@ gh-worker work [--once | --frequency FREQ] [OPTIONS]
 - `--repos REPO...` - Specific repositories to process
 - `--since TIMESTAMP` - Only process issues updated after timestamp
 - `--issue-numbers NUM...` - Specific issue numbers to process
+- `--agent AGENT` - Override agent to use
 - `--config-path PATH` - Custom config file path
 
 **Examples:**
@@ -603,8 +683,14 @@ gh-worker issues sync --all-repos
 # Generate plans
 gh-worker issues plan
 
+# Review and approve plans (optional)
+gh-worker issues review plan --repo octocat/hello-world 42 --approve
+
 # Implement plans
 gh-worker issues implement
+
+# Review implementation if not auto-pushed (optional)
+gh-worker issues review implementation --repo octocat/hello-world 42
 ```
 
 ### Automated Workflow
