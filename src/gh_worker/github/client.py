@@ -387,6 +387,93 @@ class GHClient:
                 )
                 raise RuntimeError(f"Failed to remove worktree: {force_error}") from force_error
 
+    def fetch_repository(self, repository: Repository) -> None:
+        """Fetch latest state from remote.
+
+        Args:
+            repository: Repository object
+
+        Raises:
+            RuntimeError: If fetch fails
+        """
+        repo_path = self._get_repo_path(repository)
+
+        if not repo_path.exists():
+            raise FileNotFoundError(f"Repository not found at {repo_path}")
+
+        try:
+            self._run_git_command(["fetch", "origin"], cwd=repo_path)
+            logger.info(
+                "repository_fetched",
+                repository=repository.full_name,
+            )
+        except RuntimeError as e:
+            logger.error(
+                "repository_fetch_failed",
+                repository=repository.full_name,
+                error=str(e),
+            )
+            raise RuntimeError(f"Failed to fetch repository: {e}") from e
+
+    def create_planning_worktree(self, repository: Repository, worktree_path: Path) -> Path:
+        """Create a git worktree checked out to origin/main for planning.
+
+        Uses the latest code from the origin remote to ensure plans are
+        generated against up-to-date code.
+
+        Args:
+            repository: Repository object
+            worktree_path: Path where worktree should be created
+
+        Returns:
+            Path to the created worktree
+
+        Raises:
+            RuntimeError: If worktree creation fails
+        """
+        repo_path = self._get_repo_path(repository)
+
+        if not repo_path.exists():
+            raise FileNotFoundError(f"Repository not found at {repo_path}")
+
+        # Ensure parent directory exists
+        worktree_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Try origin/main first, then origin/master
+        remote_ref = None
+        for branch in ["main", "master"]:
+            try:
+                self._run_git_command(
+                    ["rev-parse", "--verify", f"origin/{branch}"],
+                    cwd=repo_path,
+                )
+                remote_ref = f"origin/{branch}"
+                break
+            except RuntimeError:
+                continue
+        if not remote_ref:
+            raise RuntimeError("Could not find origin/main or origin/master for planning worktree")
+
+        # Create worktree at remote ref (detached HEAD at latest origin/main)
+        args = ["worktree", "add", str(worktree_path), remote_ref]
+        try:
+            self._run_git_command(args, cwd=repo_path)
+            logger.info(
+                "planning_worktree_created",
+                repository=repository.full_name,
+                worktree_path=str(worktree_path),
+                ref=remote_ref,
+            )
+            return worktree_path
+        except RuntimeError as e:
+            logger.error(
+                "planning_worktree_creation_failed",
+                repository=repository.full_name,
+                worktree_path=str(worktree_path),
+                error=str(e),
+            )
+            raise RuntimeError(f"Failed to create planning worktree: {e}") from e
+
     def _run_git_command(self, args: list[str], cwd: Path | None = None) -> str:
         """Run git command.
 
