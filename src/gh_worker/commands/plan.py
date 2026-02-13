@@ -406,12 +406,23 @@ async def plan_command_async(
         logger.info("No issues need plans generated")
         return
 
-    # Get agent configuration (use override if provided, otherwise use config default)
-    agent_name = agent if agent is not None else app_config.agent.default
+    # Agent config: CLI override > plan.agent/model > agent.default/model
+    agent_name = (
+        agent
+        if agent is not None
+        else (app_config.plan.agent if app_config.plan.agent else app_config.agent.default)
+    )
+    model_val = (
+        model
+        if model is not None
+        else (
+            app_config.plan.model if app_config.plan.model is not None else app_config.agent.model
+        )
+    )
     agent_config = {
         "claude_code_path": app_config.agent.claude_code_path,
         "opencode_path": app_config.agent.opencode_path,
-        "model": model if model is not None else app_config.agent.model,
+        "model": model_val,
     }
 
     logger.info(

@@ -17,9 +17,13 @@ AppConfig (root)
 ├── issues_path: Path
 ├── repository_path: Path
 ├── plan: PlanConfig
-│   └── parallelism: int
+│   ├── parallelism: int
+│   ├── agent: str | None
+│   └── model: str | None
 ├── implement: ImplementConfig
-│   └── parallelism: int
+│   ├── parallelism: int
+│   ├── agent: str | None
+│   └── model: str | None
 ├── sync: SyncConfig
 │   └── frequency: str
 └── agent: AgentConfig
@@ -50,6 +54,8 @@ Settings for plan generation.
 **Fields:**
 
 - `parallelism` - Number of parallel plan executions (default: 1, minimum: 1)
+- `agent` - Agent to use for planning (overrides agent.default when set, default: None)
+- `model` - Model to use for planning (overrides agent.model when set, default: None)
 
 #### ImplementConfig
 
@@ -58,6 +64,8 @@ Settings for plan implementation.
 **Fields:**
 
 - `parallelism` - Number of parallel implementations (default: 1, minimum: 1)
+- `agent` - Agent to use for implementation (overrides agent.default when set, default: None)
+- `model` - Model to use for implementation (overrides agent.model when set, default: None)
 
 #### SyncConfig
 
@@ -113,8 +121,12 @@ issues_path: /var/gh-worker/issues
 repository_path: /var/gh-worker/repos
 plan:
   parallelism: 3
+  agent: null   # Override agent for planning (uses agent.default if null)
+  model: null   # Override model for planning (uses agent.model if null)
 implement:
   parallelism: 2
+  agent: null   # Override agent for implementation (uses agent.default if null)
+  model: null   # Override model for implementation (uses agent.model if null)
 sync:
   frequency: 30m
 agent:

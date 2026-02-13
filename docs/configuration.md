@@ -138,6 +138,32 @@ ghw config plan.parallelism 3
 
 Higher values enable processing multiple issues concurrently, but may increase resource usage and API rate limits.
 
+#### `plan.agent`
+
+Agent to use for planning. Overrides `agent.default` when set.
+
+```bash
+ghw config plan.agent claude-code
+```
+
+- **Type**: String
+- **Required**: No
+- **Default**: null (uses `agent.default`)
+
+Use this to run planning with a different agent than implementation (e.g., `claude-code` for plans, `cursor-agent` for implementation).
+
+#### `plan.model`
+
+Model to use for planning. Overrides `agent.model` when set.
+
+```bash
+ghw config plan.model claude-sonnet-4-20250514
+```
+
+- **Type**: String
+- **Required**: No
+- **Default**: null (uses `agent.model` or agent default)
+
 **Recommendations**:
 
 - Local development: 1-2
@@ -162,6 +188,32 @@ ghw config implement.parallelism 2
 - **Range**: >= 1
 
 Implementation is typically more resource-intensive than planning. Use lower values to prevent system overload.
+
+#### `implement.agent`
+
+Agent to use for implementation. Overrides `agent.default` when set.
+
+```bash
+ghw config implement.agent cursor-agent
+```
+
+- **Type**: String
+- **Required**: No
+- **Default**: null (uses `agent.default`)
+
+Use this to run implementation with a different agent than planning (e.g., `claude-code` for plans, `cursor-agent` for implementation).
+
+#### `implement.model`
+
+Model to use for implementation. Overrides `agent.model` when set.
+
+```bash
+ghw config implement.model gpt-4
+```
+
+- **Type**: String
+- **Required**: No
+- **Default**: null (uses `agent.model` or agent default)
 
 **Recommendations**:
 

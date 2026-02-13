@@ -171,6 +171,38 @@ def init_command(config_path: Path | None = None) -> None:
     agent_name = _prompt_choice("Default agent", available_agents, default=default_agent)
     config.agent.default = agent_name
 
+    # Optional: phase-specific agent/model overrides
+    logger.info(
+        "Phase-specific overrides (leave blank to use default for both plan and implement):"
+    )
+    plan_agent = _prompt_with_default(
+        "Plan agent",
+        default=config.plan.agent or "",
+        required=False,
+    )
+    config.plan.agent = plan_agent if plan_agent else None
+
+    plan_model = _prompt_with_default(
+        "Plan model",
+        default=config.plan.model or "",
+        required=False,
+    )
+    config.plan.model = plan_model if plan_model else None
+
+    implement_agent = _prompt_with_default(
+        "Implementation agent",
+        default=config.implement.agent or "",
+        required=False,
+    )
+    config.implement.agent = implement_agent if implement_agent else None
+
+    implement_model = _prompt_with_default(
+        "Implementation model",
+        default=config.implement.model or "",
+        required=False,
+    )
+    config.implement.model = implement_model if implement_model else None
+
     # Prompt for claude-code path if using claude-code
     if agent_name == "claude-code":
         claude_code_path = _prompt_with_default(

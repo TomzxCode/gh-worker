@@ -62,7 +62,11 @@ ghw init --config-path /path/to/config.yaml
 - `issues-path` - Where to store synced issues
 - `repository-path` - Where to clone repositories
 - `plan.parallelism` - How many plans to generate concurrently (default: 1)
+- `plan.agent` - Agent for planning (overrides agent.default when set)
+- `plan.model` - Model for planning (overrides agent.model when set)
 - `implement.parallelism` - How many implementations to run concurrently (default: 1)
+- `implement.agent` - Agent for implementation (overrides agent.default when set)
+- `implement.model` - Model for implementation (overrides agent.model when set)
 - `implement.use_worktree` - Use git worktree for implementations (default: True)
 - `implement.push_branch` - Auto-push branches after implementation (default: False)
 - `implement.create_pr` - Auto-create PRs after implementation (default: False)

@@ -32,8 +32,13 @@ class AgentConfirmModal(ModalScreen[tuple[str, str | None] | None]):
 
         config = ConfigManager(self.config_path)
         app_config = config.load()
-        default_agent = app_config.agent.default
-        default_model = app_config.agent.model or ""
+        # Use phase-specific overrides when available
+        if self.action == "plan":
+            default_agent = app_config.plan.agent or app_config.agent.default
+            default_model = (app_config.plan.model or app_config.agent.model or "") or ""
+        else:
+            default_agent = app_config.implement.agent or app_config.agent.default
+            default_model = (app_config.implement.model or app_config.agent.model or "") or ""
 
         registry = get_registry()
         agent_options = [(name, name) for name in registry.list_agents()]

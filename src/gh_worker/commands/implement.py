@@ -874,12 +874,27 @@ async def implement_command_async(
         parallelism=max_workers,
     )
 
-    # Get agent configuration (use override if provided, otherwise use config default)
-    agent_name = agent if agent is not None else app_config.agent.default
+    # Agent config: CLI override > implement.agent/model > agent.default/model
+    agent_name = (
+        agent
+        if agent is not None
+        else (
+            app_config.implement.agent if app_config.implement.agent else app_config.agent.default
+        )
+    )
+    model_val = (
+        model
+        if model is not None
+        else (
+            app_config.implement.model
+            if app_config.implement.model is not None
+            else app_config.agent.model
+        )
+    )
     agent_config = {
         "claude_code_path": app_config.agent.claude_code_path,
         "opencode_path": app_config.agent.opencode_path,
-        "model": model if model is not None else app_config.agent.model,
+        "model": model_val,
     }
 
     # Determine settings (CLI override > config > default)

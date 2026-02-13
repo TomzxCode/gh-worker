@@ -9,12 +9,28 @@ class PlanConfig(BaseModel):
     """Configuration for plan command."""
 
     parallelism: int = Field(default=1, ge=1, description="Number of parallel plan executions")
+    agent: str | None = Field(
+        default=None,
+        description="Agent to use for planning (overrides agent.default when set)",
+    )
+    model: str | None = Field(
+        default=None,
+        description="Model to use for planning (overrides agent.model when set)",
+    )
 
 
 class ImplementConfig(BaseModel):
     """Configuration for implement command."""
 
     parallelism: int = Field(default=1, ge=1, description="Number of parallel implementations")
+    agent: str | None = Field(
+        default=None,
+        description="Agent to use for implementation (overrides agent.default when set)",
+    )
+    model: str | None = Field(
+        default=None,
+        description="Model to use for implementation (overrides agent.model when set)",
+    )
     use_worktree: bool = Field(
         default=True, description="Use git worktree for isolated implementation branches"
     )

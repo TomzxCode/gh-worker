@@ -114,9 +114,7 @@ class TestFindIssuesWithApprovedPlans:
         metadata.status = PlanStatus.APPROVED
         plan_store.update_metadata(metadata)
 
-        items = _find_issues_with_approved_plans(
-            repository, issue_store, plan_store, [1]
-        )
+        items = _find_issues_with_approved_plans(repository, issue_store, plan_store, [1])
         assert len(items) == 1
 
     def test_skips_pending_plans(self, tmp_path):
@@ -130,9 +128,7 @@ class TestFindIssuesWithApprovedPlans:
         (issue_dir / "description.md").write_text("Issue 1")
         plan_store.create_plan(repository, 1, "Plan 1")
 
-        items = _find_issues_with_approved_plans(
-            repository, issue_store, plan_store, [1]
-        )
+        items = _find_issues_with_approved_plans(repository, issue_store, plan_store, [1])
         assert len(items) == 0
 
 
@@ -159,9 +155,7 @@ class TestUnapprovePlanCommand:
         metadata.status = PlanStatus.APPROVED
         plan_store.update_metadata(metadata)
 
-        result = unapprove_plan_command(
-            "owner/repo", 1, config_path=config_dir / "config.yaml"
-        )
+        result = unapprove_plan_command("owner/repo", 1, config_path=config_dir / "config.yaml")
         assert result is True
 
         _, metadata = plan_store.get_latest_plan(repository, 1)
@@ -185,7 +179,5 @@ class TestUnapprovePlanCommand:
         plan_store.create_plan(repository, 1, "Plan 1")
         # Plan is PENDING, not APPROVED
 
-        result = unapprove_plan_command(
-            "owner/repo", 1, config_path=config_dir / "config.yaml"
-        )
+        result = unapprove_plan_command("owner/repo", 1, config_path=config_dir / "config.yaml")
         assert result is False
