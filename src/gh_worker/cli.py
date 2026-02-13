@@ -141,7 +141,7 @@ app.command(issues_app)
 app["issues"].sort_key = 2
 
 
-@issues_app.command
+@issues_app.command(sort_key=0)
 def sync(
     repo: Annotated[str | None, Parameter(help="Repository to sync (e.g., 'owner/repo')")] = None,
     issue_numbers: Annotated[
@@ -181,7 +181,7 @@ def sync(
     )
 
 
-@issues_app.command(name="list")
+@issues_app.command(name="list", sort_key=1)
 def issues_list(
     repo: Annotated[str | None, Parameter(help="Repository to list (e.g., 'owner/repo')")] = None,
     *,
@@ -229,7 +229,7 @@ def issues_list(
     )
 
 
-@issues_app.command
+@issues_app.command(sort_key=2)
 def plan(
     repo: Annotated[str | None, Parameter(help="Repository (e.g., 'owner/repo')")] = None,
     issue_numbers: Annotated[
@@ -271,7 +271,7 @@ def plan(
     )
 
 
-@issues_app.command
+@issues_app.command(sort_key=3)
 def implement(
     repo: Annotated[str | None, Parameter(help="Repository (e.g., 'owner/repo')")] = None,
     issue_numbers: Annotated[
