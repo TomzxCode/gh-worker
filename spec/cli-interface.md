@@ -356,14 +356,14 @@ gh-worker plans unapprove --repo REPO <issue-number> [OPTIONS]
 - Updates plan metadata status to PENDING
 - Only plans with status APPROVED can be unapproved
 
-#### issues review plan
+#### plans review
 
 Create worktree with plan symlinked for review/editing.
 
 **Syntax:**
 
 ```bash
-gh-worker issues review plan --repo REPO <issue-number> [OPTIONS]
+gh-worker plans review --repo REPO <issue-number> [OPTIONS]
 ```
 
 **Arguments:**
@@ -379,7 +379,7 @@ gh-worker issues review plan --repo REPO <issue-number> [OPTIONS]
 
 ```bash
 # Create worktree with plan symlinked for review
-gh-worker issues review plan --repo octocat/hello-world 42
+gh-worker plans review --repo octocat/hello-world 42
 ```
 
 **Behavior:**
@@ -387,14 +387,14 @@ gh-worker issues review plan --repo octocat/hello-world 42
 - Creates a git worktree with the plan file symlinked for editing
 - Only plans with status PENDING and existing plan file can be reviewed
 
-#### issues review implementation
+#### implementations review
 
 Approve implementations waiting for review: push branch and create PR.
 
 **Syntax:**
 
 ```bash
-gh-worker issues review implementation --repo REPO <issue-number> [OPTIONS]
+gh-worker implementations review --repo REPO <issue-number> [OPTIONS]
 ```
 
 **Arguments:**
@@ -414,10 +414,10 @@ gh-worker issues review implementation --repo REPO <issue-number> [OPTIONS]
 
 ```bash
 # Push branch and create PR (default)
-gh-worker issues review implementation --repo octocat/hello-world 42
+gh-worker implementations review --repo octocat/hello-world 42
 
 # Push only, no PR
-gh-worker issues review implementation --repo octocat/hello-world 42 --no-pr
+gh-worker implementations review --repo octocat/hello-world 42 --no-pr
 ```
 
 **Behavior:**
@@ -742,7 +742,7 @@ gh-worker plans approve --repo octocat/hello-world 42
 gh-worker issues implement
 
 # Review implementation if not auto-pushed (optional)
-gh-worker issues review implementation --repo octocat/hello-world 42
+gh-worker implementations review --repo octocat/hello-world 42
 ```
 
 ### Automated Workflow

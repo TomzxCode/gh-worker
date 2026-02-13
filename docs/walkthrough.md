@@ -191,7 +191,7 @@ ghw issues plan --repo owner/repo --issue-numbers 42 43 44 --parallelism 2
 Before implementing, review the generated plan:
 
 ```bash
-ghw issues review plan --repo owner/repo 42
+ghw plans review --repo owner/repo 42
 ```
 
 This creates a git worktree with the plan symlinked so you can inspect it in context.
@@ -232,7 +232,7 @@ ghw issues implement --repo owner/repo --issue-numbers 42 --push-branch --create
 ```bash
 ghw issues implement --repo owner/repo --issue-numbers 42
 # Then manually push and create PR:
-ghw issues review implementation --repo owner/repo 42
+ghw implementations review --repo owner/repo 42
 ```
 
 ---
@@ -242,7 +242,7 @@ ghw issues review implementation --repo owner/repo 42
 If you didn't use `--push-branch --create-pr`, push the branch and create the PR manually:
 
 ```bash
-ghw issues review implementation --repo owner/repo 42
+ghw implementations review --repo owner/repo 42
 ```
 
 This pushes the branch and opens a pull request on GitHub.
@@ -306,7 +306,7 @@ ghw config implement.create_pr true
 | `ghw issues plan --repo owner/repo` | Generate plans |
 | `ghw plans approve --repo owner/repo 42` | Approve plan |
 | `ghw issues implement --repo owner/repo` | Implement plans |
-| `ghw issues review implementation --repo owner/repo 42` | Push & create PR |
+| `ghw implementations review --repo owner/repo 42` | Push & create PR |
 | `ghw monitor --repo owner/repo --issue-number 42` | Monitor progress |
 | `ghw work --once --repos owner/repo` | Full workflow |
 

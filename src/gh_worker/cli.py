@@ -291,9 +291,11 @@ def plan(
     )
 
 
-review_app = cyclopts.App(name="review", help="Review plans or implementations")
-issues_app.command(review_app)
-issues_app["review"].sort_key = 3.5
+implementations_app = cyclopts.App(
+    name="implementations", help="Review implementations (push branch, create PR)"
+)
+app.command(implementations_app)
+app["implementations"].sort_key = 1.6
 
 
 @plans_app.command
@@ -337,8 +339,8 @@ def unapprove(
     )
 
 
-@review_app.command(name="plan")
-def review_plan(
+@plans_app.command
+def review(
     repo: Annotated[str, Parameter(help="Repository (e.g., 'owner/repo')")],
     issue_number: Annotated[int, Parameter(help="Issue number to review")],
     *,
@@ -358,8 +360,8 @@ def review_plan(
     )
 
 
-@review_app.command
-def implementation(
+@implementations_app.command(name="review")
+def implementations_review(
     repo: Annotated[str, Parameter(help="Repository (e.g., 'owner/repo')")],
     issue_number: Annotated[int, Parameter(help="Issue number to review")],
     *,

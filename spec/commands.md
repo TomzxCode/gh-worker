@@ -242,7 +242,7 @@ Generates implementation plans using LLM agents.
    - Log results
 1. Report success/failure counts
 
-#### issues review plan
+#### plans review
 
 Reviews and approves implementation plans.
 
@@ -257,7 +257,7 @@ Reviews and approves implementation plans.
 **Example:**
 
 ```bash
-gh-worker issues review plan --repo octocat/hello-world 42
+gh-worker plans review --repo octocat/hello-world 42
 gh-worker plans approve --repo octocat/hello-world 42
 ```
 
@@ -267,9 +267,9 @@ gh-worker plans approve --repo octocat/hello-world 42
 1. Initialize IssueStore and PlanStore
 1. Find plan with status PENDING and existing plan file
 1. `plans approve`: Update metadata status to APPROVED
-1. `issues review plan`: Create worktree, symlink plan, open for editing
+1. `plans review`: Create worktree, symlink plan, open for editing
 
-#### issues review implementation
+#### implementations review
 
 Approves implementations waiting for review: push branch and create PR.
 
@@ -285,8 +285,8 @@ Approves implementations waiting for review: push branch and create PR.
 **Example:**
 
 ```bash
-gh-worker issues review implementation --repo octocat/hello-world 42
-gh-worker issues review implementation --repo octocat/hello-world 42 --no-pr
+gh-worker implementations review --repo octocat/hello-world 42
+gh-worker implementations review --repo octocat/hello-world 42 --no-pr
 ```
 
 **Flow:**

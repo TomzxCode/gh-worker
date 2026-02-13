@@ -191,8 +191,8 @@ Sync, plan, and implement issues with `ghw issues`:
 ghw issues sync [--repo REPO | --all-repos] [OPTIONS]
 ghw issues list [--repo REPO | --all-repos] [OPTIONS]
 ghw issues plan [--repo REPO] [OPTIONS]
-ghw issues review plan [--repo REPO] <issue-number> [OPTIONS]
-ghw issues review implementation [--repo REPO] <issue-number> [OPTIONS]
+ghw plans review [--repo REPO] <issue-number> [OPTIONS]
+ghw implementations review [--repo REPO] <issue-number> [OPTIONS]
 ghw issues implement [--repo REPO] [OPTIONS]
 ```
 
@@ -372,7 +372,7 @@ Review and approve implementation plans before running the implement step.
 
 ```bash
 # Review a plan (creates worktree with plan symlinked)
-ghw issues review plan --repo owner/repo 42
+ghw plans review --repo owner/repo 42
 
 # Approve a plan
 ghw plans approve --repo owner/repo 42
@@ -384,13 +384,13 @@ Approve implementations that completed without auto-push/PR: push the branch and
 
 ```bash
 # Push branch and create PR (default)
-ghw issues review implementation --repo owner/repo 42
+ghw implementations review --repo owner/repo 42
 
 # Push branch only (no PR)
-ghw issues review implementation --repo owner/repo 42 --no-pr
+ghw implementations review --repo owner/repo 42 --no-pr
 
 # Create PR only (branch already pushed)
-ghw issues review implementation --repo owner/repo 42 --no-push
+ghw implementations review --repo owner/repo 42 --no-push
 ```
 
 #### implement
