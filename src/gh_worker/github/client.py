@@ -86,7 +86,7 @@ class GHClient:
             "--state",
             state,
             "--json",
-            "number,title,body,state,createdAt,updatedAt,author,labels,url",
+            "number,title,body,state,createdAt,updatedAt,author,labels,assignees,url",
             "--limit",
             "1000",
         ]
@@ -126,7 +126,7 @@ class GHClient:
             "--repo",
             repository.full_name,
             "--json",
-            "number,title,body,state,createdAt,updatedAt,author,labels,url",
+            "number,title,body,state,createdAt,updatedAt,author,labels,assignees,url",
         ]
 
         output = self._run_command(args)

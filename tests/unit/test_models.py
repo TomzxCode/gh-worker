@@ -62,6 +62,7 @@ class TestIssue:
             "updatedAt": "2024-01-02T12:00:00Z",
             "author": {"login": "testuser"},
             "labels": [{"name": "bug"}, {"name": "enhancement"}],
+            "assignees": [{"login": "alice"}, {"login": "bob"}],
             "url": "https://github.com/owner/repo/issues/123",
         }
 
@@ -73,6 +74,7 @@ class TestIssue:
         assert issue.state == "open"
         assert issue.author == "testuser"
         assert issue.labels == ["bug", "enhancement"]
+        assert issue.assignees == ["alice", "bob"]
         assert issue.url == "https://github.com/owner/repo/issues/123"
         assert issue.repository == "owner/repo"
 
@@ -92,6 +94,7 @@ class TestIssue:
         assert issue.body == ""
         assert issue.author == "unknown"
         assert issue.labels == []
+        assert issue.assignees == []
 
     def test_to_markdown(self):
         """Test converting Issue to markdown."""
@@ -104,6 +107,7 @@ class TestIssue:
             updated_at=datetime(2024, 1, 2, 12, 0, 0),
             author="testuser",
             labels=["bug"],
+            assignees=["alice", "bob"],
             url="https://github.com/owner/repo/issues/123",
             repository="owner/repo",
         )
@@ -116,6 +120,7 @@ class TestIssue:
         assert "**State**: open" in markdown
         assert "**Author**: testuser" in markdown
         assert "**Labels**: bug" in markdown
+        assert "**Assignees**: alice, bob" in markdown
         assert "Issue description" in markdown
 
 

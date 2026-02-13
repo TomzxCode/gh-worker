@@ -42,6 +42,7 @@ def sample_issue():
         updated_at=datetime(2024, 1, 2, 12, 0, 0),
         author="testuser",
         labels=["bug"],
+        assignees=[],
         url="https://github.com/owner/repo/issues/123",
         repository="owner/repo",
     )
@@ -120,6 +121,7 @@ class TestIssueStore:
                 updated_at=datetime.now(),
                 author="user",
                 labels=[],
+                assignees=[],
                 url=f"https://github.com/owner/repo/issues/{i}",
                 repository="owner/repo",
             )
@@ -148,6 +150,7 @@ class TestIssueStore:
             updated_at=datetime.now(),
             author="user",
             labels=[],
+            assignees=[],
             url="https://github.com/other/project/issues/456",
             repository="other/project",
         )

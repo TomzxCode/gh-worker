@@ -17,6 +17,7 @@ class Issue:
     updated_at: datetime
     author: str
     labels: list[str]
+    assignees: list[str]
     url: str
     repository: str
 
@@ -40,6 +41,7 @@ class Issue:
             updated_at=datetime.fromisoformat(data["updatedAt"].replace("Z", "+00:00")),
             author=data["author"]["login"] if data.get("author") else "unknown",
             labels=[label["name"] for label in data.get("labels", [])],
+            assignees=[a["login"] for a in data.get("assignees", [])],
             url=data["url"],
             repository=repository,
         )
@@ -64,6 +66,9 @@ class Issue:
 
         if self.labels:
             lines.append(f"**Labels**: {', '.join(self.labels)}")
+
+        if self.assignees:
+            lines.append(f"**Assignees**: {', '.join(self.assignees)}")
 
         lines.extend(["", "---", "", self.body])
 
