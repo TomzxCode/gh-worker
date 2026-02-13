@@ -13,6 +13,7 @@ class PlanStatus(Enum):
     """Status of a plan."""
 
     PENDING = "pending"
+    APPROVED = "approved"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
     FAILED = "failed"

@@ -673,6 +673,7 @@ def find_issues_needing_implementation(
     issue_numbers: list[int] | None = None,
     force: bool = False,
     assignee_filter: str | None = None,
+    require_approved: bool = True,
 ) -> list[ImplementTask]:
     """Find issues that need implementation.
 
@@ -718,6 +719,17 @@ def find_issues_needing_implementation(
             continue
 
         plan_file, metadata = plan_result
+
+        # Skip if plan not approved (unless force is True)
+        # Allow IN_PROGRESS and FAILED when explicitly requested (issue_numbers) for retry/continue
+        if require_approved and metadata.status == PlanStatus.PENDING:
+            logger.debug(
+                "plan_not_approved",
+                repository=repository.full_name,
+                issue_number=issue_number,
+                status=metadata.status.value,
+            )
+            continue
 
         # Skip if already completed (unless force is True)
         if not force and metadata.status == PlanStatus.COMPLETED:
@@ -842,7 +854,7 @@ async def implement_command_async(
         print("Error: Specify --repo or --all-repos")
         return
 
-    # Find all issues needing implementation
+    # Find all issues needing implementation (require approved plans unless force)
     all_tasks = []
     for repository in repositories:
         tasks = find_issues_needing_implementation(
@@ -852,6 +864,7 @@ async def implement_command_async(
             issue_numbers,
             force,
             assignee_filter,
+            require_approved=not force,
         )
         all_tasks.extend(tasks)
 

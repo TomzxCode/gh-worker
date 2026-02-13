@@ -122,13 +122,35 @@ This is a test implementation plan.
 class TestFindIssuesNeedingImplementation:
     """Tests for find_issues_needing_implementation function."""
 
-    def test_find_issues_with_pending_plans(self, tmp_issues_path):
-        """Test finding issues that have pending plans."""
+    def test_find_issues_with_approved_plans(self, tmp_issues_path):
+        """Test finding issues that have approved plans."""
         repository = Repository(owner="owner", name="repo")
         issue_store = IssueStore(tmp_issues_path)
         plan_store = PlanStore(tmp_issues_path)
 
-        # Create issues with plans
+        # Create issues with plans and mark them approved
+        for issue_number in [1, 2, 3]:
+            issue_dir = issue_store.get_issue_dir(repository, issue_number)
+            issue_dir.mkdir(parents=True, exist_ok=True)
+            (issue_dir / "description.md").write_text(f"Issue {issue_number}")
+            plan_store.create_plan(repository, issue_number, f"Plan {issue_number}")
+            _, metadata = plan_store.get_latest_plan(repository, issue_number)
+            metadata.status = PlanStatus.APPROVED
+            plan_store.update_metadata(metadata)
+
+        tasks = find_issues_needing_implementation(repository, issue_store, plan_store)
+
+        assert len(tasks) == 3
+        assert all(isinstance(task, ImplementTask) for task in tasks)
+        assert [task.issue_number for task in tasks] == [1, 2, 3]
+
+    def test_skip_unapproved_plans(self, tmp_issues_path):
+        """Test that issues with pending (unapproved) plans are skipped."""
+        repository = Repository(owner="owner", name="repo")
+        issue_store = IssueStore(tmp_issues_path)
+        plan_store = PlanStore(tmp_issues_path)
+
+        # Create issues with plans (default status is PENDING)
         for issue_number in [1, 2, 3]:
             issue_dir = issue_store.get_issue_dir(repository, issue_number)
             issue_dir.mkdir(parents=True, exist_ok=True)
@@ -137,9 +159,26 @@ class TestFindIssuesNeedingImplementation:
 
         tasks = find_issues_needing_implementation(repository, issue_store, plan_store)
 
+        assert len(tasks) == 0
+
+    def test_force_includes_unapproved_plans(self, tmp_issues_path):
+        """Test that force=True includes unapproved plans."""
+        repository = Repository(owner="owner", name="repo")
+        issue_store = IssueStore(tmp_issues_path)
+        plan_store = PlanStore(tmp_issues_path)
+
+        # Create issues with plans (default status is PENDING)
+        for issue_number in [1, 2, 3]:
+            issue_dir = issue_store.get_issue_dir(repository, issue_number)
+            issue_dir.mkdir(parents=True, exist_ok=True)
+            (issue_dir / "description.md").write_text(f"Issue {issue_number}")
+            plan_store.create_plan(repository, issue_number, f"Plan {issue_number}")
+
+        tasks = find_issues_needing_implementation(
+            repository, issue_store, plan_store, force=True, require_approved=False
+        )
+
         assert len(tasks) == 3
-        assert all(isinstance(task, ImplementTask) for task in tasks)
-        assert [task.issue_number for task in tasks] == [1, 2, 3]
 
     def test_skip_completed_implementations(self, tmp_issues_path):
         """Test that issues with completed implementations are skipped."""
@@ -147,12 +186,15 @@ class TestFindIssuesNeedingImplementation:
         issue_store = IssueStore(tmp_issues_path)
         plan_store = PlanStore(tmp_issues_path)
 
-        # Create issues with plans
+        # Create issues with approved plans
         for issue_number in [1, 2, 3]:
             issue_dir = issue_store.get_issue_dir(repository, issue_number)
             issue_dir.mkdir(parents=True, exist_ok=True)
             (issue_dir / "description.md").write_text(f"Issue {issue_number}")
             plan_store.create_plan(repository, issue_number, f"Plan {issue_number}")
+            _, metadata = plan_store.get_latest_plan(repository, issue_number)
+            metadata.status = PlanStatus.APPROVED
+            plan_store.update_metadata(metadata)
 
         # Mark issue 2 as completed
         _, metadata = plan_store.get_latest_plan(repository, 2)
@@ -170,12 +212,15 @@ class TestFindIssuesNeedingImplementation:
         issue_store = IssueStore(tmp_issues_path)
         plan_store = PlanStore(tmp_issues_path)
 
-        # Create issues with plans
+        # Create issues with approved plans
         for issue_number in [1, 2, 3]:
             issue_dir = issue_store.get_issue_dir(repository, issue_number)
             issue_dir.mkdir(parents=True, exist_ok=True)
             (issue_dir / "description.md").write_text(f"Issue {issue_number}")
             plan_store.create_plan(repository, issue_number, f"Plan {issue_number}")
+            _, metadata = plan_store.get_latest_plan(repository, issue_number)
+            metadata.status = PlanStatus.APPROVED
+            plan_store.update_metadata(metadata)
 
         # Mark issue 2 as in progress
         _, metadata = plan_store.get_latest_plan(repository, 2)
@@ -193,12 +238,15 @@ class TestFindIssuesNeedingImplementation:
         issue_store = IssueStore(tmp_issues_path)
         plan_store = PlanStore(tmp_issues_path)
 
-        # Create issues with plans
+        # Create issues with approved plans
         for issue_number in [1, 2, 3]:
             issue_dir = issue_store.get_issue_dir(repository, issue_number)
             issue_dir.mkdir(parents=True, exist_ok=True)
             (issue_dir / "description.md").write_text(f"Issue {issue_number}")
             plan_store.create_plan(repository, issue_number, f"Plan {issue_number}")
+            _, metadata = plan_store.get_latest_plan(repository, issue_number)
+            metadata.status = PlanStatus.APPROVED
+            plan_store.update_metadata(metadata)
 
         # Mark issue 2 as in progress
         _, metadata = plan_store.get_latest_plan(repository, 2)
@@ -218,13 +266,16 @@ class TestFindIssuesNeedingImplementation:
         issue_store = IssueStore(tmp_issues_path)
         plan_store = PlanStore(tmp_issues_path)
 
-        # Create issues but only add plans to some
+        # Create issues but only add approved plans to some
         for issue_number in [1, 2, 3]:
             issue_dir = issue_store.get_issue_dir(repository, issue_number)
             issue_dir.mkdir(parents=True, exist_ok=True)
             (issue_dir / "description.md").write_text(f"Issue {issue_number}")
             if issue_number in [1, 3]:
                 plan_store.create_plan(repository, issue_number, f"Plan {issue_number}")
+                _, metadata = plan_store.get_latest_plan(repository, issue_number)
+                metadata.status = PlanStatus.APPROVED
+                plan_store.update_metadata(metadata)
 
         tasks = find_issues_needing_implementation(repository, issue_store, plan_store)
 
@@ -237,12 +288,15 @@ class TestFindIssuesNeedingImplementation:
         issue_store = IssueStore(tmp_issues_path)
         plan_store = PlanStore(tmp_issues_path)
 
-        # Create issues with plans
+        # Create issues with approved plans
         for issue_number in [1, 2, 3]:
             issue_dir = issue_store.get_issue_dir(repository, issue_number)
             issue_dir.mkdir(parents=True, exist_ok=True)
             (issue_dir / "description.md").write_text(f"Issue {issue_number}")
             plan_store.create_plan(repository, issue_number, f"Plan {issue_number}")
+            _, metadata = plan_store.get_latest_plan(repository, issue_number)
+            metadata.status = PlanStatus.APPROVED
+            plan_store.update_metadata(metadata)
 
         tasks = find_issues_needing_implementation(
             repository, issue_store, plan_store, issue_numbers=[1, 3]

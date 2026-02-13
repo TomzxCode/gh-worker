@@ -276,7 +276,62 @@ def plan(
     )
 
 
-@issues_app.command(sort_key=3)
+review_app = cyclopts.App(name="review", help="Review and approve plans or implementations")
+issues_app.command(review_app)
+issues_app["review"].sort_key = 3.5
+
+
+@review_app.command(name="plan")
+def review_plan(
+    repo: Annotated[str, Parameter(help="Repository (e.g., 'owner/repo')")],
+    issue_number: Annotated[int, Parameter(help="Issue number to review")],
+    *,
+    config_path: Annotated[
+        Path | None,
+        Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
+    ] = None,
+) -> None:
+    """Approve plans waiting for local review."""
+    from gh_worker.commands.review import review_plan_command
+
+    review_plan_command(
+        repo=repo,
+        issue_number=issue_number,
+        config_path=config_path,
+    )
+
+
+@review_app.command
+def implementation(
+    repo: Annotated[str, Parameter(help="Repository (e.g., 'owner/repo')")],
+    issue_number: Annotated[int, Parameter(help="Issue number to review")],
+    *,
+    push: Annotated[
+        bool,
+        Parameter(help="Push branch to remote"),
+    ] = True,
+    pr: Annotated[
+        bool,
+        Parameter(help="Create pull request"),
+    ] = True,
+    config_path: Annotated[
+        Path | None,
+        Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
+    ] = None,
+) -> None:
+    """Approve implementations: push branch and create PR."""
+    from gh_worker.commands.review import review_implementation_command
+
+    review_implementation_command(
+        repo=repo,
+        issue_number=issue_number,
+        push_branch=push,
+        create_pr=pr,
+        config_path=config_path,
+    )
+
+
+@issues_app.command(sort_key=4)
 def implement(
     repo: Annotated[str | None, Parameter(help="Repository (e.g., 'owner/repo')")] = None,
     issue_numbers: Annotated[

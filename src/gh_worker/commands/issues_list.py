@@ -8,6 +8,7 @@ from rich.table import Table
 
 from gh_worker.config.manager import ConfigManager
 from gh_worker.github.client import GHClient
+from gh_worker.models.plan import PlanStatus
 from gh_worker.models.repository import Repository
 from gh_worker.storage.issue_store import IssueStore
 from gh_worker.storage.plan_store import PlanStore
@@ -38,7 +39,7 @@ def _get_plan_status(plan_store: PlanStore, repository: Repository, issue_number
     plan_file, metadata = plan_result
     if not plan_file.exists():
         return PLAN_BEING_GENERATED  # metadata exists but .md doesn't = generating or failed
-    if metadata.status.value == "pending":
+    if metadata.status == PlanStatus.PENDING:
         return PLAN_WAITING_FOR_REVIEW
     return PLAN_APPROVED
 
