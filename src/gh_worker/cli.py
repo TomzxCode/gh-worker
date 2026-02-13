@@ -1,5 +1,6 @@
 """CLI entry point using cyclopts."""
 
+import argparse
 from pathlib import Path
 from typing import Annotated
 
@@ -8,6 +9,18 @@ from cyclopts import Parameter
 
 from gh_worker.agents.registry import get_registry
 from gh_worker.utils.logging import setup_logging
+
+
+def _parse_log_level() -> str:
+    """Parse --log-level from argv for initial setup."""
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--log-level", default="INFO")
+    args, _ = parser.parse_known_args()
+    return args.log_level.upper()
+
+
+# Setup logging early so import-time logs (e.g. registering_agent) don't spam
+setup_logging(_parse_log_level())
 
 # Get list of available agents for choices
 available_agents = ", ".join(sorted(get_registry().list_agents()))
