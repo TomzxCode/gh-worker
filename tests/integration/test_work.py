@@ -81,6 +81,7 @@ class TestWorkOrchestrator:
                 parallelism=None,
                 force=False,
                 config_path=tmp_config_path,
+                agent=None,
             )
 
             # Verify implement was called
@@ -91,6 +92,7 @@ class TestWorkOrchestrator:
                 parallelism=None,
                 force=False,
                 config_path=tmp_config_path,
+                agent=None,
             )
 
     async def test_run_cycle_multiple_repos(self, tmp_config_path):
@@ -166,6 +168,7 @@ class TestWorkOrchestrator:
                 parallelism=None,
                 force=False,
                 config_path=tmp_config_path,
+                agent=None,
             )
 
             # Verify implement was called with all_repos=True
@@ -176,6 +179,7 @@ class TestWorkOrchestrator:
                 parallelism=None,
                 force=False,
                 config_path=tmp_config_path,
+                agent=None,
             )
 
     async def test_run_cycle_with_filters(self, tmp_config_path):
@@ -357,6 +361,7 @@ class TestWorkCommand:
                 repos=["owner/repo"],
                 since=None,
                 issue_numbers=None,
+                agent=None,
             )
 
             # Verify run_once was called
@@ -434,4 +439,5 @@ class TestWorkCommand:
                 repos=["owner/repo1", "owner/repo2"],
                 since="2024-01-01T00:00:00Z",
                 issue_numbers=[1, 2, 3],
+                agent=None,
             )

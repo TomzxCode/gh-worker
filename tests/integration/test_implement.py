@@ -1,5 +1,7 @@
 """Integration tests for implement command."""
 
+import os
+import subprocess
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -43,7 +45,11 @@ def mock_agent():
     agent.validate_environment = AsyncMock(return_value=(True, None))
 
     async def mock_implement(*args, **kwargs):
-        """Mock implement that yields events."""
+        """Mock implement that yields events and creates a file for commit."""
+        repository_path = kwargs.get("repository_path", args[2] if len(args) > 2 else "")
+        if repository_path:
+            from pathlib import Path
+            (Path(repository_path) / "implemented.py").write_text("# Implementation by agent\n")
         yield AgentEvent(
             type=AgentEventType.STATUS,
             content="Starting implementation",
@@ -61,7 +67,19 @@ def mock_agent():
             },
         )
 
+    async def mock_commit(*args, **kwargs):
+        """Mock commit that yields commit message events."""
+        yield AgentEvent(
+            type=AgentEventType.OUTPUT,
+            content="Fix: implement test changes",
+        )
+        yield AgentEvent(
+            type=AgentEventType.COMPLETION,
+            content="Commit completed",
+        )
+
     agent.implement = mock_implement
+    agent.commit = mock_commit
     return agent
 
 
@@ -249,9 +267,19 @@ class TestImplementIssue:
         issue_store = IssueStore(tmp_issues_path)
         plan_store = PlanStore(tmp_issues_path)
 
-        # Create repository directory
+        # Create repository directory and initialize git repo
         repo_path = tmp_repository_path / repository.owner / repository.name
         repo_path.mkdir(parents=True, exist_ok=True)
+        subprocess.run(["git", "init", "-b", "main"], cwd=repo_path, check=True, capture_output=True)
+        (repo_path / "README.md").write_text("# Test repo")
+        subprocess.run(["git", "add", "README.md"], cwd=repo_path, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "-m", "Initial commit"],
+            cwd=repo_path,
+            check=True,
+            capture_output=True,
+            env={**os.environ, "GIT_AUTHOR_NAME": "Test", "GIT_AUTHOR_EMAIL": "test@test.com", "GIT_COMMITTER_NAME": "Test", "GIT_COMMITTER_EMAIL": "test@test.com"},
+        )
 
         # Create issue and plan
         issue_dir = issue_store.get_issue_dir(repository, 123)

@@ -259,11 +259,16 @@ class TestPlanStore:
 
     def test_has_plan_no_matching_timestamp(self, plan_store, sample_repo):
         """Test that has_plan returns False when .updated-at is newer than all plans."""
+        from datetime import timezone
+
         issue_dir = plan_store.get_issue_dir(sample_repo, 123)
         issue_dir.mkdir(parents=True, exist_ok=True)
 
         # Create a plan with an old timestamp
-        plan_store.create_plan(sample_repo, 123, "Old plan")
+        metadata = plan_store.create_plan(sample_repo, 123, "Old plan")
+        # Backdate the plan so it's older than .updated-at
+        metadata.created_at = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+        plan_store.update_metadata(metadata)
 
         # Set .updated-at to a time after the plan was created
         updated_at_file = issue_dir / ".updated-at"

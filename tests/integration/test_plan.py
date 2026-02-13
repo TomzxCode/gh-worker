@@ -180,7 +180,10 @@ class TestGeneratePlanForIssue:
         with patch("gh_worker.commands.plan.get_registry") as mock_registry:
             mock_registry.return_value.get.return_value = mock_agent
 
-            await generate_plan_for_issue(task, plan_store, tmp_repository_path, "test-agent", {})
+            issue_store = IssueStore(tmp_issues_path)
+            await generate_plan_for_issue(
+                task, plan_store, issue_store, tmp_repository_path, "test-agent", {}
+            )
 
             # Verify agent was called
             mock_agent.validate_environment.assert_called_once()
@@ -222,9 +225,10 @@ class TestGeneratePlanForIssue:
         with patch("gh_worker.commands.plan.get_registry") as mock_registry:
             mock_registry.return_value.get.return_value = mock_agent
 
+            issue_store = IssueStore(tmp_issues_path)
             with pytest.raises(RuntimeError, match="Agent environment validation failed"):
                 await generate_plan_for_issue(
-                    task, plan_store, tmp_repository_path, "test-agent", {}
+                    task, plan_store, issue_store, tmp_repository_path, "test-agent", {}
                 )
 
     async def test_generate_plan_repository_not_found(
@@ -249,9 +253,10 @@ class TestGeneratePlanForIssue:
         with patch("gh_worker.commands.plan.get_registry") as mock_registry:
             mock_registry.return_value.get.return_value = mock_agent
 
+            issue_store = IssueStore(tmp_issues_path)
             with pytest.raises(FileNotFoundError, match="Repository not found"):
                 await generate_plan_for_issue(
-                    task, plan_store, tmp_repository_path, "test-agent", {}
+                    task, plan_store, issue_store, tmp_repository_path, "test-agent", {}
                 )
 
     async def test_generate_plan_agent_failure(
@@ -289,7 +294,8 @@ class TestGeneratePlanForIssue:
         with patch("gh_worker.commands.plan.get_registry") as mock_registry:
             mock_registry.return_value.get.return_value = mock_agent
 
+            issue_store = IssueStore(tmp_issues_path)
             with pytest.raises(RuntimeError, match="Plan generation failed"):
                 await generate_plan_for_issue(
-                    task, plan_store, tmp_repository_path, "test-agent", {}
+                    task, plan_store, issue_store, tmp_repository_path, "test-agent", {}
                 )

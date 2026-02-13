@@ -127,7 +127,7 @@ class TestPlaceholderAgents:
     async def test_opencode_agent_plan_fails(self):
         """Test that OpenCode agent plan returns error."""
         agent = OpenCodeAgent()
-        result = await agent.plan("Test issue", "/tmp/repo", 1)
+        result = await agent.plan("Test issue", "/tmp/repo")
 
         assert result.success is False
         assert "not yet implemented" in result.error
@@ -158,7 +158,7 @@ class TestPlaceholderAgents:
     async def test_gemini_agent_plan_fails(self):
         """Test that Gemini agent plan returns error."""
         agent = GeminiAgent()
-        result = await agent.plan("Test issue", "/tmp/repo", 1)
+        result = await agent.plan("Test issue", "/tmp/repo")
 
         assert result.success is False
         assert "not yet implemented" in result.error
@@ -176,7 +176,7 @@ class TestPlaceholderAgents:
     async def test_codex_agent_plan_fails(self):
         """Test that Codex agent plan returns error."""
         agent = CodexAgent()
-        result = await agent.plan("Test issue", "/tmp/repo", 1)
+        result = await agent.plan("Test issue", "/tmp/repo")
 
         assert result.success is False
         assert "not yet implemented" in result.error
