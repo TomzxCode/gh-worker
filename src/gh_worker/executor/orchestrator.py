@@ -55,13 +55,11 @@ class WorkOrchestrator:
         app_config = self.config_manager.load()
 
         if not app_config.issues_path:
-            logger.error("Issues path not configured")
             logger.error("Issues path not configured. Run: gh-worker config issues-path <path>")
             return
 
         # Phase 1: Sync
         logger.info("Work cycle phase", phase="sync")
-        logger.info("Syncing issues")
         if self.repos:
             for repo in self.repos:
                 sync_command(
@@ -84,7 +82,6 @@ class WorkOrchestrator:
 
         # Phase 2: List issues (show what we're working on)
         logger.info("Work cycle phase", phase="list")
-        logger.info("Issues being worked on")
         if self.repos:
             for repo in self.repos:
                 issues_list_command(
@@ -103,7 +100,6 @@ class WorkOrchestrator:
 
         # Phase 3: Plan
         logger.info("Work cycle phase", phase="plan")
-        logger.info("Generating plans")
         if self.repos:
             for repo in self.repos:
                 await plan_command_async(
@@ -128,7 +124,6 @@ class WorkOrchestrator:
 
         # Phase 4: Implement
         logger.info("Work cycle phase", phase="implement")
-        logger.info("Implementing plans")
         if self.repos:
             for repo in self.repos:
                 await implement_command_async(
@@ -152,7 +147,6 @@ class WorkOrchestrator:
             )
 
         logger.info("Work cycle completed")
-        logger.info("Work cycle completed")
 
     async def run_once(self) -> None:
         """Run a single work cycle and exit."""
@@ -171,29 +165,39 @@ class WorkOrchestrator:
         try:
             interval = parse_duration(frequency)
         except ValueError as e:
-            logger.error("Invalid frequency", frequency=frequency, error=str(e))
-            logger.error(f"Invalid frequency format: {frequency}")
-            logger.error("Expected format like '10m', '1h', '2d', or '1h30m'")
+            logger.error(
+                "Invalid frequency format",
+                frequency=frequency,
+                error=str(e),
+                expected_format="10m, 1h, 2d, or 1h30m",
+            )
             return
 
         logger.info(
-            f"Running continuously with frequency: {frequency} ({interval.total_seconds()}s)"
+            "Running continuously",
+            frequency=frequency,
+            interval_seconds=interval.total_seconds(),
         )
 
         cycle_count = 0
         while True:
             cycle_count += 1
-            logger.info("Starting cycle", cycle=cycle_count)
-            logger.info(f"Starting work cycle #{cycle_count} at {datetime.now().isoformat()}")
+            logger.info(
+                "Starting work cycle",
+                cycle=cycle_count,
+                at=datetime.now().isoformat(),
+            )
 
             try:
                 await self.run_cycle()
             except Exception as e:
                 logger.error("Work cycle failed", cycle=cycle_count, error=str(e))
-                logger.error(f"Error in work cycle #{cycle_count}: {e}")
                 logger.info("Continuing to next cycle")
 
             # Wait for next cycle
-            logger.info("Waiting for next cycle", interval_seconds=interval.total_seconds())
-            logger.info(f"Waiting {frequency} until next cycle")
+            logger.info(
+                "Waiting for next cycle",
+                frequency=frequency,
+                interval_seconds=interval.total_seconds(),
+            )
             await asyncio.sleep(interval.total_seconds())

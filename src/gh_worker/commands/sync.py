@@ -109,7 +109,6 @@ def sync_command(
     app_config = config.load()
 
     if not app_config.issues_path:
-        logger.error("Issues path not configured")
         logger.error("Issues path not configured. Run: gh-worker config issues-path <path>")
         return
 
@@ -117,14 +116,12 @@ def sync_command(
     gh_client = GHClient(app_config.repository_path)
 
     if not gh_client.check_auth():
-        logger.error("gh CLI not authenticated")
         logger.error("gh CLI not authenticated. Run: gh auth login")
         return
 
     if all_repos:
         repositories = issue_store.list_repositories()
         if not repositories:
-            logger.warning("No repositories found")
             logger.warning(
                 "No repositories found. Use 'gh-worker repositories add' to add repositories."
             )
@@ -144,7 +141,7 @@ def sync_command(
             )
             total += count
 
-        logger.info(f"Synced {total} issues across {len(repositories)} repositories")
+        logger.info("Synced", total=total, repositories=len(repositories))
 
     elif repo:
         try:
@@ -162,8 +159,7 @@ def sync_command(
             assignee,
             force,
         )
-        logger.info(f"Synced {count} issues from {repository.full_name}")
+        logger.info("Synced", count=count, repository=repository.full_name)
 
     else:
-        logger.error("No repository specified")
         logger.error("Specify --repo or --all-repos")

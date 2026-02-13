@@ -143,7 +143,6 @@ def issues_list_command(
     app_config = config.load()
 
     if not app_config.issues_path:
-        logger.error("Issues path not configured")
         logger.error("Issues path not configured. Run: gh-worker config issues-path <path>")
         return
 
@@ -155,13 +154,11 @@ def issues_list_command(
             repository = issue_store.resolve_repo(repo)
         except ValueError as e:
             logger.error("Invalid repository", repo=repo, error=str(e))
-            logger.error(f"Error: {e}")
             return
         repositories = [repository]
     elif all_repos:
         repositories = issue_store.list_repositories()
     else:
-        logger.error("Specify --repo or --all-repos")
         logger.error("Specify --repo <owner/repo> or --all-repos")
         return
 

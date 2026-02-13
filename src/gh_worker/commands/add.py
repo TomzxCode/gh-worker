@@ -49,16 +49,19 @@ def add_command(
             repo_dir.mkdir(parents=True, exist_ok=True)
 
             logger.info("Created repository directory", repository=repository.full_name)
-            logger.info(f"Added repository: {repository.full_name}")
+            logger.info("Added repository", repository=repository.full_name)
 
             # Clone repository only if --clone was passed and repository_path is configured
             if clone and app_config.repository_path:
                 try:
                     gh_client.clone_repo(repository)
-                    logger.info(f"Cloned repository to: {gh_client._get_repo_path(repository)}")
+                    logger.info(
+                        "Cloned repository",
+                        path=str(gh_client._get_repo_path(repository)),
+                    )
                 except Exception as e:
                     logger.warning("Failed to clone repository", error=str(e))
-                    logger.warning(f"Failed to clone repository: {e}")
+                    logger.warning("Failed to clone repository", error=str(e))
             elif clone and not app_config.repository_path:
                 logger.info(
                     "Repository-path not configured. Set it to enable cloning. "

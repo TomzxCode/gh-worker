@@ -20,7 +20,6 @@ def list_command(config_path: Path | None = None) -> None:
     app_config = config.load()
 
     if not app_config.issues_path:
-        logger.error("Issues path not configured")
         logger.error("Issues path not configured. Run: gh-worker config issues-path <path>")
         return
 
@@ -32,4 +31,4 @@ def list_command(config_path: Path | None = None) -> None:
         return
 
     for repo in sorted(repositories, key=lambda r: r.full_name):
-        logger.info(f"{repo.full_name}")
+        logger.info("Repository", repository=repo.full_name)

@@ -76,7 +76,7 @@ def _prompt_int(prompt: str, default: int | None = None, min_value: int = 1) -> 
         try:
             int_value = int(value)
             if int_value < min_value:
-                logger.info(f"Value must be at least {min_value}")
+                logger.info("Value too low", min_value=min_value)
                 continue
             return int_value
         except ValueError:
@@ -106,7 +106,7 @@ def _prompt_choice(prompt: str, choices: list[str], default: str | None = None) 
             return default
         if value in choices:
             return value
-        logger.info(f"Please choose one of: {', '.join(choices)}")
+        logger.info("Invalid choice", choices=choices)
 
 
 def init_command(config_path: Path | None = None) -> None:
@@ -123,7 +123,7 @@ def init_command(config_path: Path | None = None) -> None:
 
     # Check if config already exists
     if manager.config_path.exists():
-        logger.info(f"Configuration file already exists at: {manager.config_path}")
+        logger.info("Configuration exists", path=str(manager.config_path))
         overwrite = input("Do you want to update it? (y/N): ").strip().lower()
         if overwrite != "y":
             logger.info("Configuration setup cancelled.")
@@ -205,7 +205,7 @@ def init_command(config_path: Path | None = None) -> None:
     # Save configuration
     logger.info("Saving configuration...")
     manager.save(config)
-    logger.info(f"Configuration saved to: {manager.config_path}")
+    logger.info("Configuration saved", path=str(manager.config_path))
     logger.info("Setup complete! You can now use gh-worker commands.")
     logger.info("Next steps:")
     logger.info("  1. Add repositories: gh-worker repositories add owner/repo")

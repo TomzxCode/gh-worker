@@ -43,7 +43,7 @@ async def monitor_command_async(
         repository = issue_store.resolve_repo(repo)
     except ValueError as e:
         logger.error("Invalid repository", repo=repo, error=str(e))
-        logger.error(f"Error: {e}")
+        logger.error("Error", error=str(e))
         return
 
     # Get latest plan and metadata
@@ -54,20 +54,20 @@ async def monitor_command_async(
             repository=repository.full_name,
             issue_number=issue_number,
         )
-        logger.error(f"No plan found for {repository.full_name}#{issue_number}")
+        logger.error(
+            "No plan found",
+            repository=repository.full_name,
+            issue_number=issue_number,
+        )
         return
 
     _, metadata = plan_result
 
     if not metadata.session_id:
         logger.error(
-            "No session ID",
+            "No session ID found. Implementation may not have started yet.",
             repository=repository.full_name,
             issue_number=issue_number,
-        )
-        logger.error(
-            f"No session ID found for {repository.full_name}#{issue_number}. "
-            "Implementation may not have started yet."
         )
         return
 
@@ -77,11 +77,6 @@ async def monitor_command_async(
         issue_number=issue_number,
         session_id=metadata.session_id,
     )
-
-    logger.info(
-        f"Monitoring {repository.full_name}#{issue_number} (session: {metadata.session_id})"
-    )
-    logger.info("=" * 80)
 
     # Get agent (use override if provided, otherwise use config default)
     registry = get_registry()
@@ -96,11 +91,10 @@ async def monitor_command_async(
     is_valid, error_msg = await agent.validate_environment()
     if not is_valid:
         logger.error(
-            "Agent environment invalid",
+            "Agent environment validation failed",
             agent=agent_name,
             error=error_msg,
         )
-        logger.error(f"Agent environment validation failed: {error_msg}")
         return
 
     try:
@@ -108,18 +102,18 @@ async def monitor_command_async(
         async for event in agent.monitor(metadata.session_id):
             # Format output based on event type
             if event.type == AgentEventType.OUTPUT:
-                logger.info(f"{event.content}")
+                logger.info("Event output", content=event.content)
             elif event.type == AgentEventType.ERROR:
-                logger.error(f"{event.content}")
+                logger.error("Event error", content=event.content)
             elif event.type == AgentEventType.STATUS:
-                logger.info(f"[STATUS] {event.content}")
+                logger.info("Status", content=event.content)
             elif event.type == AgentEventType.TOOL_USE:
-                logger.info(f"[TOOL] {event.content}")
+                logger.info("Tool use", content=event.content)
             elif event.type == AgentEventType.COMPLETION:
-                logger.info(f"Completed: {event.content}")
+                logger.info("Completed", content=event.content)
                 break
             elif event.type == AgentEventType.FAILURE:
-                logger.error(f"Failed: {event.content}")
+                logger.error("Failed", content=event.content)
                 break
 
     except KeyboardInterrupt:
@@ -127,7 +121,7 @@ async def monitor_command_async(
         logger.info("Monitoring interrupted by user")
     except Exception as e:
         logger.error("Monitor failed", error=str(e))
-        logger.error(f"Monitoring failed: {e}")
+        logger.error("Monitoring failed", error=str(e))
 
 
 def monitor_command(
