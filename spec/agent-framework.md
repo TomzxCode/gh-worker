@@ -112,13 +112,29 @@ Test agent implementation for testing without external dependencies, located in 
 - `plan_delay` - Delay in seconds for plan generation (default: 0)
 - `implement_delay` - Delay in seconds for implementation (default: 0)
 
+#### OpenCodeAgent
+
+Concrete implementation using the opencode CLI tool, located in [src/gh_worker/agents/opencode.py](src/gh_worker/agents/opencode.py).
+
+**Features:**
+
+- CLI subprocess management with streaming I/O
+- Plan generation using `opencode run` with plan agent
+- Implementation using `opencode run` with build agent
+- Commit generation capabilities
+- Session ID extraction from output
+- Environment validation (CLI availability check)
+
+**Configuration:**
+
+- `cli_path` or `opencode_path` - Path to opencode executable (defaults to "opencode")
+
 #### Stub Agents
 
 Placeholder implementations for future integration:
 
 - **CodexAgent** - OpenAI Codex integration
 - **GeminiAgent** - Google Gemini integration
-- **OpenCodeAgent** - OpenCode integration
 
 ### Global Registry
 

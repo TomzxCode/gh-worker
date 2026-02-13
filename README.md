@@ -54,11 +54,12 @@ ghw repositories add        Add repositories to track
 ghw repositories list      List tracked repositories
 ghw repositories remove    Remove repositories from tracking
 ghw issues sync             Sync issues from GitHub
-ghw issues plan            Generate implementation plans
-ghw issues implement       Implement plans and create PRs
-ghw monitor                Monitor ongoing implementations
-ghw work                   Run sync → plan → implement workflow
-ghw config                 Manage configuration
+ghw issues list             List synced issues with plan/impl status
+ghw issues plan             Generate implementation plans
+ghw issues implement        Implement plans and create PRs
+ghw monitor                 Monitor ongoing implementations
+ghw work                    Run sync → plan → implement workflow
+ghw config                  Manage configuration
 ```
 
 ### Global Options
@@ -155,7 +156,22 @@ ghw issues sync --repo owner/repo --since 7d
 ghw issues sync --all-repos
 ```
 
-### 5. Generate Plans
+### 5. List Issues
+
+List synced issues with plan and implementation status:
+
+```bash
+# List issues for a repository
+ghw issues list --repo owner/repo
+
+# List issues from all repositories
+ghw issues list --all-repos
+
+# Filter by title, author, assignee, plan status, or impl status
+ghw issues list --repo owner/repo --plan approved --impl none
+```
+
+### 6. Generate Plans
 
 Generate implementation plans for synced issues using LLM agents:
 
@@ -176,7 +192,7 @@ ghw issues plan --repo owner/repo --issue-numbers 42 --force
 ghw issues plan --repo owner/repo --agent cursor-agent
 ```
 
-### 6. Implement Plans
+### 7. Implement Plans
 
 Execute plans and create pull requests with git worktree support:
 
@@ -203,7 +219,7 @@ ghw issues implement --repo owner/repo --delete-worktree=false
 ghw issues implement --repo owner/repo --issue-numbers 42 --force
 ```
 
-### 7. Monitor Progress
+### 8. Monitor Progress
 
 Monitor an ongoing implementation:
 
@@ -211,7 +227,7 @@ Monitor an ongoing implementation:
 ghw monitor --repo owner/repo --issue-number 42
 ```
 
-### 8. Run Full Workflow
+### 9. Run Full Workflow
 
 Run the complete sync → plan → implement workflow:
 
@@ -316,7 +332,7 @@ gh-worker supports multiple LLM agents through a pluggable architecture:
 - **claude-code** (default): Uses the Claude Code CLI tool for comprehensive implementations
 - **cursor-agent**: Uses the Cursor Agent CLI for fast code generation
 - **mock**: Test agent for development and CI/CD (no external dependencies)
-- **opencode**: OpenCode agent (placeholder, not yet implemented)
+- **opencode**: OpenCode agent (uses `opencode run` CLI)
 - **gemini**: Google Gemini agent (placeholder, not yet implemented)
 - **codex**: OpenAI Codex agent (placeholder, not yet implemented)
 
@@ -332,6 +348,7 @@ ghw issues implement --repo owner/repo --agent cursor-agent
 
 # Configure agent-specific settings
 ghw config agent.claude_code_path /custom/path/to/claude-code
+ghw config agent.opencode_path /custom/path/to/opencode
 ```
 
 ### Agent Requirements
@@ -346,26 +363,26 @@ ghw config agent.claude_code_path /custom/path/to/claude-code
 
 ```bash
 # Run all tests
-pytest
+uv run pytest
 
 # Run with coverage
-pytest --cov=gh_worker --cov-report=html
+uv run pytest --cov=gh_worker --cov-report=html
 
 # Run specific test file
-pytest tests/unit/test_agents.py
+uv run pytest tests/unit/test_agents.py
 
 # Run specific test
-pytest tests/unit/test_agents.py::TestAgentRegistry::test_registry_initialization
+uv run pytest tests/unit/test_agents.py::TestAgentRegistry::test_registry_initialization
 ```
 
 ### Linting and Formatting
 
 ```bash
 # Check code
-ruff check src/ tests/
+uv run ruff check src/ tests/
 
 # Format code
-ruff format src/ tests/
+uv run ruff format src/ tests/
 ```
 
 ### Project Structure
@@ -490,9 +507,9 @@ ghw monitor --repo owner/repo --issue-number 42
 
 Contributions are welcome! Please follow these guidelines:
 
-1. Run tests before submitting: `pytest`
-2. Format code with ruff: `ruff format src/ tests/`
-3. Check for linting issues: `ruff check src/ tests/`
+1. Run tests before submitting: `uv run pytest`
+2. Format code with ruff: `uv run ruff format src/ tests/`
+3. Check for linting issues: `uv run ruff check src/ tests/`
 4. Write tests for new features
 5. Update documentation as needed
 

@@ -73,7 +73,53 @@ ghw config agent.claude_code_path /full/path/to/claude-code
 4. Or use a different agent:
 
 ```bash
+ghw config agent.default cursor-agent
+# or
 ghw config agent.default opencode
+```
+
+### OpenCode CLI Not Found
+
+**Symptom**: "opencode: command not found" or OpenCode agent validation errors
+
+**Solution**:
+
+1. Install OpenCode CLI:
+
+```bash
+npm i -g opencode-ai
+```
+
+2. Verify installation:
+
+```bash
+opencode --version
+```
+
+3. If installed but not in PATH, specify the full path:
+
+```bash
+ghw config agent.opencode_path /full/path/to/opencode
+```
+
+### Cursor Agent CLI Not Found
+
+**Symptom**: "cursor-agent: command not found" or Cursor agent validation errors
+
+**Solution**:
+
+1. Install Cursor Agent CLI:
+
+```bash
+npm install -g @cursor/agent
+```
+
+2. Verify installation:
+
+```bash
+cursor-agent --version
+# or
+agent --version
 ```
 
 ## Configuration Issues

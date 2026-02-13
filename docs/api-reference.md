@@ -23,7 +23,7 @@ app(["sync", "--repo", "owner/repo"])
 
 ### `gh_worker.commands.sync`
 
-#### `sync_command(repo, all_repos, since, issue_numbers, search, config_path)`
+#### `sync_command(repo, all_repos, since, issue_numbers, search, assignee, force, config_path)`
 
 Sync GitHub issues to local storage.
 
@@ -34,6 +34,8 @@ Sync GitHub issues to local storage.
 - `since` (str | None): Only sync issues updated since (e.g., "7d", "2h")
 - `issue_numbers` (list[int] | None): Specific issue numbers to sync
 - `search` (str | None): GitHub search query
+- `assignee` (str | None): Filter by assignee (substring match, use @me for current user)
+- `force` (bool): Refresh all issues (re-fetch and update description.md)
 - `config_path` (Path | None): Custom config file path
 
 **Example**:
@@ -51,9 +53,43 @@ sync_command(
 )
 ```
 
+### `gh_worker.commands.issues_list`
+
+#### `issues_list_command(repo, all_repos, title, author, assignee, plan, impl, config_path)`
+
+List synced issues with plan and implementation status.
+
+**Parameters**:
+
+- `repo` (str | None): Repository to list (format: "owner/repo")
+- `all_repos` (bool): List issues from all repositories
+- `title` (str | None): Filter by title (substring match)
+- `author` (str | None): Filter by author (substring match, use @me for current user)
+- `assignee` (str | None): Filter by assignee (substring match, use @me for current user)
+- `plan` (str | None): Filter by plan status: none, being generated, waiting for local review, approved
+- `impl` (str | None): Filter by impl status: none, being generated, waiting for local review, PR opened, merged, failed
+- `config_path` (Path | None): Custom config file path
+
+**Example**:
+
+```python
+from gh_worker.commands.issues_list import issues_list_command
+
+issues_list_command(
+    repo="owner/repo",
+    all_repos=False,
+    title=None,
+    author=None,
+    assignee=None,
+    plan=None,
+    impl=None,
+    config_path=None
+)
+```
+
 ### `gh_worker.commands.plan`
 
-#### `plan_command(repo, issue_numbers, parallelism, config_path)`
+#### `plan_command(repo, issue_numbers, all_repos, parallelism, force, assignee, config_path, agent)`
 
 Generate implementation plans for issues.
 
@@ -61,8 +97,12 @@ Generate implementation plans for issues.
 
 - `repo` (str | None): Repository (format: "owner/repo")
 - `issue_numbers` (list[int] | None): Specific issues to plan
+- `all_repos` (bool): Generate plans for all repositories
 - `parallelism` (int | None): Number of parallel executions
+- `force` (bool): Generate plan even if one already exists
+- `assignee` (str | None): Filter by assignee (substring match, use @me for current user)
 - `config_path` (Path | None): Custom config file path
+- `agent` (str | None): Override agent to use
 
 **Example**:
 
@@ -79,7 +119,7 @@ plan_command(
 
 ### `gh_worker.commands.implement`
 
-#### `implement_command(repo, issue_numbers, parallelism, config_path)`
+#### `implement_command(repo, issue_numbers, all_repos, parallelism, force, assignee, use_worktree, push_branch, create_pr, delete_worktree, config_path, agent)`
 
 Implement plans and create pull requests.
 
@@ -87,8 +127,16 @@ Implement plans and create pull requests.
 
 - `repo` (str | None): Repository (format: "owner/repo")
 - `issue_numbers` (list[int] | None): Specific issues to implement
+- `all_repos` (bool): Implement plans for all repositories
 - `parallelism` (int | None): Number of parallel executions
+- `force` (bool): Implement even if already completed
+- `assignee` (str | None): Filter by assignee (substring match, use @me for current user)
+- `use_worktree` (bool | None): Use git worktree (overrides config)
+- `push_branch` (bool | None): Push branch after implementation (overrides config)
+- `create_pr` (bool | None): Create PR after implementation (overrides config)
+- `delete_worktree` (bool | None): Delete worktree after implementation (overrides config)
 - `config_path` (Path | None): Custom config file path
+- `agent` (str | None): Override agent to use
 
 **Example**:
 
@@ -105,7 +153,7 @@ implement_command(
 
 ### `gh_worker.commands.monitor`
 
-#### `monitor_command(repo, issue_number, config_path)`
+#### `monitor_command(repo, issue_number, config_path, agent)`
 
 Monitor an ongoing agent session.
 
@@ -114,6 +162,7 @@ Monitor an ongoing agent session.
 - `repo` (str): Repository (format: "owner/repo")
 - `issue_number` (int): Issue number to monitor
 - `config_path` (Path | None): Custom config file path
+- `agent` (str | None): Override agent to use
 
 **Example**:
 
@@ -129,7 +178,7 @@ monitor_command(
 
 ### `gh_worker.commands.work`
 
-#### `work_command(once, frequency, repos, since, issue_numbers, config_path)`
+#### `work_command(once, frequency, repos, since, issue_numbers, config_path, agent)`
 
 Run complete workflow (sync → plan → implement).
 
@@ -141,6 +190,7 @@ Run complete workflow (sync → plan → implement).
 - `since` (str | None): Only process issues updated since
 - `issue_numbers` (list[int] | None): Specific issues to process
 - `config_path` (Path | None): Custom config file path
+- `agent` (str | None): Override agent to use
 
 **Example**:
 
@@ -153,7 +203,8 @@ work_command(
     repos=["owner/repo"],
     since="1d",
     issue_numbers=None,
-    config_path=None
+    config_path=None,
+    agent=None
 )
 ```
 

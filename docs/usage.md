@@ -25,7 +25,7 @@ gh-worker provides the following commands (in help order):
 
 - [`init`](#init-command) - Initialize configuration interactively
 - [`repositories`](#repositories-commands) - Manage tracked repositories (add, list, remove)
-- [`issues`](#issues-commands) - Sync, plan, and implement issues (sync, plan, implement)
+- [`issues`](#issues-commands) - Sync, plan, implement, and list issues (sync, list, plan, implement)
 - [`monitor`](#monitor-command) - Monitor ongoing implementations
 - [`work`](#work-command) - Run complete workflow (sync → plan → implement)
 - [`config`](#config-command) - Manage configuration
@@ -186,6 +186,7 @@ Sync, plan, and implement issues with `ghw issues`:
 
 ```bash
 ghw issues sync [--repo REPO | --all-repos] [OPTIONS]
+ghw issues list [--repo REPO | --all-repos] [OPTIONS]
 ghw issues plan [--repo REPO] [OPTIONS]
 ghw issues implement [--repo REPO] [OPTIONS]
 ```
@@ -214,6 +215,12 @@ ghw issues sync --repo owner/repo --since 2h
 
 # Sync specific issues
 ghw issues sync --repo owner/repo --issue-numbers 42 43 44
+
+# Filter by assignee (use @me for current user)
+ghw issues sync --repo owner/repo --assignee @me
+
+# Force refresh all issues (re-fetch and update description.md)
+ghw issues sync --repo owner/repo --force
 ```
 
 #### Sync All Repositories
@@ -248,6 +255,33 @@ ghw issues sync --repo owner/repo --since 7d
 
 # Last 2 weeks
 ghw issues sync --repo owner/repo --since 14d
+```
+
+#### list
+
+List synced issues with plan and implementation status in a table.
+
+```bash
+# List issues for a repository
+ghw issues list --repo owner/repo
+
+# List issues from all repositories
+ghw issues list --all-repos
+
+# Filter by title (substring match)
+ghw issues list --repo owner/repo --title "bug"
+
+# Filter by author (use @me for current user)
+ghw issues list --repo owner/repo --author @me
+
+# Filter by assignee (use @me for current user)
+ghw issues list --repo owner/repo --assignee @me
+
+# Filter by plan status: none, being generated, waiting for local review, approved
+ghw issues list --repo owner/repo --plan approved
+
+# Filter by impl status: none, being generated, waiting for local review, PR opened, merged, failed
+ghw issues list --repo owner/repo --impl none
 ```
 
 #### plan
@@ -322,6 +356,9 @@ ghw issues plan --repo owner/repo --agent cursor-agent
 
 # Use mock agent for testing
 ghw issues plan --repo owner/repo --agent mock
+
+# Filter by assignee (use @me for current user)
+ghw issues plan --repo owner/repo --assignee @me
 ```
 
 #### implement
@@ -447,6 +484,9 @@ ghw issues implement --repo owner/repo --agent cursor-agent
 
 # Use mock agent (for testing)
 ghw issues implement --repo owner/repo --agent mock
+
+# Filter by assignee (use @me for current user)
+ghw issues implement --repo owner/repo --assignee @me
 ```
 
 ### Monitor Command

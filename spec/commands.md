@@ -147,6 +147,34 @@ gh-worker repositories remove octocat/hello-world
 gh-worker repositories remove octocat/hello-world --no-keep-clone
 ```
 
+#### issues list
+
+Lists synced issues with plan and implementation status.
+
+**Location:** [src/gh_worker/commands/issues_list.py](src/gh_worker/commands/issues_list.py)
+
+**Operations:**
+
+- Load issues from IssueStore and PlanStore
+- Display table with issue number, title, author, assignees, plan status, impl status
+- Support filters: repo, all_repos, title, author, assignee, plan, impl
+
+**Example:**
+
+```bash
+gh-worker issues list --repo octocat/hello-world
+gh-worker issues list --all-repos --plan approved --impl none
+```
+
+**Flow:**
+
+1. Load configuration and validate issues_path
+1. Initialize IssueStore and PlanStore
+1. Resolve repositories (specific or all)
+1. For each repository, load issues and plan metadata
+1. Apply filters (title, author, assignee, plan status, impl status)
+1. Display results in rich table format
+
 #### issues sync
 
 Synchronizes issues from GitHub to local storage.
@@ -159,7 +187,8 @@ Synchronizes issues from GitHub to local storage.
 - Convert from GitHub JSON to Issue model
 - Save to IssueStore
 - Update repository timestamps for incremental sync
-- Support filters: since, issue_numbers, search
+- Support filters: since, issue_numbers, search, assignee
+- Support force refresh (--force) to re-fetch and update description.md
 
 **Helper Function:**
 

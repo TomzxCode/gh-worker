@@ -36,9 +36,10 @@ Run sync → plan → implement cycles continuously with configurable frequencie
 Support for multiple LLM agents through a flexible plugin system. Ships with built-in support for:
 
 - Claude Code (default)
+- Cursor Agent
 - OpenCode
-- Google Gemini
-- OpenAI Codex
+- Google Gemini (placeholder)
+- OpenAI Codex (placeholder)
 
 ### File-Based Storage
 

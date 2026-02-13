@@ -260,7 +260,7 @@ ghw config agent.default claude-code
   - `claude-code` - Claude Code CLI agent
   - `cursor-agent` - Cursor Agent CLI
   - `mock` - Mock agent for testing
-  - `opencode` - OpenCode agent (placeholder)
+  - `opencode` - OpenCode agent (uses `opencode run` CLI)
   - `gemini` - Google Gemini agent (placeholder)
   - `codex` - OpenAI Codex agent (placeholder)
 
@@ -291,6 +291,20 @@ ghw config agent.cursor_agent_path /custom/path/to/cursor-agent
 - **Default**: None (uses PATH)
 
 Only needed if cursor-agent is installed in a non-standard location.
+
+#### `agent.opencode_path`
+
+Custom path to the opencode binary (if not in PATH).
+
+```bash
+ghw config agent.opencode_path /custom/path/to/opencode
+```
+
+- **Type**: Path
+- **Required**: No
+- **Default**: None (uses PATH)
+
+Only needed if opencode is installed in a non-standard location.
 
 ## Example Configuration File
 
@@ -323,7 +337,7 @@ sync:
 agent:
   default: claude-code
   claude_code_path: null  # Use PATH
-  cursor_agent_path: null  # Use PATH
+  opencode_path: null  # Use PATH
 ```
 
 ## Environment-Specific Configuration

@@ -31,6 +31,7 @@ gh-worker
 │   └── remove        - Remove repositories from tracking
 ├── issues            - Sync, plan, and implement issues
 │   ├── sync          - Sync issues from GitHub
+│   ├── list          - List synced issues with plan/impl status
 │   ├── plan          - Generate implementation plans
 │   └── implement     - Implement plans and create PRs
 ├── monitor           - Monitor agent sessions
@@ -185,9 +186,11 @@ gh-worker issues sync [--repo REPO | --all-repos] [OPTIONS]
 
 **Options:**
 
-- `--since TIMESTAMP` - Only sync issues updated after timestamp (ISO 8601)
+- `--since TIMESTAMP` - Only sync issues updated after timestamp (ISO 8601 or duration like 7d)
 - `--issue-numbers NUM...` - Specific issue numbers to sync
 - `--search QUERY` - GitHub search query
+- `--assignee ASSIGNEE` - Filter by assignee (substring match, use @me for current user)
+- `--force` - Refresh all issues (re-fetch and update description.md)
 - `--config-path PATH` - Custom config file path
 
 **Examples:**
@@ -216,6 +219,33 @@ gh-worker issues sync --repo octocat/hello-world --search "is:open label:bug"
 - Updates repository and issue timestamps
 - Supports incremental sync with `--since`
 
+#### issues list
+
+List synced issues with plan and implementation status.
+
+**Syntax:**
+
+```bash
+gh-worker issues list [--repo REPO | --all-repos] [OPTIONS]
+```
+
+**Options:**
+
+- `--repo REPO` - Specific repository (format: "owner/repo")
+- `--all-repos` - List issues from all repositories
+- `--title TITLE` - Filter by title (substring match)
+- `--author AUTHOR` - Filter by author (substring match, use @me for current user)
+- `--assignee ASSIGNEE` - Filter by assignee (substring match, use @me for current user)
+- `--plan STATUS` - Filter by plan status: none, being generated, waiting for local review, approved
+- `--impl STATUS` - Filter by impl status: none, being generated, waiting for local review, PR opened, merged, failed
+- `--config-path PATH` - Custom config file path
+
+**Behavior:**
+
+- Loads issues from IssueStore and PlanStore
+- Displays table with issue number, title, author, assignees, plan status, impl status
+- Applies filters when specified
+
 #### issues plan
 
 Generate implementation plans for issues.
@@ -233,7 +263,11 @@ gh-worker issues plan [--repo REPO] [OPTIONS]
 **Options:**
 
 - `--issue-numbers NUM...` - Specific issue numbers to plan
+- `--all-repos` - Generate plans for all repositories
 - `--parallelism N` - Number of parallel plan generations
+- `--force` - Generate plan even if one already exists
+- `--assignee ASSIGNEE` - Filter by assignee (substring match, use @me for current user)
+- `--agent AGENT` - Override agent to use
 - `--config-path PATH` - Custom config file path
 
 **Examples:**
@@ -276,7 +310,15 @@ gh-worker issues implement [--repo REPO] [OPTIONS]
 **Options:**
 
 - `--issue-numbers NUM...` - Specific issue numbers to implement
+- `--all-repos` - Implement plans for all repositories
 - `--parallelism N` - Number of parallel implementations
+- `--force` - Implement even if already completed
+- `--assignee ASSIGNEE` - Filter by assignee (substring match, use @me for current user)
+- `--use-worktree` - Use git worktree (overrides config)
+- `--push-branch` - Push branch after implementation (overrides config)
+- `--create-pr` - Create PR after implementation (overrides config)
+- `--delete-worktree` - Delete worktree after implementation (overrides config)
+- `--agent AGENT` - Override agent to use
 - `--config-path PATH` - Custom config file path
 
 **Examples:**

@@ -24,7 +24,8 @@ AppConfig (root)
 │   └── frequency: str
 └── agent: AgentConfig
     ├── default: str
-    └── claude_code_path: str | None
+    ├── claude_code_path: str | None
+    └── opencode_path: str | None
 ```
 
 ### Configuration Models
@@ -74,6 +75,7 @@ Settings for LLM agents.
 
 - `default` - Default agent name (default: "claude-code")
 - `claude_code_path` - Path to claude-code binary (default: None, uses PATH)
+- `opencode_path` - Path to opencode binary (default: None, uses PATH)
 
 ### Configuration Manager
 
@@ -118,6 +120,7 @@ sync:
 agent:
   default: claude-code
   claude_code_path: /usr/local/bin/claude-code
+  opencode_path: null  # Use PATH
 ```
 
 ### Serialization

@@ -19,7 +19,7 @@ BaseAgent (Abstract)
 ├── ClaudeCodeAgent ✅
 ├── CursorAgent ✅
 ├── MockAgent ✅
-├── OpenCodeAgent 🚧
+├── OpenCodeAgent ✅
 ├── GeminiAgent 🚧
 └── CodexAgent 🚧
 ```
@@ -150,15 +150,43 @@ ghw issues implement --repo owner/repo --agent mock
 
 ### OpenCode
 
-OpenCode agent for open-source LLM integration.
+Uses the [OpenCode CLI](https://github.com/opencode-ai/opencode) (`opencode run`) for planning and implementation.
 
-**Status**: 🚧 Placeholder (not yet implemented)
+**Status**: ✅ Fully implemented
 
-**Planned Features**:
+**Features**:
 
 - Open-source LLM support
-- Self-hosted deployment
-- Customizable prompts
+- Plan and implementation generation
+- Streaming output
+- Session monitoring
+
+**Prerequisites**:
+
+- OpenCode CLI installed (`npm i -g opencode-ai`)
+
+**Configuration**:
+
+```bash
+ghw config agent.default opencode
+
+# Optional: specify custom path
+ghw config agent.opencode_path /path/to/opencode
+```
+
+**Example Usage**:
+
+```bash
+# Use explicitly
+ghw issues plan --repo owner/repo --agent opencode
+
+# Or set as default
+ghw config agent.default opencode
+ghw issues plan --repo owner/repo
+
+# With implementation
+ghw issues implement --repo owner/repo --agent opencode
+```
 
 ### Gemini
 
@@ -341,7 +369,7 @@ agent = registry.get("claude-code", config={"timeout": 300})
 
 ```python
 agents = registry.list_agents()
-print(agents)  # ['claude-code', 'opencode', 'gemini', 'codex']
+print(agents)  # ['claude-code', 'cursor-agent', 'opencode', 'gemini', 'codex', 'mock']
 ```
 
 ### Check Registration
@@ -581,11 +609,11 @@ if not is_valid:
 ### Agent Not Found
 
 ```bash
-# List available agents
-ghw agents list  # (if command exists)
-
-# Or check configuration
+# Check configuration
 ghw config agent.default
+
+# List available agents (run with invalid agent to see list)
+ghw issues plan --repo owner/repo --agent invalid
 ```
 
 ### Agent Validation Fails
