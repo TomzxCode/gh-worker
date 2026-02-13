@@ -85,10 +85,12 @@ Handles persistence and access, implemented in [src/gh_worker/config/manager.py]
 - `save()` - Persist configuration to disk
 - `get()` - Retrieve value by dotted key path
 - `set()` - Update value by dotted key path (auto-saves)
+- `list_all()` - Return all configuration values as flat dict of dotted keys to values
 
 **Internal Methods:**
 
 - `_default_config_path()` - Resolve XDG-compliant config path
+- `_flatten_config()` - Flatten nested config dict to dotted keys
 
 ## File Format
 

@@ -25,7 +25,7 @@ def main(
     app(tokens)
 
 
-@app.command
+@app.command(sort_key=0)
 def init(
     config_path: Annotated[
         Path | None,
@@ -38,10 +38,16 @@ def init(
     init_command(config_path=config_path)
 
 
-@app.command
+@app.command(sort_key=5)
 def config(
-    key: Annotated[str, Parameter(help="Configuration key (e.g., 'issues-path', 'plan.parallelism')")],
+    key: Annotated[
+        str | None,
+        Parameter(help="Configuration key (e.g., 'issues-path', 'plan.parallelism')"),
+    ] = None,
     value: Annotated[str | None, Parameter(help="Value to set (if None, gets the current value)")] = None,
+    list_: Annotated[
+        bool, Parameter(name="--list", help="List all set configuration values")
+    ] = False,
     config_path: Annotated[
         Path | None,
         Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
@@ -53,11 +59,17 @@ def config(
     config_command(
         key=key,
         value=value,
+        list_all=list_,
         config_path=config_path,
     )
 
 
-@app.command
+repositories_app = cyclopts.App(name="repositories", help="Manage tracked repositories")
+app.command(repositories_app)
+app["repositories"].sort_key = 1
+
+
+@repositories_app.command
 def add(
     repos: Annotated[list[str], Parameter(help="Repository names (e.g., 'owner/repo')")],
     config_path: Annotated[
@@ -74,7 +86,47 @@ def add(
     )
 
 
-@app.command
+@repositories_app.command
+def list_(
+    config_path: Annotated[
+        Path | None,
+        Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
+    ] = None,
+) -> None:
+    """List all repositories under management."""
+    from gh_worker.commands.list import list_command
+
+    list_command(config_path=config_path)
+
+
+@repositories_app.command
+def remove(
+    repos: Annotated[list[str], Parameter(help="Repository names (e.g., 'owner/repo')")],
+    config_path: Annotated[
+        Path | None,
+        Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
+    ] = None,
+    keep_clone: Annotated[
+        bool,
+        Parameter(help="Keep the cloned repository in repository-path"),
+    ] = True,
+) -> None:
+    """Remove repositories from tracking."""
+    from gh_worker.commands.remove import remove_command
+
+    remove_command(
+        repos=repos,
+        config_path=config_path,
+        keep_clone=keep_clone,
+    )
+
+
+issues_app = cyclopts.App(name="issues", help="Sync, plan, and implement issues")
+app.command(issues_app)
+app["issues"].sort_key = 2
+
+
+@issues_app.command
 def sync(
     repo: Annotated[str | None, Parameter(help="Repository to sync (e.g., 'owner/repo')")] = None,
     issue_numbers: Annotated[
@@ -104,7 +156,7 @@ def sync(
     )
 
 
-@app.command
+@issues_app.command
 def plan(
     repo: Annotated[str | None, Parameter(help="Repository (e.g., 'owner/repo')")] = None,
     issue_numbers: Annotated[
@@ -145,7 +197,7 @@ def plan(
     )
 
 
-@app.command
+@issues_app.command
 def implement(
     repo: Annotated[str | None, Parameter(help="Repository (e.g., 'owner/repo')")] = None,
     issue_numbers: Annotated[
@@ -204,7 +256,7 @@ def implement(
     )
 
 
-@app.command
+@app.command(sort_key=3)
 def monitor(
     repo: Annotated[str, Parameter(help="Repository (e.g., 'owner/repo')")],
     issue_number: Annotated[int, Parameter(help="Issue number to monitor")],
@@ -228,7 +280,7 @@ def monitor(
     )
 
 
-@app.command
+@app.command(sort_key=4)
 def work(
     once: Annotated[
         bool, Parameter(help="Run once and exit (default: continuous mode)")

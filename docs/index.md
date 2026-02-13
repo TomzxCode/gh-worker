@@ -59,16 +59,16 @@ ghw config issues-path ~/gh-worker/issues
 ghw config repository-path ~/gh-worker/repos
 
 # Add a repository
-ghw add owner/repo
+ghw repositories add owner/repo
 
 # Sync issues
-ghw sync --repo owner/repo
+ghw issues sync --repo owner/repo
 
 # Generate plans
-ghw plan --repo owner/repo
+ghw issues plan --repo owner/repo
 
 # Implement
-ghw implement --repo owner/repo
+ghw issues implement --repo owner/repo
 ```
 
 For detailed instructions, see the [Installation](installation.md) and [Usage](usage.md) guides.

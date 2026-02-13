@@ -10,15 +10,31 @@ from gh_worker.config.manager import ConfigManager
 logger = structlog.get_logger()
 
 
-def config_command(key: str, value: str | None = None, config_path: Path | None = None) -> None:
+def config_command(
+    key: str | None = None,
+    value: str | None = None,
+    list_all: bool = False,
+    config_path: Path | None = None,
+) -> None:
     """Execute config command.
 
     Args:
         key: Configuration key (e.g., 'issues-path', 'plan.parallelism')
         value: Value to set (if None, gets the current value)
+        list_all: If True, list all configuration values
         config_path: Path to config file
     """
     manager = ConfigManager(config_path)
+
+    if list_all:
+        for k, v in sorted(manager.list_all().items()):
+            print(f"{k}={v}")
+        return
+
+    if key is None:
+        logger.error("config_key_required")
+        print("Error: Configuration key is required (or use --list to list all)")
+        return
 
     # Convert hyphenated keys to underscored for compatibility
     key = key.replace("-", "_")

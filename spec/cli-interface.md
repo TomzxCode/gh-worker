@@ -24,16 +24,44 @@ CLI implemented using cyclopts framework in [src/gh_worker/cli.py](src/gh_worker
 
 ```
 gh-worker
-├── config       - Configuration management
-├── add          - Add repositories
-├── sync         - Sync issues from GitHub
-├── plan         - Generate implementation plans
-├── implement    - Implement plans and create PRs
-├── monitor      - Monitor agent sessions
-└── work         - Run complete workflow
+├── init              - Initialize configuration interactively
+├── repositories      - Manage tracked repositories
+│   ├── add           - Add repositories to track
+│   ├── list          - List all repositories under management
+│   └── remove        - Remove repositories from tracking
+├── issues            - Sync, plan, and implement issues
+│   ├── sync          - Sync issues from GitHub
+│   ├── plan          - Generate implementation plans
+│   └── implement     - Implement plans and create PRs
+├── monitor           - Monitor agent sessions
+├── work              - Run complete workflow (sync → plan → implement)
+└── config            - Manage configuration
 ```
 
 ## Commands
+
+Commands appear in help in this order: init, repositories, issues, monitor, work, config.
+
+### init
+
+Initialize configuration interactively.
+
+**Syntax:**
+
+```bash
+gh-worker init [--config-path PATH]
+```
+
+**Options:**
+
+- `--config-path PATH` - Custom config file path (default: ~/.config/gh-worker/config.yaml)
+
+**Behavior:**
+
+- Prompts for issues-path and repository-path
+- Validates paths and creates directories
+- Saves configuration with sensible defaults
+- Guides user through setup
 
 ### config
 
@@ -42,21 +70,25 @@ Manage application configuration.
 **Syntax:**
 
 ```bash
-gh-worker config <key> [value] [--config-path PATH]
+gh-worker config [--list] [<key> [value]] [--config-path PATH]
 ```
 
 **Arguments:**
 
-- `key` (required) - Configuration key (e.g., "issues-path", "plan.parallelism")
+- `key` (optional) - Configuration key (e.g., "issues-path", "plan.parallelism"). Required unless `--list` is used.
 - `value` (optional) - Value to set (omit to get current value)
 
 **Options:**
 
+- `--list` - List all set configuration values (key=value format)
 - `--config-path PATH` - Custom config file path (default: ~/.config/gh-worker/config.yaml)
 
 **Examples:**
 
 ```bash
+# List all configuration values
+gh-worker config --list
+
 # Get value
 gh-worker config issues-path
 
@@ -68,18 +100,23 @@ gh-worker config agent.default claude-code
 
 **Behavior:**
 
-- Get mode: Display current value
+- List mode: Display all configuration keys and values in key=value format
+- Get mode: Display current value for specified key
 - Set mode: Update value and save configuration
 - Supports dotted key paths for nested values
 
-### add
+### repositories
+
+Manage tracked repositories.
+
+#### repositories add
 
 Add repositories to track.
 
 **Syntax:**
 
 ```bash
-gh-worker add <repo>... [--config-path PATH]
+gh-worker repositories add <repo>... [--config-path PATH]
 ```
 
 **Arguments:**
@@ -93,8 +130,8 @@ gh-worker add <repo>... [--config-path PATH]
 **Examples:**
 
 ```bash
-gh-worker add octocat/hello-world
-gh-worker add octocat/hello-world octocat/spoon-knife
+gh-worker repositories add octocat/hello-world
+gh-worker repositories add octocat/hello-world octocat/spoon-knife
 ```
 
 **Behavior:**
@@ -103,14 +140,42 @@ gh-worker add octocat/hello-world octocat/spoon-knife
 - Creates directory structure
 - Validates repository access via GitHub CLI
 
-### sync
+#### repositories list
+
+List all repositories under management.
+
+**Syntax:**
+
+```bash
+gh-worker repositories list [--config-path PATH]
+```
+
+#### repositories remove
+
+Remove repositories from tracking.
+
+**Syntax:**
+
+```bash
+gh-worker repositories remove <repo>... [--config-path PATH] [--no-keep-clone]
+```
+
+**Options:**
+
+- `--no-keep-clone` - Also remove the cloned repository from repository-path
+
+### issues
+
+Sync, plan, and implement issues.
+
+#### issues sync
 
 Synchronize GitHub issues to local storage.
 
 **Syntax:**
 
 ```bash
-gh-worker sync [--repo REPO | --all-repos] [OPTIONS]
+gh-worker issues sync [--repo REPO | --all-repos] [OPTIONS]
 ```
 
 **Arguments:**
@@ -129,19 +194,19 @@ gh-worker sync [--repo REPO | --all-repos] [OPTIONS]
 
 ```bash
 # Sync specific repository
-gh-worker sync --repo octocat/hello-world
+gh-worker issues sync --repo octocat/hello-world
 
 # Sync all repositories
-gh-worker sync --all-repos
+gh-worker issues sync --all-repos
 
 # Sync with timestamp filter
-gh-worker sync --repo octocat/hello-world --since 2024-01-01T00:00:00Z
+gh-worker issues sync --repo octocat/hello-world --since 2024-01-01T00:00:00Z
 
 # Sync specific issues
-gh-worker sync --repo octocat/hello-world --issue-numbers 42 73 101
+gh-worker issues sync --repo octocat/hello-world --issue-numbers 42 73 101
 
 # Search query
-gh-worker sync --repo octocat/hello-world --search "is:open label:bug"
+gh-worker issues sync --repo octocat/hello-world --search "is:open label:bug"
 ```
 
 **Behavior:**
@@ -151,14 +216,14 @@ gh-worker sync --repo octocat/hello-world --search "is:open label:bug"
 - Updates repository and issue timestamps
 - Supports incremental sync with `--since`
 
-### plan
+#### issues plan
 
 Generate implementation plans for issues.
 
 **Syntax:**
 
 ```bash
-gh-worker plan [--repo REPO] [OPTIONS]
+gh-worker issues plan [--repo REPO] [OPTIONS]
 ```
 
 **Arguments:**
@@ -175,16 +240,16 @@ gh-worker plan [--repo REPO] [OPTIONS]
 
 ```bash
 # Plan all issues in repository
-gh-worker plan --repo octocat/hello-world
+gh-worker issues plan --repo octocat/hello-world
 
 # Plan specific issues
-gh-worker plan --repo octocat/hello-world --issue-numbers 42 73
+gh-worker issues plan --repo octocat/hello-world --issue-numbers 42 73
 
 # Parallel planning
-gh-worker plan --repo octocat/hello-world --parallelism 3
+gh-worker issues plan --repo octocat/hello-world --parallelism 3
 
 # Plan all repositories
-gh-worker plan
+gh-worker issues plan
 ```
 
 **Behavior:**
@@ -194,14 +259,14 @@ gh-worker plan
 - Saves plans with timestamps and metadata
 - Parallelizes based on configuration or `--parallelism`
 
-### implement
+#### issues implement
 
 Execute plans and create pull requests.
 
 **Syntax:**
 
 ```bash
-gh-worker implement [--repo REPO] [OPTIONS]
+gh-worker issues implement [--repo REPO] [OPTIONS]
 ```
 
 **Arguments:**
@@ -218,16 +283,16 @@ gh-worker implement [--repo REPO] [OPTIONS]
 
 ```bash
 # Implement all planned issues
-gh-worker implement --repo octocat/hello-world
+gh-worker issues implement --repo octocat/hello-world
 
 # Implement specific issues
-gh-worker implement --repo octocat/hello-world --issue-numbers 42
+gh-worker issues implement --repo octocat/hello-world --issue-numbers 42
 
 # Parallel implementation
-gh-worker implement --repo octocat/hello-world --parallelism 2
+gh-worker issues implement --repo octocat/hello-world --parallelism 2
 
 # Implement all repositories
-gh-worker implement
+gh-worker issues implement
 ```
 
 **Behavior:**
@@ -416,7 +481,10 @@ All commands load configuration from:
 - Support configuration templates
 - Provide config validation command
 - Support environment variable overrides
-- Show all config values with no arguments
+
+**Implemented:**
+
+- Show all config values via `--list` flag
 
 ### Error Messages
 
@@ -474,9 +542,10 @@ gh-worker config issues-path /var/gh-worker/issues
 gh-worker config repository-path /var/gh-worker/repos
 
 # Add repositories
-gh-worker add octocat/hello-world octocat/spoon-knife
+gh-worker repositories add octocat/hello-world octocat/spoon-knife
 
 # Verify configuration
+gh-worker config --list
 gh-worker config issues-path
 ```
 
@@ -484,13 +553,13 @@ gh-worker config issues-path
 
 ```bash
 # Sync issues
-gh-worker sync --all-repos
+gh-worker issues sync --all-repos
 
 # Generate plans
-gh-worker plan
+gh-worker issues plan
 
 # Implement plans
-gh-worker implement
+gh-worker issues implement
 ```
 
 ### Automated Workflow
@@ -507,13 +576,13 @@ gh-worker work --frequency 1h
 
 ```bash
 # Single repository
-gh-worker sync --repo octocat/hello-world
-gh-worker plan --repo octocat/hello-world
-gh-worker implement --repo octocat/hello-world
+gh-worker issues sync --repo octocat/hello-world
+gh-worker issues plan --repo octocat/hello-world
+gh-worker issues implement --repo octocat/hello-world
 
 # Specific issues
-gh-worker plan --repo octocat/hello-world --issue-numbers 42 73
-gh-worker implement --repo octocat/hello-world --issue-numbers 42
+gh-worker issues plan --repo octocat/hello-world --issue-numbers 42 73
+gh-worker issues implement --repo octocat/hello-world --issue-numbers 42
 ```
 
 ## Extension Points

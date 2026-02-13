@@ -119,3 +119,26 @@ class ConfigManager:
             setattr(obj, parts[-1], value)
 
         self.save(self._config)
+
+    def list_all(self) -> dict[str, Any]:
+        """Get all configuration values as a flat dict of dotted keys.
+
+        Returns:
+            Dict mapping dotted key paths to their values (e.g., 'plan.parallelism' -> 1)
+        """
+        if self._config is None:
+            self._config = self.load()
+
+        data = self._config.model_dump(mode="json")
+        return self._flatten_config(data)
+
+    def _flatten_config(self, data: dict[str, Any], prefix: str = "") -> dict[str, Any]:
+        """Flatten nested config dict to dotted keys."""
+        result: dict[str, Any] = {}
+        for k, v in data.items():
+            key = f"{prefix}.{k}" if prefix else k
+            if isinstance(v, dict):
+                result.update(self._flatten_config(v, key))
+            else:
+                result[key] = v
+        return result

@@ -130,7 +130,7 @@ ghw --config-path /writable/path/config.yaml sync --repo owner/repo
 
 ### No Issues Synced
 
-**Symptom**: `ghw sync` completes but no issues are stored
+**Symptom**: `ghw issues sync` completes but no issues are stored
 
 **Causes and Solutions**:
 
@@ -152,10 +152,10 @@ gh repo view owner/repo
 
 ```bash
 # Try without --since
-ghw sync --repo owner/repo
+ghw issues sync --repo owner/repo
 
 # Or use longer timeframe
-ghw sync --repo owner/repo --since 30d
+ghw issues sync --repo owner/repo --since 30d
 ```
 
 4. **Search query excludes all issues**:
@@ -186,7 +186,7 @@ ghw config plan.parallelism 1
 3. Use time-based sync:
 
 ```bash
-ghw sync --repo owner/repo --since 1d  # Only recent issues
+ghw issues sync --repo owner/repo --since 1d  # Only recent issues
 ```
 
 4. Check rate limit status:
@@ -217,14 +217,14 @@ df -h ~/gh-worker/repos
 
 ```bash
 rm -rf ~/gh-worker/repos/owner/repo
-ghw add owner/repo
+ghw repositories add owner/repo
 ```
 
 ## Plan Generation Issues
 
 ### Plans Not Generated
 
-**Symptom**: `ghw plan` completes but no plans are created
+**Symptom**: `ghw issues plan` completes but no plans are created
 
 **Causes and Solutions**:
 
@@ -243,7 +243,7 @@ find ~/gh-worker/issues/owner/repo -name "plan-*.md"
 
 # Force regenerate by deleting old plans
 rm ~/gh-worker/issues/owner/repo/42/plan-*.md
-ghw plan --repo owner/repo --issue-numbers 42
+ghw issues plan --repo owner/repo --issue-numbers 42
 ```
 
 3. **Agent not available**:
@@ -279,7 +279,7 @@ ghw --log-level DEBUG plan --repo owner/repo
 4. Reduce parallelism:
 
 ```bash
-ghw plan --repo owner/repo --parallelism 1
+ghw issues plan --repo owner/repo --parallelism 1
 ```
 
 ### Plan Quality Issues
@@ -304,15 +304,15 @@ rm ~/gh-worker/issues/owner/repo/42/plan-*.md
 gh issue edit 42 --body "..." --repo owner/repo
 
 # Resync and replan
-ghw sync --repo owner/repo --issue-numbers 42
-ghw plan --repo owner/repo --issue-numbers 42
+ghw issues sync --repo owner/repo --issue-numbers 42
+ghw issues plan --repo owner/repo --issue-numbers 42
 ```
 
 ## Implementation Issues
 
 ### Implementation Fails Immediately
 
-**Symptom**: `ghw implement` fails right after starting
+**Symptom**: `ghw issues implement` fails right after starting
 
 **Causes and Solutions**:
 
@@ -320,7 +320,7 @@ ghw plan --repo owner/repo --issue-numbers 42
 
 ```bash
 # Generate plan first
-ghw plan --repo owner/repo --issue-numbers 42
+ghw issues plan --repo owner/repo --issue-numbers 42
 ```
 
 2. **Repository not clean**:
@@ -388,7 +388,7 @@ pytest  # Or your test command
 
 ```bash
 # Fix tests
-ghw implement --repo owner/repo --issue-numbers 42
+ghw issues implement --repo owner/repo --issue-numbers 42
 ```
 
 ### Branch Already Exists
@@ -452,7 +452,7 @@ ls ~/gh-worker/issues/owner/repo/42/
 
 ```bash
 # Implementation may not have started
-ghw implement --repo owner/repo --issue-numbers 42
+ghw issues implement --repo owner/repo --issue-numbers 42
 ```
 
 3. **Session completed**:
@@ -547,8 +547,8 @@ ghw config implement.parallelism 1
 
 ```bash
 # Instead of all at once
-ghw plan --repo owner/repo --issue-numbers 1 2 3
-ghw plan --repo owner/repo --issue-numbers 4 5 6
+ghw issues plan --repo owner/repo --issue-numbers 1 2 3
+ghw issues plan --repo owner/repo --issue-numbers 4 5 6
 ```
 
 ## File System Issues

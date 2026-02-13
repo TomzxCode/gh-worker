@@ -19,6 +19,9 @@ This follows the [XDG Base Directory Specification](https://specifications.freed
 The easiest way to manage configuration is using the `config` command:
 
 ```bash
+# List all configuration values
+ghw config --list
+
 # Get a configuration value (provide only the key)
 ghw config <key>
 
@@ -44,7 +47,15 @@ ghw config plan.parallelism
 
 ### Viewing All Configuration
 
-To view your entire configuration:
+To view all configuration values via the CLI:
+
+```bash
+ghw config --list
+```
+
+This outputs all keys and values in `key=value` format (e.g., `plan.parallelism=3`).
+
+Alternatively, you can view the raw YAML file:
 
 ```bash
 cat ~/.config/gh-worker/config.yaml
@@ -369,11 +380,11 @@ You can use a custom configuration file location:
 
 ```bash
 # Specify config file for a single command
-ghw --config-path /custom/path/config.yaml sync --repo owner/repo
+ghw --config-path /custom/path/config.yaml issues sync --repo owner/repo
 
 # Or set an environment variable
 export GH_WORKER_CONFIG=/custom/path/config.yaml
-ghw sync --repo owner/repo
+ghw issues sync --repo owner/repo
 ```
 
 ## Troubleshooting

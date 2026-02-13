@@ -60,11 +60,11 @@ ghw config agent.claude_code_path /path/to/claude-code
 
 ```bash
 # Use explicitly
-ghw plan --repo owner/repo --agent claude-code
+ghw issues plan --repo owner/repo --agent claude-code
 
 # Or set as default
 ghw config agent.default claude-code
-ghw plan --repo owner/repo
+ghw issues plan --repo owner/repo
 ```
 
 ### Cursor Agent
@@ -102,14 +102,14 @@ ghw config agent.cursor.model gpt-4
 
 ```bash
 # Use explicitly
-ghw plan --repo owner/repo --agent cursor-agent
+ghw issues plan --repo owner/repo --agent cursor-agent
 
 # Or set as default
 ghw config agent.default cursor-agent
-ghw plan --repo owner/repo
+ghw issues plan --repo owner/repo
 
 # With implementation
-ghw implement --repo owner/repo --agent cursor-agent
+ghw issues implement --repo owner/repo --agent cursor-agent
 ```
 
 ### Mock Agent
@@ -142,10 +142,10 @@ ghw config agent.mock.implement_delay 0
 
 ```bash
 # Use for testing
-ghw plan --repo owner/repo --agent mock
+ghw issues plan --repo owner/repo --agent mock
 
 # Test implementation workflow
-ghw implement --repo owner/repo --agent mock
+ghw issues implement --repo owner/repo --agent mock
 ```
 
 ### OpenCode

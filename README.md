@@ -46,6 +46,21 @@ ghw --help
 
 ## Quick Start
 
+### Commands
+
+```
+ghw init                    Initialize configuration
+ghw repositories add        Add repositories to track
+ghw repositories list      List tracked repositories
+ghw repositories remove    Remove repositories from tracking
+ghw issues sync             Sync issues from GitHub
+ghw issues plan            Generate implementation plans
+ghw issues implement       Implement plans and create PRs
+ghw monitor                Monitor ongoing implementations
+ghw work                   Run sync → plan → implement workflow
+ghw config                 Manage configuration
+```
+
 ### Global Options
 
 All commands support the following global options:
@@ -104,78 +119,91 @@ ghw config implement.create_pr true
 Add a repository to track:
 
 ```bash
-ghw add owner/repo
+ghw repositories add owner/repo
 ```
 
 This creates the necessary directory structure and clones the repository.
 
-### 3. Sync Issues
+### 3. List and Manage Repositories
+
+```bash
+# List all repositories under management
+ghw repositories list
+
+# Remove a repository from tracking (keeps clone by default)
+ghw repositories remove owner/repo
+
+# Also remove the cloned repository
+ghw repositories remove owner/repo --no-keep-clone
+```
+
+### 4. Sync Issues
 
 Sync issues from GitHub:
 
 ```bash
 # Sync all open issues for a repository
-ghw sync --repo owner/repo
+ghw issues sync --repo owner/repo
 
 # Sync specific issues
-ghw sync --repo owner/repo --issue-numbers 42 43
+ghw issues sync --repo owner/repo --issue-numbers 42 43
 
 # Sync issues updated in the last 7 days
-ghw sync --repo owner/repo --since 7d
+ghw issues sync --repo owner/repo --since 7d
 
 # Sync all repositories
-ghw sync --all-repos
+ghw issues sync --all-repos
 ```
 
-### 4. Generate Plans
+### 5. Generate Plans
 
 Generate implementation plans for synced issues using LLM agents:
 
 ```bash
 # Generate plans for all issues without plans
-ghw plan --repo owner/repo
+ghw issues plan --repo owner/repo
 
 # Generate plan for specific issue
-ghw plan --repo owner/repo --issue-numbers 42
+ghw issues plan --repo owner/repo --issue-numbers 42
 
 # Use custom parallelism
-ghw plan --repo owner/repo --parallelism 5
+ghw issues plan --repo owner/repo --parallelism 5
 
 # Regenerate plan even if one exists
-ghw plan --repo owner/repo --issue-numbers 42 --force
+ghw issues plan --repo owner/repo --issue-numbers 42 --force
 
 # Use different agent
-ghw plan --repo owner/repo --agent cursor-agent
+ghw issues plan --repo owner/repo --agent cursor-agent
 ```
 
-### 5. Implement Plans
+### 6. Implement Plans
 
 Execute plans and create pull requests with git worktree support:
 
 ```bash
 # Implement all planned issues
-ghw implement --repo owner/repo
+ghw issues implement --repo owner/repo
 
 # Implement specific issue
-ghw implement --repo owner/repo --issue-numbers 42
+ghw issues implement --repo owner/repo --issue-numbers 42
 
 # Use custom parallelism
-ghw implement --repo owner/repo --parallelism 2
+ghw issues implement --repo owner/repo --parallelism 2
 
 # Full automation: worktree, push, and create PR
-ghw implement --repo owner/repo --use-worktree --push-branch --create-pr
+ghw issues implement --repo owner/repo --use-worktree --push-branch --create-pr
 
 # Use different agent
-ghw implement --repo owner/repo --agent cursor-agent
+ghw issues implement --repo owner/repo --agent cursor-agent
 
 # Implement and keep worktree for debugging
-ghw implement --repo owner/repo --delete-worktree=false
+ghw issues implement --repo owner/repo --delete-worktree=false
 
 # Force re-implementation even if already completed
-ghw implement --repo owner/repo --issue-numbers 42 --force
+ghw issues implement --repo owner/repo --issue-numbers 42 --force
 ```
 
-### 6. Monitor Progress
+### 7. Monitor Progress
 
 Monitor an ongoing implementation:
 
@@ -183,7 +211,7 @@ Monitor an ongoing implementation:
 ghw monitor --repo owner/repo --issue-number 42
 ```
 
-### 7. Run Full Workflow
+### 8. Run Full Workflow
 
 Run the complete sync → plan → implement workflow:
 
@@ -234,6 +262,9 @@ sync:
 ```bash
 # Initialize interactively
 ghw init
+
+# List all configuration values
+ghw config --list
 
 # Get a value (omit the second argument)
 ghw config issues-path
@@ -296,8 +327,8 @@ gh-worker supports multiple LLM agents through a pluggable architecture:
 ghw config agent.default claude-code
 
 # Use different agent at runtime
-ghw plan --repo owner/repo --agent cursor-agent
-ghw implement --repo owner/repo --agent cursor-agent
+ghw issues plan --repo owner/repo --agent cursor-agent
+ghw issues implement --repo owner/repo --agent cursor-agent
 
 # Configure agent-specific settings
 ghw config agent.claude_code_path /custom/path/to/claude-code
@@ -415,7 +446,7 @@ claude-code --version
 cursor-agent --version
 
 # Try a different agent
-ghw plan --repo owner/repo --agent mock
+ghw issues plan --repo owner/repo --agent mock
 ```
 
 ## Examples
@@ -441,15 +472,15 @@ ghw work --repos owner/repo --frequency 30m
 ghw init
 
 # 2. Sync recent issues
-ghw sync --repo owner/repo --since 7d
+ghw issues sync --repo owner/repo --since 7d
 
 # 3. Generate plans
-ghw plan --repo owner/repo
+ghw issues plan --repo owner/repo
 
 # 4. Review plans in ~/gh-worker/issues/owner/repo/*/plan-*.md
 
 # 5. Implement a specific issue with full automation
-ghw implement --repo owner/repo --issue-numbers 42 --push-branch --create-pr
+ghw issues implement --repo owner/repo --issue-numbers 42 --push-branch --create-pr
 
 # 6. Monitor progress
 ghw monitor --repo owner/repo --issue-number 42

@@ -13,24 +13,22 @@ All commands support the following global options:
 
 ```bash
 # Enable debug logging
-ghw --log-level DEBUG sync --repo owner/repo
+ghw --log-level DEBUG issues sync --repo owner/repo
 
 # Use custom config file
-ghw sync --repo owner/repo --config-path /path/to/config.yaml
+ghw issues sync --repo owner/repo --config-path /path/to/config.yaml
 ```
 
 ## Commands Overview
 
-gh-worker provides the following commands:
+gh-worker provides the following commands (in help order):
 
 - [`init`](#init-command) - Initialize configuration interactively
-- [`config`](#config-command) - Manage configuration
-- [`add`](#add-command) - Add repositories to track
-- [`sync`](#sync-command) - Sync GitHub issues to local files
-- [`plan`](#plan-command) - Generate implementation plans
-- [`implement`](#implement-command) - Execute plans and create PRs
+- [`repositories`](#repositories-commands) - Manage tracked repositories (add, list, remove)
+- [`issues`](#issues-commands) - Sync, plan, and implement issues (sync, plan, implement)
 - [`monitor`](#monitor-command) - Monitor ongoing implementations
 - [`work`](#work-command) - Run complete workflow (sync → plan → implement)
+- [`config`](#config-command) - Manage configuration
 
 ## Command Reference
 
@@ -75,11 +73,21 @@ ghw init --config-path /path/to/config.yaml
 Manage gh-worker configuration.
 
 ```bash
+# List all configuration values
+ghw config --list
+
 # Get a value (provide only the key)
 ghw config <key>
 
 # Set a value (provide key and value)
 ghw config <key> <value>
+```
+
+**List All Configuration Values**:
+
+```bash
+# Output all keys and values in key=value format
+ghw config --list
 ```
 
 **Get Configuration Value**:
@@ -110,15 +118,19 @@ ghw config implement.use_worktree true
 - Use dot notation for nested configuration keys (e.g., `plan.parallelism`)
 - Boolean values should be specified as `true` or `false` (lowercase)
 
-### Add Command
+### Repositories Commands
 
-Add repositories to track with gh-worker.
+Manage tracked repositories with `ghw repositories`:
 
 ```bash
-ghw add <repo> [<repo2> ...]
+ghw repositories add <repo> [<repo2> ...]
+ghw repositories list
+ghw repositories remove <repo> [<repo2> ...]
 ```
 
-This command:
+#### add
+
+Add repositories to track.
 
 1. Creates the necessary directory structure
 1. Clones the repository to `repository-path`
@@ -128,42 +140,86 @@ This command:
 
 ```bash
 # Add a single repository
-ghw add owner/repo
+ghw repositories add owner/repo
 
 # Add multiple repositories
-ghw add owner/repo1 owner/repo2 owner/repo3
+ghw repositories add owner/repo1 owner/repo2 owner/repo3
 ```
 
-### Sync Command
+#### list
+
+List all repositories under management (repositories with a directory under `issues-path`).
+
+**Examples**:
+
+```bash
+# List all tracked repositories
+ghw repositories list
+
+# Use custom config
+ghw repositories list --config-path /path/to/config.yaml
+```
+
+#### remove
+
+Remove repositories from tracking.
+
+1. Removes the repository directory from `issues-path` (including all synced issues and plans)
+2. By default, keeps the cloned repository in `repository-path` (use `--no-keep-clone` to also remove it)
+
+**Examples**:
+
+```bash
+# Remove a single repository (keeps clone by default)
+ghw repositories remove owner/repo
+
+# Remove multiple repositories
+ghw repositories remove owner/repo1 owner/repo2
+
+# Also remove the cloned repository
+ghw repositories remove owner/repo --no-keep-clone
+```
+
+### Issues Commands
+
+Sync, plan, and implement issues with `ghw issues`:
+
+```bash
+ghw issues sync [--repo REPO | --all-repos] [OPTIONS]
+ghw issues plan [--repo REPO] [OPTIONS]
+ghw issues implement [--repo REPO] [OPTIONS]
+```
+
+#### sync
 
 Sync GitHub issues to local files for processing.
 
 #### Sync a Specific Repository
 
 ```bash
-ghw sync --repo <owner/repo>
+ghw issues sync --repo <owner/repo>
 ```
 
 **Examples**:
 
 ```bash
 # Sync all open issues
-ghw sync --repo owner/repo
+ghw issues sync --repo owner/repo
 
 # Sync issues updated in last 7 days
-ghw sync --repo owner/repo --since 7d
+ghw issues sync --repo owner/repo --since 7d
 
 # Sync issues updated in last 2 hours
-ghw sync --repo owner/repo --since 2h
+ghw issues sync --repo owner/repo --since 2h
 
 # Sync specific issues
-ghw sync --repo owner/repo --issue-numbers 42 43 44
+ghw issues sync --repo owner/repo --issue-numbers 42 43 44
 ```
 
 #### Sync All Repositories
 
 ```bash
-ghw sync --all-repos
+ghw issues sync --all-repos
 ```
 
 This syncs all repositories you've added with the `add` command.
@@ -171,7 +227,7 @@ This syncs all repositories you've added with the `add` command.
 #### Sync with Search Query
 
 ```bash
-ghw sync --repo owner/repo --search "label:bug is:open"
+ghw issues sync --repo owner/repo --search "label:bug is:open"
 ```
 
 Uses GitHub's search syntax to filter issues.
@@ -182,26 +238,26 @@ The `--since` flag accepts duration strings:
 
 ```bash
 # Last hour
-ghw sync --repo owner/repo --since 1h
+ghw issues sync --repo owner/repo --since 1h
 
 # Last 30 minutes
-ghw sync --repo owner/repo --since 30m
+ghw issues sync --repo owner/repo --since 30m
 
 # Last 7 days
-ghw sync --repo owner/repo --since 7d
+ghw issues sync --repo owner/repo --since 7d
 
 # Last 2 weeks
-ghw sync --repo owner/repo --since 14d
+ghw issues sync --repo owner/repo --since 14d
 ```
 
-### Plan Command
+#### plan
 
 Generate implementation plans for synced issues using LLM agents.
 
 #### Generate Plans for a Repository
 
 ```bash
-ghw plan --repo <owner/repo>
+ghw issues plan --repo <owner/repo>
 ```
 
 This generates plans for all issues in the repository that don't already have plans.
@@ -209,7 +265,7 @@ This generates plans for all issues in the repository that don't already have pl
 #### Generate Plans for All Repositories
 
 ```bash
-ghw plan --all-repos
+ghw issues plan --all-repos
 ```
 
 This generates plans for all repositories you've added with the `add` command.
@@ -218,16 +274,16 @@ This generates plans for all repositories you've added with the `add` command.
 
 ```bash
 # Generate plans with default parallelism
-ghw plan --repo owner/repo
+ghw issues plan --repo owner/repo
 
 # Generate plans with custom parallelism
-ghw plan --repo owner/repo --parallelism 5
+ghw issues plan --repo owner/repo --parallelism 5
 ```
 
 #### Generate Plan for Specific Issues
 
 ```bash
-ghw plan --repo owner/repo --issue-numbers 42 43
+ghw issues plan --repo owner/repo --issue-numbers 42 43
 ```
 
 **Use Cases**:
@@ -242,7 +298,7 @@ Control how many issues are planned concurrently:
 
 ```bash
 # Plan 5 issues in parallel
-ghw plan --repo owner/repo --parallelism 5
+ghw issues plan --repo owner/repo --parallelism 5
 ```
 
 The parallelism value overrides the configured default for this execution.
@@ -253,7 +309,7 @@ Force plan generation even if a plan already exists:
 
 ```bash
 # Regenerate plan for an issue
-ghw plan --repo owner/repo --issue-numbers 42 --force
+ghw issues plan --repo owner/repo --issue-numbers 42 --force
 ```
 
 #### Agent Override
@@ -262,20 +318,20 @@ Use a different agent for planning:
 
 ```bash
 # Use Cursor agent instead of default
-ghw plan --repo owner/repo --agent cursor-agent
+ghw issues plan --repo owner/repo --agent cursor-agent
 
 # Use mock agent for testing
-ghw plan --repo owner/repo --agent mock
+ghw issues plan --repo owner/repo --agent mock
 ```
 
-### Implement Command
+#### implement
 
 Execute implementation plans and create pull requests using git worktree for isolated development.
 
 #### Implement Planned Issues for a Repository
 
 ```bash
-ghw implement --repo <owner/repo>
+ghw issues implement --repo <owner/repo>
 ```
 
 This implements all issues in the repository that have plans but haven't been implemented yet.
@@ -283,7 +339,7 @@ This implements all issues in the repository that have plans but haven't been im
 #### Implement Plans for All Repositories
 
 ```bash
-ghw implement --all-repos
+ghw issues implement --all-repos
 ```
 
 This implements planned issues for all repositories you've added with the `add` command.
@@ -292,19 +348,19 @@ This implements planned issues for all repositories you've added with the `add` 
 
 ```bash
 # Implement with default parallelism
-ghw implement --repo owner/repo
+ghw issues implement --repo owner/repo
 
 # Implement with custom parallelism
-ghw implement --repo owner/repo --parallelism 2
+ghw issues implement --repo owner/repo --parallelism 2
 
 # Use different agent
-ghw implement --repo owner/repo --agent cursor-agent
+ghw issues implement --repo owner/repo --agent cursor-agent
 ```
 
 #### Implement Specific Issues
 
 ```bash
-ghw implement --repo owner/repo --issue-numbers 42
+ghw issues implement --repo owner/repo --issue-numbers 42
 ```
 
 **Use Cases**:
@@ -319,10 +375,10 @@ By default, gh-worker uses git worktree to create isolated workspaces for each i
 
 ```bash
 # Use worktree (default behavior)
-ghw implement --repo owner/repo --use-worktree
+ghw issues implement --repo owner/repo --use-worktree
 
 # Disable worktree (work directly in main repo)
-ghw implement --repo owner/repo --use-worktree=false
+ghw issues implement --repo owner/repo --use-worktree=false
 ```
 
 **Benefits of Worktree**:
@@ -338,23 +394,23 @@ Control whether branches are pushed and PRs are created automatically:
 
 ```bash
 # Push branch but don't create PR
-ghw implement --repo owner/repo --push-branch
+ghw issues implement --repo owner/repo --push-branch
 
 # Push branch and create PR automatically
-ghw implement --repo owner/repo --push-branch --create-pr
+ghw issues implement --repo owner/repo --push-branch --create-pr
 
 # Keep worktree after implementation (for debugging)
-ghw implement --repo owner/repo --delete-worktree=false
+ghw issues implement --repo owner/repo --delete-worktree=false
 ```
 
 **Examples**:
 
 ```bash
 # Full automation: worktree, push, and create PR
-ghw implement --repo owner/repo --use-worktree --push-branch --create-pr
+ghw issues implement --repo owner/repo --use-worktree --push-branch --create-pr
 
 # Manual PR creation: implement and push only
-ghw implement --repo owner/repo --push-branch
+ghw issues implement --repo owner/repo --push-branch
 ```
 
 #### What Happens During Implementation
@@ -375,7 +431,7 @@ Force implementation even if the issue was already completed:
 
 ```bash
 # Re-implement an issue
-ghw implement --repo owner/repo --issue-numbers 42 --force
+ghw issues implement --repo owner/repo --issue-numbers 42 --force
 ```
 
 #### Agent Override
@@ -384,13 +440,13 @@ Override the default agent for specific implementations:
 
 ```bash
 # Use Claude Code agent
-ghw implement --repo owner/repo --agent claude-code
+ghw issues implement --repo owner/repo --agent claude-code
 
 # Use Cursor agent
-ghw implement --repo owner/repo --agent cursor-agent
+ghw issues implement --repo owner/repo --agent cursor-agent
 
 # Use mock agent (for testing)
-ghw implement --repo owner/repo --agent mock
+ghw issues implement --repo owner/repo --agent mock
 ```
 
 ### Monitor Command
@@ -496,16 +552,16 @@ ghw config issues-path ~/gh-worker/issues
 ghw config repository-path ~/gh-worker/repos
 
 # 2. Add repository
-ghw add owner/repo
+ghw repositories add owner/repo
 
 # 3. Sync issues
-ghw sync --repo owner/repo
+ghw issues sync --repo owner/repo
 
 # 4. Generate plans
-ghw plan --repo owner/repo
+ghw issues plan --repo owner/repo
 
 # 5. Implement with full automation
-ghw implement --repo owner/repo --push-branch --create-pr
+ghw issues implement --repo owner/repo --push-branch --create-pr
 ```
 
 ### Daily Issue Processing
@@ -557,13 +613,13 @@ Process a batch of specific issues:
 
 ```bash
 # Sync specific issues
-ghw sync --repo owner/repo --issue-numbers 42 43 44 45 46
+ghw issues sync --repo owner/repo --issue-numbers 42 43 44 45 46
 
 # Generate plans in parallel
-ghw plan --repo owner/repo --issue-numbers 42 43 44 45 46 --parallelism 3
+ghw issues plan --repo owner/repo --issue-numbers 42 43 44 45 46 --parallelism 3
 
 # Implement sequentially (safer for complex changes)
-ghw implement --repo owner/repo --issue-numbers 42 43 44 45 46 --parallelism 1
+ghw issues implement --repo owner/repo --issue-numbers 42 43 44 45 46 --parallelism 1
 ```
 
 ### Review-Before-Implement Workflow
@@ -572,16 +628,16 @@ Generate plans for review before implementation:
 
 ```bash
 # 1. Sync issues
-ghw sync --repo owner/repo
+ghw issues sync --repo owner/repo
 
 # 2. Generate plans
-ghw plan --repo owner/repo
+ghw issues plan --repo owner/repo
 
 # 3. Review plans manually
 ls ~/gh-worker/issues/owner/repo/*/plan-*.md
 
 # 4. Implement approved issues
-ghw implement --repo owner/repo --issue-numbers 42 43
+ghw issues implement --repo owner/repo --issue-numbers 42 43
 ```
 
 ### Bug Triage Workflow
@@ -590,13 +646,13 @@ Process issues with specific labels:
 
 ```bash
 # Sync bugs only
-ghw sync --repo owner/repo --search "label:bug is:open"
+ghw issues sync --repo owner/repo --search "label:bug is:open"
 
 # Generate plans
-ghw plan --repo owner/repo
+ghw issues plan --repo owner/repo
 
 # Review and implement selectively
-ghw implement --repo owner/repo --issue-numbers 42
+ghw issues implement --repo owner/repo --issue-numbers 42
 ```
 
 ### High-Parallelism Processing
@@ -605,13 +661,13 @@ Process many issues quickly:
 
 ```bash
 # Sync all issues
-ghw sync --repo owner/repo
+ghw issues sync --repo owner/repo
 
 # Generate plans with high parallelism
-ghw plan --repo owner/repo --parallelism 5
+ghw issues plan --repo owner/repo --parallelism 5
 
 # Implement with moderate parallelism
-ghw implement --repo owner/repo --parallelism 2
+ghw issues implement --repo owner/repo --parallelism 2
 ```
 
 ## Best Practices
@@ -620,10 +676,10 @@ ghw implement --repo owner/repo --parallelism 2
 
 When starting with a new repository:
 
-1. Sync a few issues: `ghw sync --repo owner/repo --issue-numbers 1 2 3`
-1. Generate one plan: `ghw plan --repo owner/repo --issue-numbers 1`
+1. Sync a few issues: `ghw issues sync --repo owner/repo --issue-numbers 1 2 3`
+1. Generate one plan: `ghw issues plan --repo owner/repo --issue-numbers 1`
 1. Review the plan manually
-1. Implement if satisfied: `ghw implement --repo owner/repo --issue-numbers 1`
+1. Implement if satisfied: `ghw issues implement --repo owner/repo --issue-numbers 1`
 
 ### Use Appropriate Parallelism
 
@@ -645,7 +701,7 @@ For complex issues, monitor progress:
 
 ```bash
 # In one terminal: implement
-ghw implement --repo owner/repo --issue-numbers 42
+ghw issues implement --repo owner/repo --issue-numbers 42
 
 # In another terminal: monitor
 ghw monitor --repo owner/repo --issue-number 42
@@ -657,7 +713,7 @@ Instead of syncing all issues, sync recent ones:
 
 ```bash
 # Last week's issues
-ghw sync --repo owner/repo --since 7d
+ghw issues sync --repo owner/repo --since 7d
 ```
 
 ### Organize by Repository
@@ -699,7 +755,7 @@ cursor-agent --version
 ghw config agent.default
 
 # Try using a different agent
-ghw plan --repo owner/repo --agent cursor-agent
+ghw issues plan --repo owner/repo --agent cursor-agent
 ```
 
 ### Implementation Fails

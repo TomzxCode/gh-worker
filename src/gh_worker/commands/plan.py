@@ -211,7 +211,7 @@ async def plan_command_async(
         repositories = issue_store.list_repositories()
         if not repositories:
             logger.warning("no_repositories_found")
-            print("No repositories found. Use 'gh-worker add' to add repositories.")
+            print("No repositories found. Use 'gh-worker repositories add' to add repositories.")
             return
     elif repo:
         repositories = [Repository.from_string(repo)]

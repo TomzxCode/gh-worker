@@ -32,6 +32,8 @@ All commands located in [src/gh_worker/commands/](src/gh_worker/commands/) follo
 
 ### Available Commands
 
+Commands are ordered in help as: init, repositories, issues, monitor, work, config.
+
 #### init
 
 Initializes configuration interactively.
@@ -70,6 +72,7 @@ Manages application configuration.
 
 **Operations:**
 
+- List all configuration values (`--list`)
 - Get configuration value
 - Set configuration value
 - Uses dotted key paths
@@ -77,11 +80,18 @@ Manages application configuration.
 **Example:**
 
 ```bash
+# List all configuration values
+gh-worker config --list
+
+# Get value
+gh-worker config issues-path
+
+# Set value
 gh-worker config issues-path /var/gh-worker/issues
 gh-worker config plan.parallelism 3
 ```
 
-#### add
+#### repositories add
 
 Adds repositories to track.
 
@@ -97,10 +107,47 @@ Adds repositories to track.
 **Example:**
 
 ```bash
-gh-worker add octocat/hello-world
+gh-worker repositories add octocat/hello-world
 ```
 
-#### sync
+#### list
+
+Lists all repositories under management.
+
+**Location:** [src/gh_worker/commands/list.py](src/gh_worker/commands/list.py)
+
+**Operations:**
+
+- Load configuration and validate issues_path
+- Use IssueStore.list_repositories() to discover tracked repos
+- Display repository names (owner/repo format)
+
+**Example:**
+
+```bash
+gh-worker repositories list
+```
+
+#### remove
+
+Removes repositories from tracking.
+
+**Location:** [src/gh_worker/commands/remove.py](src/gh_worker/commands/remove.py)
+
+**Operations:**
+
+- Parse repository names
+- Remove repository directory from issues_path (issues, plans, metadata)
+- By default keeps cloned repository in repository_path (use --no-keep-clone to remove it)
+
+**Example:**
+
+```bash
+gh-worker repositories remove octocat/hello-world
+gh-worker repositories remove octocat/hello-world --no-keep-clone
+```
+
+#### issues sync
 
 Synchronizes issues from GitHub to local storage.
 
@@ -131,7 +178,7 @@ Synchronizes issues from GitHub to local storage.
    - Update repository timestamp
 1. Report total issues synced
 
-#### plan
+#### issues plan
 
 Generates implementation plans using LLM agents.
 
@@ -164,7 +211,7 @@ Generates implementation plans using LLM agents.
    - Log results
 1. Report success/failure counts
 
-#### implement
+#### issues implement
 
 Executes plans and creates pull requests with git worktree support.
 

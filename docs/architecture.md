@@ -345,7 +345,7 @@ User → CLI → sync_command → GitHubClient → gh CLI → GitHub API
               IssueStore → File System
 ```
 
-1. User invokes `ghw sync`
+1. User invokes `ghw issues sync`
 1. CLI parses arguments and calls `sync_command`
 1. `sync_command` uses `GitHubClient` to fetch issues
 1. `GitHubClient` executes `gh` CLI commands
@@ -364,7 +364,7 @@ User → CLI → plan_command → ParallelExecutor
                             PlanStore → File System
 ```
 
-1. User invokes `ghw plan`
+1. User invokes `ghw issues plan`
 1. CLI calls `plan_command`
 1. `plan_command` creates tasks for each issue
 1. `ParallelExecutor` runs tasks concurrently
@@ -386,7 +386,7 @@ User → CLI → implement_command → ParallelExecutor
                                   Pull Request
 ```
 
-1. User invokes `ghw implement`
+1. User invokes `ghw issues implement`
 1. CLI calls `implement_command`
 1. `implement_command` creates tasks for each issue
 1. `ParallelExecutor` runs tasks concurrently
