@@ -21,15 +21,15 @@ def list_command(config_path: Path | None = None) -> None:
 
     if not app_config.issues_path:
         logger.error("Issues path not configured")
-        print("Error: issues-path not configured. Run: gh-worker config issues-path <path>")
+        logger.error("Issues path not configured. Run: gh-worker config issues-path <path>")
         return
 
     issue_store = IssueStore(app_config.issues_path)
     repositories = issue_store.list_repositories()
 
     if not repositories:
-        print("No repositories under management.")
+        logger.info("No repositories under management.")
         return
 
     for repo in sorted(repositories, key=lambda r: r.full_name):
-        print(repo.full_name)
+        logger.info(f"{repo.full_name}")

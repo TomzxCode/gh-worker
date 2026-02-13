@@ -810,7 +810,7 @@ async def implement_command_async(
 
     if not app_config.issues_path:
         logger.error("Issues path not configured")
-        print("Error: issues-path not configured. Run: gh-worker config issues-path <path>")
+        logger.error("Issues path not configured. Run: gh-worker config issues-path <path>")
         return
 
     assignee_filter = assignee
@@ -818,12 +818,12 @@ async def implement_command_async(
         gh_client = GHClient(app_config.repository_path)
         if not gh_client.check_auth():
             logger.error("gh CLI not authenticated")
-            print("Error: gh CLI not authenticated. Run: gh auth login")
+            logger.error("gh CLI not authenticated. Run: gh auth login")
             return
         current_user = gh_client.get_current_user()
         if not current_user:
             logger.error("Could not get current user")
-            print("Error: Could not determine current user. Run: gh auth login")
+            logger.error("Could not determine current user. Run: gh auth login")
             return
         assignee_filter = current_user
 
@@ -838,18 +838,19 @@ async def implement_command_async(
         repositories = issue_store.list_repositories()
         if not repositories:
             logger.warning("No repositories found")
-            print("No repositories found. Use 'gh-worker repositories add' to add repositories.")
+            logger.warning(
+                "No repositories found. Use 'gh-worker repositories add' to add repositories."
+            )
             return
     elif repo:
         try:
             repositories = [issue_store.resolve_repo(repo)]
         except ValueError as e:
             logger.error("Invalid repository", repo=repo, error=str(e))
-            print(f"Error: {e}")
             return
     else:
         logger.error("No repository specified")
-        print("Error: Specify --repo or --all-repos")
+        logger.error("Specify --repo or --all-repos")
         return
 
     # Find all issues needing implementation (require approved plans unless force)
@@ -868,7 +869,7 @@ async def implement_command_async(
 
     if not all_tasks:
         logger.info("No issues need implementation")
-        print("No issues need implementation")
+        logger.info("No issues need implementation")
         return
 
     logger.info(
@@ -876,7 +877,7 @@ async def implement_command_async(
         total_issues=len(all_tasks),
         parallelism=max_workers,
     )
-    print(f"Implementing {len(all_tasks)} issues (parallelism: {max_workers})")
+    logger.info(f"Implementing {len(all_tasks)} issues (parallelism: {max_workers})")
 
     # Get agent configuration (use override if provided, otherwise use config default)
     agent_name = agent if agent is not None else app_config.agent.default
@@ -917,15 +918,15 @@ async def implement_command_async(
     successes = sum(1 for r in results if r.success)
     failures = len(results) - successes
 
-    print(f"\nCompleted: {successes} implementations successful, {failures} failures")
+    logger.info(f"Completed: {successes} implementations successful, {failures} failures")
 
     if failures > 0:
-        print("\nFailed issues:")
+        logger.info("Failed issues:")
         for result in results:
             if not result.success:
-                print(
-                    f"  - {result.item.repository.full_name}#{result.item.issue_number}: "
-                    f"{result.error}"
+                logger.error(
+                    f"Failed issue: {result.item.repository.full_name}"
+                    f"#{result.item.issue_number}: {result.error}"
                 )
 
 

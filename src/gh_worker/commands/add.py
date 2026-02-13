@@ -29,7 +29,7 @@ def add_command(
 
     if not app_config.issues_path:
         logger.error("Issues path not configured")
-        print("Error: issues-path not configured. Run: gh-worker config issues-path <path>")
+        logger.error("Issues path not configured. Run: gh-worker config issues-path <path>")
         return
 
     issue_store = IssueStore(app_config.issues_path)
@@ -37,7 +37,7 @@ def add_command(
 
     if not gh_client.check_auth():
         logger.error("gh CLI not authenticated")
-        print("Error: gh CLI not authenticated. Run: gh auth login")
+        logger.error("gh CLI not authenticated. Run: gh auth login")
         return
 
     for repo_str in repos:
@@ -49,30 +49,28 @@ def add_command(
             repo_dir.mkdir(parents=True, exist_ok=True)
 
             logger.info("Created repository directory", repository=repository.full_name)
-            print(f"Added repository: {repository.full_name}")
+            logger.info(f"Added repository: {repository.full_name}")
 
             # Clone repository only if --clone was passed and repository_path is configured
             if clone and app_config.repository_path:
                 try:
                     gh_client.clone_repo(repository)
-                    print(f"Cloned repository to: {gh_client._get_repo_path(repository)}")
+                    logger.info(f"Cloned repository to: {gh_client._get_repo_path(repository)}")
                 except Exception as e:
                     logger.warning("Failed to clone repository", error=str(e))
-                    print(f"Warning: Failed to clone repository: {e}")
+                    logger.warning(f"Failed to clone repository: {e}")
             elif clone and not app_config.repository_path:
-                print(
-                    "Note: repository-path not configured. "
-                    "Set it to enable cloning. Run: gh-worker config repository-path <path>"
+                logger.info(
+                    "Repository-path not configured. Set it to enable cloning. "
+                    "Run: gh-worker config repository-path <path>"
                 )
             elif app_config.repository_path:
-                print(
-                    "Note: Repository not cloned. Use --clone to clone now, "
+                logger.info(
+                    "Repository not cloned. Use --clone to clone now, "
                     "or it will be cloned when you run 'ghw issues plan'."
                 )
 
         except ValueError as e:
             logger.error("Invalid repository format", repo=repo_str, error=str(e))
-            print(f"Error: {e}")
         except Exception as e:
             logger.error("Failed to add repository", repo=repo_str, error=str(e))
-            print(f"Error: Failed to add repository {repo_str}: {e}")

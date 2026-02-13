@@ -180,7 +180,10 @@ class TestSyncCommand:
         sync_command(repo="owner/repo", config_path=tmp_config_path)
 
         captured = capsys.readouterr()
-        assert "issues-path not configured" in captured.out
+        assert (
+            "Issues path not configured" in captured.out
+            or "issues-path not configured" in captured.out
+        )
 
     def test_sync_command_not_authenticated(self, tmp_config_path, tmp_issues_path, capsys):
         """Test sync command when not authenticated."""

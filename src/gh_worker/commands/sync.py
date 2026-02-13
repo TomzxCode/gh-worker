@@ -110,7 +110,7 @@ def sync_command(
 
     if not app_config.issues_path:
         logger.error("Issues path not configured")
-        print("Error: issues-path not configured. Run: gh-worker config issues-path <path>")
+        logger.error("Issues path not configured. Run: gh-worker config issues-path <path>")
         return
 
     issue_store = IssueStore(app_config.issues_path)
@@ -118,14 +118,16 @@ def sync_command(
 
     if not gh_client.check_auth():
         logger.error("gh CLI not authenticated")
-        print("Error: gh CLI not authenticated. Run: gh auth login")
+        logger.error("gh CLI not authenticated. Run: gh auth login")
         return
 
     if all_repos:
         repositories = issue_store.list_repositories()
         if not repositories:
             logger.warning("No repositories found")
-            print("No repositories found. Use 'gh-worker repositories add' to add repositories.")
+            logger.warning(
+                "No repositories found. Use 'gh-worker repositories add' to add repositories."
+            )
             return
 
         total = 0
@@ -142,14 +144,13 @@ def sync_command(
             )
             total += count
 
-        print(f"Synced {total} issues across {len(repositories)} repositories")
+        logger.info(f"Synced {total} issues across {len(repositories)} repositories")
 
     elif repo:
         try:
             repository = issue_store.resolve_repo(repo)
         except ValueError as e:
             logger.error("Invalid repository", repo=repo, error=str(e))
-            print(f"Error: {e}")
             return
         count = sync_repository(
             repository,
@@ -161,8 +162,8 @@ def sync_command(
             assignee,
             force,
         )
-        print(f"Synced {count} issues from {repository.full_name}")
+        logger.info(f"Synced {count} issues from {repository.full_name}")
 
     else:
         logger.error("No repository specified")
-        print("Error: Specify --repo or --all-repos")
+        logger.error("Specify --repo or --all-repos")

@@ -38,7 +38,7 @@ def _prompt_with_default(prompt: str, default: Any | None = None, required: bool
             return str(default)
         if not required:
             return ""
-        print("This field is required. Please enter a value.")
+        logger.info("This field is required. Please enter a value.")
 
 
 def _prompt_path(prompt: str, default: Path | None = None, required: bool = True) -> Path | None:
@@ -76,11 +76,11 @@ def _prompt_int(prompt: str, default: int | None = None, min_value: int = 1) -> 
         try:
             int_value = int(value)
             if int_value < min_value:
-                print(f"Value must be at least {min_value}")
+                logger.info(f"Value must be at least {min_value}")
                 continue
             return int_value
         except ValueError:
-            print("Please enter a valid integer")
+            logger.info("Please enter a valid integer")
 
 
 def _prompt_choice(prompt: str, choices: list[str], default: str | None = None) -> str:
@@ -106,7 +106,7 @@ def _prompt_choice(prompt: str, choices: list[str], default: str | None = None) 
             return default
         if value in choices:
             return value
-        print(f"Please choose one of: {', '.join(choices)}")
+        logger.info(f"Please choose one of: {', '.join(choices)}")
 
 
 def init_command(config_path: Path | None = None) -> None:
@@ -115,36 +115,33 @@ def init_command(config_path: Path | None = None) -> None:
     Args:
         config_path: Path to config file
     """
-    print("Welcome to gh-worker configuration setup!")
-    print("This will guide you through setting up your configuration.")
-    print()
+    logger.info("Welcome to gh-worker configuration setup!")
+    logger.info("This will guide you through setting up your configuration.")
 
     manager = ConfigManager(config_path)
     config = manager.load()
 
     # Check if config already exists
     if manager.config_path.exists():
-        print(f"Configuration file already exists at: {manager.config_path}")
+        logger.info(f"Configuration file already exists at: {manager.config_path}")
         overwrite = input("Do you want to update it? (y/N): ").strip().lower()
         if overwrite != "y":
-            print("Configuration setup cancelled.")
+            logger.info("Configuration setup cancelled.")
             return
-        print()
 
     # Check GitHub authentication
-    print("Checking GitHub CLI authentication...")
+    logger.info("Checking GitHub CLI authentication...")
     gh_client = GHClient()
     if not gh_client.check_auth():
-        print("⚠️  Warning: GitHub CLI is not authenticated.")
-        print("   Run 'gh auth login' to authenticate before using gh-worker.")
-        print()
+        logger.warning(
+            "GitHub CLI is not authenticated. Run 'gh auth login' "
+            "to authenticate before using gh-worker."
+        )
     else:
-        print("✓ GitHub CLI is authenticated.")
-        print()
+        logger.info("GitHub CLI is authenticated.")
 
     # Prompt for issues_path
-    print("Configuration Options:")
-    print("-" * 50)
+    logger.info("Configuration Options:")
     issues_path = _prompt_path(
         "Issues storage path",
         default=config.issues_path,
@@ -165,9 +162,7 @@ def init_command(config_path: Path | None = None) -> None:
         config.repository_path = repository_path
 
     # Prompt for agent configuration
-    print()
-    print("Agent Configuration:")
-    print("-" * 50)
+    logger.info("Agent Configuration:")
     registry = get_registry()
     available_agents = registry.list_agents()
     default_agent = (
@@ -186,9 +181,7 @@ def init_command(config_path: Path | None = None) -> None:
         config.agent.claude_code_path = claude_code_path if claude_code_path else None
 
     # Prompt for parallelism settings
-    print()
-    print("Performance Settings:")
-    print("-" * 50)
+    logger.info("Performance Settings:")
     plan_parallelism = _prompt_int(
         "Plan parallelism (number of parallel plan executions)",
         default=config.plan.parallelism,
@@ -210,15 +203,12 @@ def init_command(config_path: Path | None = None) -> None:
     config.sync.frequency = sync_frequency
 
     # Save configuration
-    print()
-    print("Saving configuration...")
+    logger.info("Saving configuration...")
     manager.save(config)
-    print(f"✓ Configuration saved to: {manager.config_path}")
-    print()
-    print("Setup complete! You can now use gh-worker commands.")
-    print()
-    print("Next steps:")
-    print("  1. Add repositories: gh-worker repositories add owner/repo")
-    print("  2. Sync issues: gh-worker issues sync --all-repos")
-    print("  3. Generate plans: gh-worker issues plan --all-repos")
-    print("  4. Implement: gh-worker issues implement --all-repos")
+    logger.info(f"Configuration saved to: {manager.config_path}")
+    logger.info("Setup complete! You can now use gh-worker commands.")
+    logger.info("Next steps:")
+    logger.info("  1. Add repositories: gh-worker repositories add owner/repo")
+    logger.info("  2. Sync issues: gh-worker issues sync --all-repos")
+    logger.info("  3. Generate plans: gh-worker issues plan --all-repos")
+    logger.info("  4. Implement: gh-worker issues implement --all-repos")

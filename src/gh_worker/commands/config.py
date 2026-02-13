@@ -28,12 +28,12 @@ def config_command(
 
     if list_all:
         for k, v in sorted(manager.list_all().items()):
-            print(f"{k}={v}")
+            logger.info(f"{k}={v}")
         return
 
     if key is None:
         logger.error("Config key required")
-        print("Error: Configuration key is required (or use --list to list all)")
+        logger.error("Configuration key is required (or use --list to list all)")
         return
 
     # Convert hyphenated keys to underscored for compatibility
@@ -43,10 +43,9 @@ def config_command(
         # Get value
         try:
             result = manager.get(key)
-            print(result)
+            logger.info(f"{result}")
         except KeyError as e:
             logger.error("Config key not found", key=key, error=str(e))
-            print(f"Error: {e}")
     else:
         # Set value
         try:
@@ -73,8 +72,7 @@ def config_command(
                 typed_value = typed_value.lower() in ("true", "1", "yes")
 
             manager.set(key, typed_value)
-            print(f"Set {key} = {typed_value}")
+            logger.info(f"Set {key} = {typed_value}")
             logger.info("Config updated", key=key, value=str(typed_value))
         except (KeyError, ValueError) as e:
             logger.error("Failed to set config", key=key, value=value, error=str(e))
-            print(f"Error: {e}")

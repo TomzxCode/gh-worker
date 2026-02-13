@@ -29,7 +29,7 @@ def remove_command(
 
     if not app_config.issues_path:
         logger.error("Issues path not configured")
-        print("Error: issues-path not configured. Run: gh-worker config issues-path <path>")
+        logger.error("Issues path not configured. Run: gh-worker config issues-path <path>")
         return
 
     issue_store = IssueStore(app_config.issues_path)
@@ -41,13 +41,11 @@ def remove_command(
 
             if not repo_dir.exists():
                 logger.warning("Repository not tracked", repository=repository.full_name)
-                print(f"Repository {repository.full_name} is not under management.")
                 continue
 
             # Remove issues/plans directory
             shutil.rmtree(repo_dir)
             logger.info("Removed repository", repository=repository.full_name)
-            print(f"Removed repository: {repository.full_name}")
 
             # Optionally remove cloned repository
             if not keep_clone and app_config.repository_path:
@@ -55,11 +53,8 @@ def remove_command(
                 if clone_path.exists():
                     shutil.rmtree(clone_path)
                     logger.info("Removed clone", path=str(clone_path))
-                    print(f"Removed clone: {clone_path}")
 
         except ValueError as e:
             logger.error("Invalid repository format", repo=repo_str, error=str(e))
-            print(f"Error: {e}")
         except OSError as e:
             logger.error("Failed to remove repository", repo=repo_str, error=str(e))
-            print(f"Error: Failed to remove repository {repo_str}: {e}")

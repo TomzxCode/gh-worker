@@ -33,7 +33,7 @@ async def monitor_command_async(
 
     if not app_config.issues_path:
         logger.error("Issues path not configured")
-        print("Error: issues-path not configured. Run: gh-worker config issues-path <path>")
+        logger.error("Issues path not configured. Run: gh-worker config issues-path <path>")
         return
 
     issue_store = IssueStore(app_config.issues_path)
@@ -43,7 +43,7 @@ async def monitor_command_async(
         repository = issue_store.resolve_repo(repo)
     except ValueError as e:
         logger.error("Invalid repository", repo=repo, error=str(e))
-        print(f"Error: {e}")
+        logger.error(f"Error: {e}")
         return
 
     # Get latest plan and metadata
@@ -54,7 +54,7 @@ async def monitor_command_async(
             repository=repository.full_name,
             issue_number=issue_number,
         )
-        print(f"Error: No plan found for {repository.full_name}#{issue_number}")
+        logger.error(f"No plan found for {repository.full_name}#{issue_number}")
         return
 
     _, metadata = plan_result
@@ -65,8 +65,8 @@ async def monitor_command_async(
             repository=repository.full_name,
             issue_number=issue_number,
         )
-        print(
-            f"Error: No session ID found for {repository.full_name}#{issue_number}. "
+        logger.error(
+            f"No session ID found for {repository.full_name}#{issue_number}. "
             "Implementation may not have started yet."
         )
         return
@@ -78,8 +78,10 @@ async def monitor_command_async(
         session_id=metadata.session_id,
     )
 
-    print(f"Monitoring {repository.full_name}#{issue_number} (session: {metadata.session_id})")
-    print("=" * 80)
+    logger.info(
+        f"Monitoring {repository.full_name}#{issue_number} (session: {metadata.session_id})"
+    )
+    logger.info("=" * 80)
 
     # Get agent (use override if provided, otherwise use config default)
     registry = get_registry()
@@ -98,7 +100,7 @@ async def monitor_command_async(
             agent=agent_name,
             error=error_msg,
         )
-        print(f"Error: Agent environment validation failed: {error_msg}")
+        logger.error(f"Agent environment validation failed: {error_msg}")
         return
 
     try:
@@ -106,26 +108,26 @@ async def monitor_command_async(
         async for event in agent.monitor(metadata.session_id):
             # Format output based on event type
             if event.type == AgentEventType.OUTPUT:
-                print(event.content)
+                logger.info(f"{event.content}")
             elif event.type == AgentEventType.ERROR:
-                print(f"ERROR: {event.content}")
+                logger.error(f"{event.content}")
             elif event.type == AgentEventType.STATUS:
-                print(f"[STATUS] {event.content}")
+                logger.info(f"[STATUS] {event.content}")
             elif event.type == AgentEventType.TOOL_USE:
-                print(f"[TOOL] {event.content}")
+                logger.info(f"[TOOL] {event.content}")
             elif event.type == AgentEventType.COMPLETION:
-                print(f"\n✓ {event.content}")
+                logger.info(f"Completed: {event.content}")
                 break
             elif event.type == AgentEventType.FAILURE:
-                print(f"\n✗ {event.content}")
+                logger.error(f"Failed: {event.content}")
                 break
 
     except KeyboardInterrupt:
         logger.info("Monitor interrupted")
-        print("\nMonitoring interrupted by user")
+        logger.info("Monitoring interrupted by user")
     except Exception as e:
         logger.error("Monitor failed", error=str(e))
-        print(f"\nError: Monitoring failed: {e}")
+        logger.error(f"Monitoring failed: {e}")
 
 
 def monitor_command(

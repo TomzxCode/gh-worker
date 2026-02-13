@@ -144,7 +144,7 @@ def issues_list_command(
 
     if not app_config.issues_path:
         logger.error("Issues path not configured")
-        print("Error: issues-path not configured. Run: gh-worker config issues-path <path>")
+        logger.error("Issues path not configured. Run: gh-worker config issues-path <path>")
         return
 
     issue_store = IssueStore(app_config.issues_path)
@@ -155,18 +155,18 @@ def issues_list_command(
             repository = issue_store.resolve_repo(repo)
         except ValueError as e:
             logger.error("Invalid repository", repo=repo, error=str(e))
-            print(f"Error: {e}")
+            logger.error(f"Error: {e}")
             return
         repositories = [repository]
     elif all_repos:
         repositories = issue_store.list_repositories()
     else:
         logger.error("Specify --repo or --all-repos")
-        print("Error: Specify --repo <owner/repo> or --all-repos")
+        logger.error("Specify --repo <owner/repo> or --all-repos")
         return
 
     if not repositories:
-        print("No repositories under management.")
+        logger.info("No repositories under management.")
         return
 
     # Resolve @me to current user for author/assignee filters
@@ -175,11 +175,11 @@ def issues_list_command(
     if author == "@me" or assignee == "@me":
         gh_client = GHClient()
         if not gh_client.check_auth():
-            print("Error: gh CLI not authenticated. Run: gh auth login")
+            logger.error("gh CLI not authenticated. Run: gh auth login")
             return
         current_user = gh_client.get_current_user()
         if not current_user:
-            print("Error: Could not determine current user. Run: gh auth login")
+            logger.error("Could not determine current user. Run: gh auth login")
             return
         if author == "@me":
             author_filter = current_user

@@ -115,7 +115,7 @@ def review_plan_command(
 
     if not app_config.issues_path:
         logger.error("Issues path not configured")
-        print("Error: issues-path not configured. Run: gh-worker config issues-path <path>")
+        logger.error("Issues path not configured. Run: gh-worker config issues-path <path>")
         return
 
     issue_store = IssueStore(app_config.issues_path)
@@ -125,14 +125,14 @@ def review_plan_command(
         repository = issue_store.resolve_repo(repo)
     except ValueError as e:
         logger.error("Invalid repository", repo=repo, error=str(e))
-        print(f"Error: {e}")
+        logger.error(f"Error: {e}")
         return
 
     items = _find_issues_with_plans_waiting_review(
         repository, issue_store, plan_store, [issue_number], None
     )
     if not items:
-        print("No plan waiting for review for this issue")
+        logger.info("No plan waiting for review for this issue")
         return
 
     plan_file, metadata = items[0]
@@ -140,12 +140,12 @@ def review_plan_command(
     if approve:
         metadata.status = PlanStatus.APPROVED
         plan_store.update_metadata(metadata)
-        print(f"Approved plan: {repository.full_name}#{metadata.issue_number}")
+        logger.info(f"Approved plan: {repository.full_name}#{metadata.issue_number}")
         return
 
     if not app_config.repository_path:
         logger.error("Repository path not configured")
-        print("Error: repository-path not configured. Run: gh-worker config repository-path <path>")
+        logger.error("Repository path not configured. Run: gh-worker config repository-path <path>")
         return
 
     repo_path = app_config.repository_path / repository.owner / repository.name
@@ -167,7 +167,7 @@ def review_plan_command(
                 path=str(repo_path),
                 error=str(e),
             )
-            print(f"Error: Repository not found at {repo_path}. Clone failed: {e}")
+            logger.error(f"Repository not found at {repo_path}. Clone failed: {e}")
             return
 
     # Use plan timestamp for deterministic worktree path (reuse existing worktree)
@@ -198,7 +198,7 @@ def review_plan_command(
                 issue_number=metadata.issue_number,
                 error=str(e),
             )
-            print(f"Error: Failed to create worktree: {e}")
+            logger.error(f"Failed to create worktree: {e}")
             return
 
     # Symlink plan into worktree (use absolute path for portability)
@@ -214,11 +214,11 @@ def review_plan_command(
             worktree_path=str(worktree_path),
             error=str(e),
         )
-        print(f"Error: Failed to symlink plan: {e}")
+        logger.error(f"Failed to symlink plan: {e}")
         return
 
-    print(f"Worktree: {worktree_path}")
-    print(f"Plan (symlinked): {plan_symlink}")
+    logger.info(f"Worktree: {worktree_path}")
+    logger.info(f"Plan (symlinked): {plan_symlink}")
 
 
 def review_implementation_command(
@@ -246,12 +246,12 @@ def review_implementation_command(
 
     if not app_config.issues_path:
         logger.error("Issues path not configured")
-        print("Error: issues-path not configured. Run: gh-worker config issues-path <path>")
+        logger.error("Issues path not configured. Run: gh-worker config issues-path <path>")
         return
 
     if not app_config.repository_path:
         logger.error("Repository path not configured")
-        print("Error: repository-path not configured. Run: gh-worker config repository-path <path>")
+        logger.error("Repository path not configured. Run: gh-worker config repository-path <path>")
         return
 
     issue_store = IssueStore(app_config.issues_path)
@@ -262,14 +262,14 @@ def review_implementation_command(
         repository = issue_store.resolve_repo(repo)
     except ValueError as e:
         logger.error("Invalid repository", repo=repo, error=str(e))
-        print(f"Error: {e}")
+        logger.error(f"Error: {e}")
         return
 
     items = _find_implementations_waiting_review(
         repository, issue_store, plan_store, [issue_number], None
     )
     if not items:
-        print("No implementation waiting for review for this issue")
+        logger.info("No implementation waiting for review for this issue")
         return
 
     repo_path = app_config.repository_path / repository.owner / repository.name
@@ -307,7 +307,7 @@ def review_implementation_command(
             )
 
         plan_store.update_metadata(metadata)
-        print(
+        logger.info(
             f"Reviewed implementation: {repository.full_name}#{metadata.issue_number}"
             + (f" -> {pr_url}" if pr_url else "")
         )
@@ -318,4 +318,4 @@ def review_implementation_command(
             issue_number=metadata.issue_number,
             error=str(e),
         )
-        print(f"Failed {repository.full_name}#{metadata.issue_number}: {e}")
+        logger.error(f"Failed {repository.full_name}#{metadata.issue_number}: {e}")
