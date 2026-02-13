@@ -290,17 +290,22 @@ def review_plan(
     repo: Annotated[str, Parameter(help="Repository (e.g., 'owner/repo')")],
     issue_number: Annotated[int, Parameter(help="Issue number to review")],
     *,
+    approve: Annotated[
+        bool,
+        Parameter(help="Mark the plan as approved"),
+    ] = False,
     config_path: Annotated[
         Path | None,
         Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
     ] = None,
 ) -> None:
-    """Approve plans waiting for local review."""
+    """Create worktree with plan symlinked for editing. Use --approve to approve."""
     from gh_worker.commands.review import review_plan_command
 
     review_plan_command(
         repo=repo,
         issue_number=issue_number,
+        approve=approve,
         config_path=config_path,
     )
 

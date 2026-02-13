@@ -95,16 +95,19 @@ def review_plan_command(
     repo: str,
     issue_number: int,
     *,
+    approve: bool = False,
     config_path: Path | None = None,
 ) -> None:
-    """Approve a plan that is waiting for local review.
+    """Create a worktree with the plan symlinked for review, or approve a plan.
 
-    Marks the plan with status 'waiting for local review' as approved, allowing
-    it to be picked up by the implement command.
+    By default, creates a planning worktree and symlinks the plan file so the
+    user can open it in their editor and iterate. With --approve, skips
+    worktree creation and only updates the plan status to approved.
 
     Args:
         repo: Repository (e.g., 'owner/repo')
         issue_number: Issue number to review
+        approve: If True, only update plan status (skip worktree+symlink)
         config_path: Path to config file
     """
     config = ConfigManager(config_path)
@@ -132,10 +135,90 @@ def review_plan_command(
         print("No plan waiting for review for this issue")
         return
 
-    _plan_file, metadata = items[0]
-    metadata.status = PlanStatus.APPROVED
-    plan_store.update_metadata(metadata)
-    print(f"Approved plan: {repository.full_name}#{metadata.issue_number}")
+    plan_file, metadata = items[0]
+
+    if approve:
+        metadata.status = PlanStatus.APPROVED
+        plan_store.update_metadata(metadata)
+        print(f"Approved plan: {repository.full_name}#{metadata.issue_number}")
+        return
+
+    if not app_config.repository_path:
+        logger.error("repository_path_not_configured")
+        print("Error: repository-path not configured. Run: gh-worker config repository-path <path>")
+        return
+
+    repo_path = app_config.repository_path / repository.owner / repository.name
+    gh_client = GHClient(app_config.repository_path)
+
+    # Ensure repository exists
+    if not repo_path.exists():
+        try:
+            gh_client.clone_repo(repository)
+            logger.info(
+                "repository_cloned_for_review",
+                repository=repository.full_name,
+                path=str(repo_path),
+            )
+        except Exception as e:
+            logger.error(
+                "repository_clone_failed",
+                repository=repository.full_name,
+                path=str(repo_path),
+                error=str(e),
+            )
+            print(f"Error: Repository not found at {repo_path}. Clone failed: {e}")
+            return
+
+    # Use plan timestamp for deterministic worktree path (reuse existing worktree)
+    plan_timestamp = metadata.created_at.strftime("%Y%m%d-%H%M%S")
+    worktree_path = (
+        app_config.repository_path
+        / "plan-worktrees"
+        / repository.owner
+        / repository.name
+        / f"issue-{metadata.issue_number}-{plan_timestamp}"
+    )
+
+    # Create worktree only if it doesn't exist (same as ghw issues plan)
+    if not worktree_path.exists():
+        try:
+            gh_client.fetch_repository(repository)
+            gh_client.create_planning_worktree(repository, worktree_path)
+            logger.info(
+                "review_plan_worktree_created",
+                repository=repository.full_name,
+                issue_number=metadata.issue_number,
+                worktree_path=str(worktree_path),
+            )
+        except Exception as e:
+            logger.error(
+                "review_plan_worktree_failed",
+                repository=repository.full_name,
+                issue_number=metadata.issue_number,
+                error=str(e),
+            )
+            print(f"Error: Failed to create worktree: {e}")
+            return
+
+    # Symlink plan into worktree (use absolute path for portability)
+    plan_symlink = worktree_path / "plan.md"
+    try:
+        if plan_symlink.exists():
+            plan_symlink.unlink()
+        plan_symlink.symlink_to(plan_file.resolve())
+    except OSError as e:
+        logger.error(
+            "plan_symlink_failed",
+            plan_file=str(plan_file),
+            worktree_path=str(worktree_path),
+            error=str(e),
+        )
+        print(f"Error: Failed to symlink plan: {e}")
+        return
+
+    print(f"Worktree: {worktree_path}")
+    print(f"Plan (symlinked): {plan_symlink}")
 
 
 def review_implementation_command(
