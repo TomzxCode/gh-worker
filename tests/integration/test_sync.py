@@ -108,7 +108,7 @@ class TestSyncRepository:
         sync_repository(repository, issue_store, mock_gh_client, assignee="@me")
 
         mock_gh_client.list_issues.assert_called_once_with(
-            repository, since=None, search=None, assignee="@me"
+            repository, state="all", since=None, search=None, assignee="@me"
         )
 
     def test_sync_repository_force_bypasses_since(
@@ -127,7 +127,7 @@ class TestSyncRepository:
 
         # Should call list_issues with since=None (not the repo_updated_at)
         mock_gh_client.list_issues.assert_called_once_with(
-            repository, since=None, search=None, assignee=None
+            repository, state="all", since=None, search=None, assignee=None
         )
 
 

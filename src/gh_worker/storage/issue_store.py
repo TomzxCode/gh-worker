@@ -219,3 +219,68 @@ class IssueStore:
                 repositories.append(Repository(owner=owner_dir.name, name=repo_dir.name))
 
         return repositories
+
+    def resolve_repo(self, repo: str) -> Repository:
+        """Resolve a repository string to a Repository, with partial matching.
+
+        Supports:
+        - 'owner/repo': parsed directly when no suffix match
+        - 'r/repo-name' or 'repo-name': match by repo name (exact)
+        - 'owner_suffix/repo-name': match owner ending with prefix, repo name exact.
+          e.g. 'y/repo' -> my/repo, 'ner/repo' -> owner/repo
+
+        Args:
+            repo: Repository string (e.g., 'owner/repo', 'r/repo', 'y/repo')
+
+        Returns:
+            Resolved Repository
+
+        Raises:
+            ValueError: If format is invalid, no match, or multiple matches
+        """
+        tracked = self.list_repositories()
+
+        if repo.startswith("r/"):
+            repo_name = repo[2:]
+            matches = [r for r in tracked if r.name == repo_name]
+        elif "/" in repo:
+            parts = repo.split("/", 1)
+            if len(parts) != 2 or not parts[0] or not parts[1]:
+                raise ValueError(f"Repository must be in 'owner/repo' format, got: {repo}")
+
+            owner_suffix = parts[0]
+            repo_name = parts[1]
+            matches = [
+                r for r in tracked
+                if r.name == repo_name and r.owner.endswith(owner_suffix)
+            ]
+            if len(matches) == 1:
+                return matches[0]
+            if len(matches) > 1:
+                raise ValueError(
+                    f"Multiple repositories match '{repo}': "
+                    f"{', '.join(r.full_name for r in matches)}. "
+                    "Use 'owner/repo' to disambiguate."
+                )
+            # 0 matches: try parsing as explicit owner/repo (sync may create it)
+            try:
+                return Repository.from_string(repo)
+            except ValueError:
+                raise ValueError(
+                    f"No tracked repository matches '{repo}'. "
+                    "Use 'owner/repo' format or add the repository first."
+                )
+        else:
+            matches = [r for r in tracked if r.name == repo]
+
+        if len(matches) == 1:
+            return matches[0]
+        if len(matches) == 0:
+            raise ValueError(
+                f"No tracked repository matches '{repo}'. "
+                "Use 'owner/repo' format or add the repository first."
+            )
+        raise ValueError(
+            f"Multiple repositories match '{repo}': "
+            f"{', '.join(r.full_name for r in matches)}. Use 'owner/repo' to disambiguate."
+        )

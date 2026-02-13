@@ -147,10 +147,10 @@ def issues_list_command(
 
     if repo:
         try:
-            repository = Repository.from_string(repo)
+            repository = issue_store.resolve_repo(repo)
         except ValueError as e:
             logger.error("invalid_repository", repo=repo, error=str(e))
-            print(f"Error: Invalid repository '{repo}'. Use format 'owner/repo'")
+            print(f"Error: {e}")
             return
         repositories = [repository]
     elif all_repos:

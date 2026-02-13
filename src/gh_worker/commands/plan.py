@@ -371,7 +371,12 @@ async def plan_command_async(
             print("No repositories found. Use 'gh-worker repositories add' to add repositories.")
             return
     elif repo:
-        repositories = [Repository.from_string(repo)]
+        try:
+            repositories = [issue_store.resolve_repo(repo)]
+        except ValueError as e:
+            logger.error("invalid_repository", repo=repo, error=str(e))
+            print(f"Error: {e}")
+            return
     else:
         logger.error("no_repository_specified")
         print("Error: Specify --repo or --all-repos")

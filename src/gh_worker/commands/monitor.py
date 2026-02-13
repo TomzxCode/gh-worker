@@ -8,7 +8,7 @@ import structlog
 from gh_worker.agents.base import AgentEventType
 from gh_worker.agents.registry import get_registry
 from gh_worker.config.manager import ConfigManager
-from gh_worker.models.repository import Repository
+from gh_worker.storage.issue_store import IssueStore
 from gh_worker.storage.plan_store import PlanStore
 
 logger = structlog.get_logger()
@@ -36,8 +36,15 @@ async def monitor_command_async(
         print("Error: issues-path not configured. Run: gh-worker config issues-path <path>")
         return
 
+    issue_store = IssueStore(app_config.issues_path)
     plan_store = PlanStore(app_config.issues_path)
-    repository = Repository.from_string(repo)
+
+    try:
+        repository = issue_store.resolve_repo(repo)
+    except ValueError as e:
+        logger.error("invalid_repository", repo=repo, error=str(e))
+        print(f"Error: {e}")
+        return
 
     # Get latest plan and metadata
     plan_result = plan_store.get_latest_plan(repository, issue_number)

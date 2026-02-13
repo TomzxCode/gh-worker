@@ -203,6 +203,72 @@ class TestIssueStore:
         assert "owner/repo" in repo_strings
         assert "other/project" in repo_strings
 
+    def test_resolve_repo_full_format(self, issue_store, sample_issue):
+        """Test resolving repo with owner/repo format."""
+        issue_store.save_issue(sample_issue)
+        repo = issue_store.resolve_repo("owner/repo")
+        assert repo.owner == "owner"
+        assert repo.name == "repo"
+
+    def test_resolve_repo_partial_single_match(self, issue_store, sample_issue):
+        """Test resolving repo by name when exactly one matches."""
+        issue_store.save_issue(sample_issue)
+        repo = issue_store.resolve_repo("repo")
+        assert repo.full_name == "owner/repo"
+
+    def test_resolve_repo_r_prefix_single_match(self, issue_store, sample_issue):
+        """Test resolving repo with r/ prefix when exactly one matches."""
+        issue_store.save_issue(sample_issue)
+        repo = issue_store.resolve_repo("r/repo")
+        assert repo.full_name == "owner/repo"
+
+    def test_resolve_repo_owner_suffix_match(self, issue_store):
+        """Test resolving repo with owner suffix: y/repo -> my/repo, ner/repo -> owner/repo."""
+        for owner, name in [("my", "repo"), ("owner", "repo"), ("nor", "repo")]:
+            issue = Issue(
+                number=1,
+                title="Test",
+                body="",
+                state="open",
+                created_at=datetime.now(),
+                updated_at=datetime.now(),
+                author="u",
+                labels=[],
+                assignees=[],
+                url=f"https://github.com/{owner}/{name}/issues/1",
+                repository=f"{owner}/{name}",
+            )
+            issue_store.save_issue(issue)
+
+        assert issue_store.resolve_repo("y/repo").full_name == "my/repo"
+        assert issue_store.resolve_repo("ner/repo").full_name == "owner/repo"
+        assert issue_store.resolve_repo("or/repo").full_name == "nor/repo"
+
+    def test_resolve_repo_partial_no_match(self, issue_store):
+        """Test resolving repo by name when none match."""
+        with pytest.raises(ValueError, match="No tracked repository matches"):
+            issue_store.resolve_repo("nonexistent")
+
+    def test_resolve_repo_partial_multiple_matches(self, issue_store, sample_issue):
+        """Test resolving repo by name when multiple match."""
+        issue_store.save_issue(sample_issue)
+        other_issue = Issue(
+            number=1,
+            title="Other",
+            body="",
+            state="open",
+            created_at=datetime.now(),
+            updated_at=datetime.now(),
+            author="u",
+            labels=[],
+            assignees=[],
+            url="https://github.com/other/repo/issues/1",
+            repository="other/repo",
+        )
+        issue_store.save_issue(other_issue)
+        with pytest.raises(ValueError, match="Multiple repositories match"):
+            issue_store.resolve_repo("repo")
+
 
 class TestPlanStore:
     """Tests for PlanStore."""

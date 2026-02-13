@@ -61,7 +61,7 @@ def sync_repository(
                     since_filter = repo_updated_at.isoformat()
 
         issues_data = gh_client.list_issues(
-            repository, since=since_filter, search=search, assignee=assignee
+            repository, state="all", since=since_filter, search=search, assignee=assignee
         )
 
     # Save issues
@@ -145,7 +145,12 @@ def sync_command(
         print(f"Synced {total} issues across {len(repositories)} repositories")
 
     elif repo:
-        repository = Repository.from_string(repo)
+        try:
+            repository = issue_store.resolve_repo(repo)
+        except ValueError as e:
+            logger.error("invalid_repository", repo=repo, error=str(e))
+            print(f"Error: {e}")
+            return
         count = sync_repository(
             repository,
             issue_store,
