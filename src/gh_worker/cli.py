@@ -143,6 +143,12 @@ def sync(
         str | None, Parameter(help="Only sync issues updated since this timestamp")
     ] = None,
     search: Annotated[str | None, Parameter(help="GitHub search query")] = None,
+    force: Annotated[
+        bool,
+        Parameter(
+            help="Refresh all issues (re-fetch and update description.md)"
+        ),
+    ] = False,
     config_path: Annotated[
         Path | None,
         Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
@@ -158,6 +164,7 @@ def sync(
         issue_numbers=issue_numbers,
         search=search,
         assigned_to_me=assigned_to_me,
+        force=force,
         config_path=config_path,
     )
 

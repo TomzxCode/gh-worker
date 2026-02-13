@@ -1,5 +1,6 @@
 """Integration tests for sync command."""
 
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -110,6 +111,25 @@ class TestSyncRepository:
 
         mock_gh_client.list_issues.assert_called_once_with(
             repository, since=None, search=None, assigned_to_me=True
+        )
+
+    def test_sync_repository_force_bypasses_since(
+        self, tmp_issues_path, mock_gh_client, sample_issue_data
+    ):
+        """Test that force=True fetches all issues (since=None) even with repo_updated_at set."""
+        repository = Repository(owner="owner", name="repo")
+        issue_store = IssueStore(tmp_issues_path)
+        # Set repo_updated_at so incremental sync would normally filter
+        issue_store.get_repo_dir(repository).mkdir(parents=True, exist_ok=True)
+        issue_store.set_repo_updated_at(repository, datetime(2024, 1, 1, 12, 0, 0, tzinfo=UTC))
+
+        mock_gh_client.list_issues.return_value = [sample_issue_data]
+
+        sync_repository(repository, issue_store, mock_gh_client, force=True)
+
+        # Should call list_issues with since=None (not the repo_updated_at)
+        mock_gh_client.list_issues.assert_called_once_with(
+            repository, since=None, search=None, assigned_to_me=False
         )
 
 

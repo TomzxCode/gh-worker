@@ -165,16 +165,12 @@ class TestOpenCodeAgent:
         agent = OpenCodeAgent()
         events = []
 
-        async for event in agent.implement(
-            "Test issue", "Test plan", str(tmp_path), 1, "branch"
-        ):
+        async for event in agent.implement("Test issue", "Test plan", str(tmp_path), 1, "branch"):
             events.append(event)
 
         assert len(events) > 0
         # OpenCode agent is implemented - should not return placeholder error
-        assert not any(
-            "not yet implemented" in (e.content or "") for e in events
-        )
+        assert not any("not yet implemented" in (e.content or "") for e in events)
 
 
 class TestPlaceholderAgents:

@@ -22,6 +22,7 @@ def sync_repository(
     issue_numbers: list[int] | None = None,
     search: str | None = None,
     assigned_to_me: bool = False,
+    force: bool = False,
 ) -> int:
     """Sync issues for a single repository.
 
@@ -33,6 +34,7 @@ def sync_repository(
         issue_numbers: Specific issue numbers to sync
         search: GitHub search query
         assigned_to_me: Only sync issues assigned to the current user
+        force: If True, fetch all issues (ignore since filter) to refresh description.md
 
     Returns:
         Number of issues synced
@@ -48,12 +50,15 @@ def sync_repository(
             except Exception as e:
                 logger.error("failed_to_get_issue", issue_number=issue_number, error=str(e))
     else:
-        # Get timestamp for filtering
-        since_filter = since
-        if not since_filter:
-            repo_updated_at = issue_store.get_repo_updated_at(repository)
-            if repo_updated_at:
-                since_filter = repo_updated_at.isoformat()
+        # Get timestamp for filtering (skip when force=True to refresh all description.md)
+        if force:
+            since_filter = None
+        else:
+            since_filter = since
+            if not since_filter:
+                repo_updated_at = issue_store.get_repo_updated_at(repository)
+                if repo_updated_at:
+                    since_filter = repo_updated_at.isoformat()
 
         issues_data = gh_client.list_issues(
             repository, since=since_filter, search=search, assigned_to_me=assigned_to_me
@@ -85,6 +90,7 @@ def sync_command(
     issue_numbers: list[int] | None = None,
     search: str | None = None,
     assigned_to_me: bool = False,
+    force: bool = False,
     config_path: Path | None = None,
 ) -> None:
     """Execute sync command.
@@ -96,6 +102,7 @@ def sync_command(
         issue_numbers: Specific issue numbers to sync
         search: GitHub search query
         assigned_to_me: Only sync issues assigned to the current user
+        force: Refresh all issues (re-fetch and update description.md even if unchanged)
         config_path: Path to config file
     """
     config = ConfigManager(config_path)
@@ -131,6 +138,7 @@ def sync_command(
                 issue_numbers,
                 search,
                 assigned_to_me,
+                force,
             )
             total += count
 
@@ -139,7 +147,14 @@ def sync_command(
     elif repo:
         repository = Repository.from_string(repo)
         count = sync_repository(
-            repository, issue_store, gh_client, since, issue_numbers, search, assigned_to_me
+            repository,
+            issue_store,
+            gh_client,
+            since,
+            issue_numbers,
+            search,
+            assigned_to_me,
+            force,
         )
         print(f"Synced {count} issues from {repository.full_name}")
 
