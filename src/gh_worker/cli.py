@@ -189,6 +189,9 @@ def sync(
 @issues_app.command(name="list", sort_key=1)
 def issues_list(
     repo: Annotated[str | None, Parameter(help="Repository to list (e.g., 'owner/repo')")] = None,
+    issue_numbers: Annotated[
+        list[int] | None, Parameter(help="Only list these specific issue numbers")
+    ] = None,
     *,
     all_repos: Annotated[bool, Parameter(help="List issues from all repositories")] = False,
     title: Annotated[
@@ -225,6 +228,7 @@ def issues_list(
     issues_list_command(
         repo=repo,
         all_repos=all_repos,
+        issue_numbers=issue_numbers,
         title=title,
         author=author,
         assignee=assignee,

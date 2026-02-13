@@ -7,6 +7,7 @@ from pathlib import Path
 import structlog
 
 from gh_worker.commands.implement import implement_command_async
+from gh_worker.commands.issues_list import issues_list_command
 from gh_worker.commands.plan import plan_command_async
 from gh_worker.commands.sync import sync_command
 from gh_worker.config.manager import ConfigManager
@@ -81,7 +82,26 @@ class WorkOrchestrator:
                 config_path=self.config_path,
             )
 
-        # Phase 2: Plan
+        # Phase 2: List issues (show what we're working on)
+        logger.info("work_cycle_phase", phase="list")
+        print("\n=== Issues being worked on ===")
+        if self.repos:
+            for repo in self.repos:
+                issues_list_command(
+                    repo=repo,
+                    all_repos=False,
+                    issue_numbers=self.issue_numbers,
+                    config_path=self.config_path,
+                )
+        else:
+            issues_list_command(
+                repo=None,
+                all_repos=True,
+                issue_numbers=self.issue_numbers,
+                config_path=self.config_path,
+            )
+
+        # Phase 3: Plan
         logger.info("work_cycle_phase", phase="plan")
         print("\n=== Generating plans ===")
         if self.repos:
@@ -106,7 +126,7 @@ class WorkOrchestrator:
                 agent=self.agent,
             )
 
-        # Phase 3: Implement
+        # Phase 4: Implement
         logger.info("work_cycle_phase", phase="implement")
         print("\n=== Implementing plans ===")
         if self.repos:

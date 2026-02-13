@@ -117,6 +117,7 @@ def _get_issue_title(issue_dir: Path) -> str:
 def issues_list_command(
     repo: str | None = None,
     all_repos: bool = False,
+    issue_numbers: list[int] | None = None,
     title: str | None = None,
     author: str | None = None,
     assignee: str | None = None,
@@ -129,6 +130,7 @@ def issues_list_command(
     Args:
         repo: Repository to list issues for (e.g., 'owner/repo')
         all_repos: List issues from all repositories
+        issue_numbers: Only list these specific issue numbers
         title: Filter by title (substring match)
         author: Filter by author (substring match)
         assignee: Filter by assignee (substring match)
@@ -193,12 +195,19 @@ def issues_list_command(
     table.add_column("Plan", style="green")
     table.add_column("Implementation", style="green")
 
+    issue_numbers_filter = set(issue_numbers) if issue_numbers else None
+
     for repository in sorted(repositories, key=lambda r: r.full_name):
-        issue_numbers = issue_store.list_issues(repository)
-        if not issue_numbers:
+        repo_issue_numbers = issue_store.list_issues(repository)
+        if not repo_issue_numbers:
             continue
 
-        for issue_number in sorted(issue_numbers):
+        if issue_numbers_filter is not None:
+            repo_issue_numbers = [n for n in repo_issue_numbers if n in issue_numbers_filter]
+        if not repo_issue_numbers:
+            continue
+
+        for issue_number in sorted(repo_issue_numbers):
             issue_dir = issue_store.get_issue_dir(repository, issue_number)
             issue_title = _get_issue_title(issue_dir)
             issue_author = issue_store.get_issue_author(repository, issue_number)
