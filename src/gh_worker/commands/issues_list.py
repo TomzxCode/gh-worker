@@ -44,7 +44,9 @@ def _get_plan_status(plan_store: PlanStore, repository: Repository, issue_number
     return PLAN_APPROVED
 
 
-def _get_impl_status(plan_store: PlanStore, repository: Repository, issue_number: int) -> str:
+def _get_implementation_status(
+    plan_store: PlanStore, repository: Repository, issue_number: int
+) -> str:
     """Get implementation status for display."""
     plan_result = plan_store.get_latest_plan(repository, issue_number)
     if not plan_result:
@@ -68,12 +70,12 @@ def _matches_filters(
     author: str | None,
     assignees: list[str],
     plan_status: str,
-    impl_status: str,
+    implementation_status: str,
     title_filter: str | None,
     author_filter: str | None,
     assignee_filter: str | None,
     plan_filter: str | None,
-    impl_filter: str | None,
+    implementation_filter: str | None,
 ) -> bool:
     """Check if issue matches all specified filters (case-insensitive substring match)."""
     if title_filter and title_filter.lower() not in (title or "").lower():
@@ -88,7 +90,7 @@ def _matches_filters(
             return False
     if plan_filter and plan_filter.lower() != plan_status.lower():
         return False
-    if impl_filter and impl_filter.lower() != impl_status.lower():
+    if implementation_filter and implementation_filter.lower() != implementation_status.lower():
         return False
     return True
 
@@ -119,7 +121,7 @@ def issues_list_command(
     author: str | None = None,
     assignee: str | None = None,
     plan: str | None = None,
-    impl: str | None = None,
+    implementation: str | None = None,
     config_path: Path | None = None,
 ) -> None:
     """Execute issues list command.
@@ -131,8 +133,8 @@ def issues_list_command(
         author: Filter by author (substring match)
         assignee: Filter by assignee (substring match)
         plan: Filter by plan status (none, being generated, waiting for local review, approved)
-        impl: Filter by impl status (none, being generated, waiting for local review, PR opened,
-            merged, failed)
+        implementation: Filter by implementation status (none, being generated,
+            waiting for local review, PR opened, merged, failed)
         config_path: Path to config file
     """
     config = ConfigManager(config_path)
@@ -202,19 +204,19 @@ def issues_list_command(
             issue_author = issue_store.get_issue_author(repository, issue_number)
             issue_assignees = issue_store.get_issue_assignees(repository, issue_number)
             plan_status = _get_plan_status(plan_store, repository, issue_number)
-            impl_status = _get_impl_status(plan_store, repository, issue_number)
+            implementation_status = _get_implementation_status(plan_store, repository, issue_number)
 
             if not _matches_filters(
                 issue_title,
                 issue_author,
                 issue_assignees,
                 plan_status,
-                impl_status,
+                implementation_status,
                 title,
                 author_filter,
                 assignee_filter,
                 plan,
-                impl,
+                implementation,
             ):
                 continue
 
@@ -229,7 +231,7 @@ def issues_list_command(
                 issue_author or "—",
                 assignees_str,
                 "—" if plan_status == "none" else plan_status,
-                "—" if impl_status == "none" else impl_status,
+                "—" if implementation_status == "none" else implementation_status,
             )
 
     console = Console()

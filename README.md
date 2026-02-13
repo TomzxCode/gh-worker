@@ -54,7 +54,7 @@ ghw repositories add        Add repositories to track
 ghw repositories list      List tracked repositories
 ghw repositories remove    Remove repositories from tracking
 ghw issues sync             Sync issues from GitHub
-ghw issues list             List synced issues with plan/impl status
+ghw issues list             List synced issues with plan/implementation status
 ghw issues plan             Generate implementation plans
 ghw issues implement        Implement plans and create PRs
 ghw monitor                 Monitor ongoing implementations
@@ -167,8 +167,8 @@ ghw issues list --repo owner/repo
 # List issues from all repositories
 ghw issues list --all-repos
 
-# Filter by title, author, assignee, plan status, or impl status
-ghw issues list --repo owner/repo --plan approved --impl none
+# Filter by title, author, assignee, plan status, or implementation status
+ghw issues list --repo owner/repo --plan approved --implementation none
 ```
 
 ### 6. Generate Plans

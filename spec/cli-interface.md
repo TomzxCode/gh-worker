@@ -31,7 +31,7 @@ gh-worker
 │   └── remove        - Remove repositories from tracking
 ├── issues            - Sync, plan, and implement issues
 │   ├── sync          - Sync issues from GitHub
-│   ├── list          - List synced issues with plan/impl status
+│   ├── list          - List synced issues with plan/implementation status
 │   ├── plan          - Generate implementation plans
 │   └── implement     - Implement plans and create PRs
 ├── monitor           - Monitor agent sessions
@@ -240,13 +240,13 @@ gh-worker issues list [--repo REPO | --all-repos] [OPTIONS]
 - `--author AUTHOR` - Filter by author (substring match, use @me for current user)
 - `--assignee ASSIGNEE` - Filter by assignee (substring match, use @me for current user)
 - `--plan STATUS` - Filter by plan status: none, being generated, waiting for local review, approved
-- `--impl STATUS` - Filter by impl status: none, being generated, waiting for local review, PR opened, merged, failed
+- `--implementation STATUS` - Filter by implementation status: none, being generated, waiting for local review, PR opened, merged, failed
 - `--config-path PATH` - Custom config file path
 
 **Behavior:**
 
 - Loads issues from IssueStore and PlanStore
-- Displays table with issue number, title, author, assignees, plan status, impl status
+- Displays table with issue number, title, author, assignees, plan status, implementation status
 - Applies filters when specified
 
 #### issues plan

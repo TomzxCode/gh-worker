@@ -250,10 +250,7 @@ class IssueStore:
 
             owner_suffix = parts[0]
             repo_name = parts[1]
-            matches = [
-                r for r in tracked
-                if r.name == repo_name and r.owner.endswith(owner_suffix)
-            ]
+            matches = [r for r in tracked if r.name == repo_name and r.owner.endswith(owner_suffix)]
             if len(matches) == 1:
                 return matches[0]
             if len(matches) > 1:

@@ -55,7 +55,7 @@ sync_command(
 
 ### `gh_worker.commands.issues_list`
 
-#### `issues_list_command(repo, all_repos, title, author, assignee, plan, impl, config_path)`
+#### `issues_list_command(repo, all_repos, title, author, assignee, plan, implementation, config_path)`
 
 List synced issues with plan and implementation status.
 
@@ -67,7 +67,7 @@ List synced issues with plan and implementation status.
 - `author` (str | None): Filter by author (substring match, use @me for current user)
 - `assignee` (str | None): Filter by assignee (substring match, use @me for current user)
 - `plan` (str | None): Filter by plan status: none, being generated, waiting for local review, approved
-- `impl` (str | None): Filter by impl status: none, being generated, waiting for local review, PR opened, merged, failed
+- `implementation` (str | None): Filter by implementation status: none, being generated, waiting for local review, PR opened, merged, failed
 - `config_path` (Path | None): Custom config file path
 
 **Example**:
@@ -82,7 +82,7 @@ issues_list_command(
     author=None,
     assignee=None,
     plan=None,
-    impl=None,
+    implementation=None,
     config_path=None
 )
 ```

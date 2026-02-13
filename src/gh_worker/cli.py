@@ -207,10 +207,10 @@ def issues_list(
         str | None,
         Parameter(help="Filter by plan: none, being generated, waiting for local review, approved"),
     ] = None,
-    impl: Annotated[
+    implementation: Annotated[
         str | None,
         Parameter(
-            help="Filter by impl: none, being generated, waiting for local review, "
+            help="Filter by implementation: none, being generated, waiting for local review, "
             "PR opened, merged, failed"
         ),
     ] = None,
@@ -229,7 +229,7 @@ def issues_list(
         author=author,
         assignee=assignee,
         plan=plan,
-        impl=impl,
+        implementation=implementation,
         config_path=config_path,
     )
 

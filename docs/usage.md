@@ -283,8 +283,8 @@ ghw issues list --repo owner/repo --assignee @me
 # Filter by plan status: none, being generated, waiting for local review, approved
 ghw issues list --repo owner/repo --plan approved
 
-# Filter by impl status: none, being generated, waiting for local review, PR opened, merged, failed
-ghw issues list --repo owner/repo --impl none
+# Filter by implementation status: none, being generated, waiting for local review, PR opened, merged, failed
+ghw issues list --repo owner/repo --implementation none
 ```
 
 #### plan

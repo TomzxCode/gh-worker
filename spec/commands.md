@@ -158,14 +158,14 @@ Lists synced issues with plan and implementation status.
 **Operations:**
 
 - Load issues from IssueStore and PlanStore
-- Display table with issue number, title, author, assignees, plan status, impl status
-- Support filters: repo, all_repos, title, author, assignee, plan, impl
+- Display table with issue number, title, author, assignees, plan status, implementation status
+- Support filters: repo, all_repos, title, author, assignee, plan, implementation
 
 **Example:**
 
 ```bash
 gh-worker issues list --repo octocat/hello-world
-gh-worker issues list --all-repos --plan approved --impl none
+gh-worker issues list --all-repos --plan approved --implementation none
 ```
 
 **Flow:**
@@ -174,7 +174,7 @@ gh-worker issues list --all-repos --plan approved --impl none
 1. Initialize IssueStore and PlanStore
 1. Resolve repositories (specific or all)
 1. For each repository, load issues and plan metadata
-1. Apply filters (title, author, assignee, plan status, impl status)
+1. Apply filters (title, author, assignee, plan status, implementation status)
 1. Display results in rich table format
 
 #### issues sync
