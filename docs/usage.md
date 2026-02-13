@@ -1,6 +1,6 @@
 # Usage Guide
 
-This guide covers all gh-worker commands and common workflows.
+This guide covers all gh-worker commands and common workflows. New to ghw? Start with the [Walkthrough Guide](walkthrough.md) for a step-by-step tutorial.
 
 ## Global Options
 
@@ -209,7 +209,7 @@ ghw issues sync --repo <owner/repo>
 **Examples**:
 
 ```bash
-# Sync all open issues
+# Sync all issues (open and closed)
 ghw issues sync --repo owner/repo
 
 # Sync issues updated in last 7 days

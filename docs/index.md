@@ -75,7 +75,7 @@ ghw issues review plan --repo owner/repo 42 --approve
 ghw issues implement --repo owner/repo
 ```
 
-For detailed instructions, see the [Installation](installation.md) and [Usage](usage.md) guides.
+For a step-by-step tutorial, see the [Walkthrough Guide](walkthrough.md). For detailed instructions, see the [Installation](installation.md) and [Usage](usage.md) guides.
 
 ## Architecture
 
@@ -109,6 +109,7 @@ Use gh-worker as a development assistant that generates implementation plans you
 
 ## Next Steps
 
+- [Walkthrough Guide](walkthrough.md) - Step-by-step tutorial from setup to first PR
 - [Installation Guide](installation.md) - Get gh-worker up and running
 - [Configuration](configuration.md) - Configure gh-worker for your workflow
 - [Usage Guide](usage.md) - Learn the commands and workflows

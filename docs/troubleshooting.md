@@ -180,7 +180,7 @@ ghw --config-path /writable/path/config.yaml sync --repo owner/repo
 
 **Causes and Solutions**:
 
-1. **No open issues in repository**:
+1. **No issues in repository**:
 
 ```bash
 # Check repository has issues
