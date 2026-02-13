@@ -1,6 +1,7 @@
 """Work orchestrator for running sync -> plan -> implement cycles."""
 
 import asyncio
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 
@@ -153,11 +154,16 @@ class WorkOrchestrator:
         logger.info("Running one-shot mode")
         await self.run_cycle()
 
-    async def run_continuous(self, frequency: str) -> None:
+    async def run_continuous(
+        self,
+        frequency: str,
+        stop_requested: Callable[[], bool] | None = None,
+    ) -> None:
         """Run work cycles continuously at specified frequency.
 
         Args:
             frequency: Frequency string (e.g., '10m', '1h', '1d')
+            stop_requested: Optional callback returning True to stop gracefully between cycles
         """
         logger.info("Running continuous mode", frequency=frequency)
 
@@ -180,7 +186,13 @@ class WorkOrchestrator:
         )
 
         cycle_count = 0
+        interval_seconds = interval.total_seconds()
+
         while True:
+            if stop_requested and stop_requested():
+                logger.info("Stop requested, exiting")
+                break
+
             cycle_count += 1
             logger.info(
                 "Starting work cycle",
@@ -194,10 +206,19 @@ class WorkOrchestrator:
                 logger.error("Work cycle failed", cycle=cycle_count, error=str(e))
                 logger.info("Continuing to next cycle")
 
-            # Wait for next cycle
             logger.info(
                 "Waiting for next cycle",
                 frequency=frequency,
-                interval_seconds=interval.total_seconds(),
+                interval_seconds=interval_seconds,
             )
-            await asyncio.sleep(interval.total_seconds())
+            if stop_requested:
+                remaining = interval_seconds
+                while remaining > 0:
+                    if stop_requested():
+                        logger.info("Stop requested during wait, exiting")
+                        return
+                    sleep_time = min(1.0, remaining)
+                    await asyncio.sleep(sleep_time)
+                    remaining -= sleep_time
+            else:
+                await asyncio.sleep(interval_seconds)

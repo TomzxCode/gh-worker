@@ -444,6 +444,20 @@ def monitor(
     )
 
 
+@app.command(sort_key=3.9)
+def tui(
+    config_path: Annotated[
+        Path | None,
+        Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
+    ] = None,
+) -> None:
+    """Launch the TUI dashboard."""
+    from gh_worker.tui.app import GhWorkerApp
+
+    app = GhWorkerApp(config_path=config_path)
+    app.run()
+
+
 @app.command(sort_key=4)
 def work(
     once: Annotated[bool, Parameter(help="Run once and exit (default: continuous mode)")] = False,

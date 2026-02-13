@@ -97,7 +97,7 @@ def review_plan_command(
     *,
     approve: bool = False,
     config_path: Path | None = None,
-) -> None:
+) -> Path | None:
     """Create a worktree with the plan symlinked for review, or approve a plan.
 
     By default, creates a planning worktree and symlinks the plan file so the
@@ -115,7 +115,7 @@ def review_plan_command(
 
     if not app_config.issues_path:
         logger.error("Issues path not configured. Run: gh-worker config issues-path <path>")
-        return
+        return None
 
     issue_store = IssueStore(app_config.issues_path)
     plan_store = PlanStore(app_config.issues_path)
@@ -124,14 +124,14 @@ def review_plan_command(
         repository = issue_store.resolve_repo(repo)
     except ValueError as e:
         logger.error("Invalid repository", repo=repo, error=str(e))
-        return
+        return None
 
     items = _find_issues_with_plans_waiting_review(
         repository, issue_store, plan_store, [issue_number], None
     )
     if not items:
         logger.info("No plan waiting for review for this issue")
-        return
+        return None
 
     plan_file, metadata = items[0]
 
@@ -143,11 +143,11 @@ def review_plan_command(
             repository=repository.full_name,
             issue_number=metadata.issue_number,
         )
-        return
+        return None
 
     if not app_config.repository_path:
         logger.error("Repository path not configured. Run: gh-worker config repository-path <path>")
-        return
+        return None
 
     repo_path = app_config.repository_path / repository.owner / repository.name
     gh_client = GHClient(app_config.repository_path)
@@ -168,7 +168,7 @@ def review_plan_command(
                 path=str(repo_path),
                 error=str(e),
             )
-            return
+            return None
 
     # Use plan timestamp for deterministic worktree path (reuse existing worktree)
     plan_timestamp = metadata.created_at.strftime("%Y%m%d-%H%M%S")
@@ -198,7 +198,7 @@ def review_plan_command(
                 issue_number=metadata.issue_number,
                 error=str(e),
             )
-            return
+            return None
 
     # Symlink plan into worktree (use absolute path for portability)
     plan_symlink = worktree_path / "plan.md"
@@ -213,13 +213,14 @@ def review_plan_command(
             worktree_path=str(worktree_path),
             error=str(e),
         )
-        return
+        return None
 
     logger.info(
         "Worktree created",
         worktree_path=str(worktree_path),
         plan_symlink=str(plan_symlink),
     )
+    return worktree_path
 
 
 def review_implementation_command(
