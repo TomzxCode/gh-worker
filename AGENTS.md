@@ -1,1 +1,4 @@
 - Use `uv` to run most commands, e.g., `uv run ghw`, `uv run ruff`, etc.
+- Run `uv run ruff format` to format the code.
+- Run `uv run ruff check` to check the code for linting issues.
+- Run `uv run pytest` to run the tests.
