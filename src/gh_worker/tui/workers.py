@@ -52,6 +52,8 @@ async def run_plan(
     all_repos: bool = False,
     issue_numbers: list[int] | None = None,
     config_path: Path | None = None,
+    agent: str | None = None,
+    model: str | None = None,
 ) -> tuple[bool, str]:
     """Run plan command. Returns (success, message)."""
     try:
@@ -62,8 +64,8 @@ async def run_plan(
             parallelism=None,
             force=False,
             config_path=config_path,
-            agent=None,
-            model=None,
+            agent=agent,
+            model=model,
         )
         return True, "Plan completed"
     except Exception as e:
@@ -75,6 +77,8 @@ async def run_implement(
     all_repos: bool = False,
     issue_numbers: list[int] | None = None,
     config_path: Path | None = None,
+    agent: str | None = None,
+    model: str | None = None,
 ) -> tuple[bool, str]:
     """Run implement command. Returns (success, message)."""
     try:
@@ -85,8 +89,8 @@ async def run_implement(
             parallelism=None,
             force=False,
             config_path=config_path,
-            agent=None,
-            model=None,
+            agent=agent,
+            model=model,
         )
         return True, "Implement completed"
     except Exception as e:

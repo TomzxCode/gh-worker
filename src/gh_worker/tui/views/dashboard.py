@@ -256,14 +256,24 @@ class DashboardView(Container):
         self._set_running(True)
 
     def _run_plan(self) -> None:
-        """Run plan in worker."""
+        """Run plan in worker (after agent/model confirmation)."""
+        from gh_worker.tui.screens.agent_confirm import AgentConfirmModal
         from gh_worker.tui.workers import run_plan
 
         async def _plan() -> tuple[bool, str]:
+            result = await self.app.push_screen_wait(
+                AgentConfirmModal(action="plan", config_path=self.config_path)
+            )
+            if result is None:
+                return True, "Cancelled"
+            agent, model = result
+            self._log_activity("Plan started...")
             return await run_plan(
                 repo=self._selected_repo if self._selected_repo else None,
                 all_repos=not bool(self._selected_repo),
                 config_path=self.config_path,
+                agent=agent,
+                model=model,
             )
 
         self.run_worker(
@@ -273,18 +283,27 @@ class DashboardView(Container):
             exit_on_error=False,
             exclusive=True,
         )
-        self._log_activity("Plan started...")
         self._set_running(True)
 
     def _run_implement(self) -> None:
-        """Run implement in worker."""
+        """Run implement in worker (after agent/model confirmation)."""
+        from gh_worker.tui.screens.agent_confirm import AgentConfirmModal
         from gh_worker.tui.workers import run_implement
 
         async def _implement() -> tuple[bool, str]:
+            result = await self.app.push_screen_wait(
+                AgentConfirmModal(action="implement", config_path=self.config_path)
+            )
+            if result is None:
+                return True, "Cancelled"
+            agent, model = result
+            self._log_activity("Implement started...")
             return await run_implement(
                 repo=self._selected_repo if self._selected_repo else None,
                 all_repos=not bool(self._selected_repo),
                 config_path=self.config_path,
+                agent=agent,
+                model=model,
             )
 
         self.run_worker(
@@ -294,7 +313,6 @@ class DashboardView(Container):
             exit_on_error=False,
             exclusive=True,
         )
-        self._log_activity("Implement started...")
         self._set_running(True)
 
     def _run_work_once(self) -> None:

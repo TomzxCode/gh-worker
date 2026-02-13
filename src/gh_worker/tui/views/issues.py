@@ -432,15 +432,25 @@ class IssuesView(Container):
         self.notify("Sync started...")
 
     def _run_plan(self, repo: str, issue_number: int) -> None:
-        """Run plan for selected issue."""
+        """Run plan for selected issue (after agent/model confirmation)."""
+        from gh_worker.tui.screens.agent_confirm import AgentConfirmModal
         from gh_worker.tui.workers import run_plan
 
         async def _plan() -> tuple[bool, str]:
+            result = await self.app.push_screen_wait(
+                AgentConfirmModal(action="plan", config_path=self.config_path)
+            )
+            if result is None:
+                return True, "Cancelled"
+            agent, model = result
+            self.notify("Plan started...")
             return await run_plan(
                 repo=repo,
                 all_repos=False,
                 issue_numbers=[issue_number],
                 config_path=self.config_path,
+                agent=agent,
+                model=model,
             )
 
         self.run_worker(
@@ -450,18 +460,27 @@ class IssuesView(Container):
             exit_on_error=False,
             exclusive=True,
         )
-        self.notify("Plan started...")
 
     def _run_implement(self, repo: str, issue_number: int) -> None:
-        """Run implement for selected issue."""
+        """Run implement for selected issue (after agent/model confirmation)."""
+        from gh_worker.tui.screens.agent_confirm import AgentConfirmModal
         from gh_worker.tui.workers import run_implement
 
         async def _implement() -> tuple[bool, str]:
+            result = await self.app.push_screen_wait(
+                AgentConfirmModal(action="implement", config_path=self.config_path)
+            )
+            if result is None:
+                return True, "Cancelled"
+            agent, model = result
+            self.notify("Implement started...")
             return await run_implement(
                 repo=repo,
                 all_repos=False,
                 issue_numbers=[issue_number],
                 config_path=self.config_path,
+                agent=agent,
+                model=model,
             )
 
         self.run_worker(
@@ -471,7 +490,6 @@ class IssuesView(Container):
             exit_on_error=False,
             exclusive=True,
         )
-        self.notify("Implement started...")
 
     def _open_monitor(self, repo: str, issue_number: int) -> None:
         """Open Monitor screen for selected issue."""
