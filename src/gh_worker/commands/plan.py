@@ -107,7 +107,7 @@ async def generate_plan_for_issue(
     model = model_val if isinstance(model_val, str) else None
 
     # Save plan
-    plan_store.create_plan(
+    metadata = plan_store.create_plan(
         task.repository,
         task.issue_number,
         result.output,
@@ -120,6 +120,7 @@ async def generate_plan_for_issue(
         repository=task.repository.full_name,
         issue_number=task.issue_number,
         agent=agent_name,
+        plan_path=str(metadata.plan_file),
     )
 
 
