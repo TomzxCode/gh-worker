@@ -134,7 +134,8 @@ class ClaudeCodeAgent(BaseAgent):
             agent_output = None
             session_id = None
             # Allow Edit tool for the temporary directory
-            # Claude expects absolute paths to start with /, so //tmp -> /tmp (/tmp would point to <cwd>/tmp)
+            # Claude expects absolute paths to start with /, so //tmp -> /tmp
+            # (/tmp would point to <cwd>/tmp)
             allowed_tools = [
                 f"Edit(/{temp_dir}/**)",
             ]
@@ -167,7 +168,7 @@ class ClaudeCodeAgent(BaseAgent):
 
             # Read the plan from the generated file
             try:
-                with open(plan_file_path, "r", encoding="utf-8") as f:
+                with open(plan_file_path, encoding="utf-8") as f:
                     plan_content = f.read()
                 logger.debug(
                     "plan_file_read",
@@ -179,7 +180,10 @@ class ClaudeCodeAgent(BaseAgent):
                 return AgentResult(
                     success=False,
                     output="",
-                    error=f"Plan file not found at {plan_file_path}. The agent may not have written the plan to the file.",
+                    error=(
+                        f"Plan file not found at {plan_file_path}. "
+                        "The agent may not have written the plan to the file."
+                    ),
                 )
             except Exception as e:
                 logger.error("plan_file_read_error", plan_file_path=plan_file_path, error=str(e))
@@ -481,7 +485,7 @@ Please provide the commit message.
         Args:
             prompt: The prompt to send to claude
             cwd: Working directory for the command
-            permission_mode: Optional permission mode (e.g., "plan") to pass as --permission-mode flag.
+            permission_mode: Optional permission mode (e.g., "plan") for --permission-mode flag.
             allowed_tools: Optional list of allowed tools to pass as --allowedTools flags.
 
         Yields:
@@ -521,9 +525,7 @@ Please provide the commit message.
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             cwd=cwd,
-            limit=10
-            * 2
-            ** 20,  # 10MB buffer limit to prevent "Separator is not found, and chunk exceed the limit" errors
+            limit=10 * 2**20,  # 10MB buffer limit to prevent chunk separator errors
         )
         logger.debug("claude_code_streaming_process_started", pid=process.pid)
 
@@ -556,7 +558,7 @@ Please provide the commit message.
                     )
 
                     # Extract text content from the message.content array
-                    # Structure: {'type': 'assistant', 'message': {'content': [{'type': 'text', 'text': '...'}]}, ...}
+                    # Structure: message.content has [{'type': 'text', 'text': '...'}, ...]
                     text_content = None
                     message = data.get("message", {})
                     if message:

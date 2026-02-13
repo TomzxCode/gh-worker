@@ -414,7 +414,8 @@ async def plan_command_async(
         agent=agent_name,
     )
     print(
-        f"Generating plans for {len(all_tasks)} issues using agent '{agent_name}' (parallelism: {max_workers})"
+        f"Generating plans for {len(all_tasks)} issues using agent '{agent_name}' "
+        f"(parallelism: {max_workers})"
     )
 
     # Create task function

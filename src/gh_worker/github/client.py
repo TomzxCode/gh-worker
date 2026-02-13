@@ -272,7 +272,7 @@ class GHClient:
                 ["rev-parse", "--abbrev-ref", "HEAD"], cwd=repo_path
             ).strip()
             base_branch = current_branch
-        except RuntimeError:
+        except RuntimeError as err:
             # If that fails, try common default branches
             for default_branch in ["main", "master"]:
                 try:
@@ -292,7 +292,7 @@ class GHClient:
                     except RuntimeError:
                         continue
             if not base_branch:
-                raise RuntimeError("Could not determine base branch for worktree")
+                raise RuntimeError("Could not determine base branch for worktree") from err
 
         # Check if branch already exists
         try:

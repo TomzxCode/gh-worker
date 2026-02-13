@@ -165,7 +165,7 @@ async def implement_issue(
         else:
             try:
                 gh_client = GHClient(repository_path)
-                # Create worktree path: repository_path/worktrees/owner/repo/issue-{number}-{timestamp}
+                # Create worktree path: worktrees/owner/repo/issue-{number}-{timestamp}
                 worktree_path = (
                     repository_path
                     / "worktrees"
@@ -314,7 +314,6 @@ async def implement_issue(
 
         # Collect commit message from agent
         commit_message_parts = []
-        commit_message_received = False
 
         async for event in agent.commit(
             repository_path=str(actual_repo_path),
@@ -336,7 +335,6 @@ async def implement_issue(
 
             # Check for completion or failure
             if event.type == AgentEventType.COMPLETION:
-                commit_message_received = True
                 logger.info(
                     "commit_message_received",
                     repository=task.repository.full_name,

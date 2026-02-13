@@ -262,11 +262,11 @@ class IssueStore:
             # 0 matches: try parsing as explicit owner/repo (sync may create it)
             try:
                 return Repository.from_string(repo)
-            except ValueError:
+            except ValueError as err:
                 raise ValueError(
                     f"No tracked repository matches '{repo}'. "
                     "Use 'owner/repo' format or add the repository first."
-                )
+                ) from err
         else:
             matches = [r for r in tracked if r.name == repo]
 

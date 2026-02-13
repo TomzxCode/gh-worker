@@ -261,7 +261,7 @@ def plan(
         Parameter(
             help="Override agent to use. Choices: "
             + available_agents
-            + f". Uses config default if None.",
+            + ". Uses config default if None.",
         ),
     ] = None,
 ) -> None:

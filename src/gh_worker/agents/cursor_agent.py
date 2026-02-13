@@ -6,7 +6,6 @@ import re
 import shutil
 import tempfile
 from collections.abc import AsyncIterator
-from pathlib import Path
 from typing import Any
 
 import structlog
@@ -161,7 +160,7 @@ class CursorAgent(BaseAgent):
 
             # Read the plan from the generated file
             try:
-                with open(plan_file_path, "r", encoding="utf-8") as f:
+                with open(plan_file_path, encoding="utf-8") as f:
                     plan_content = f.read()
                 logger.debug(
                     "plan_file_read",
@@ -173,7 +172,10 @@ class CursorAgent(BaseAgent):
                 return AgentResult(
                     success=False,
                     output="",
-                    error=f"Plan file not found at {plan_file_path}. The agent may not have written the plan to the file.",
+                    error=(
+                        f"Plan file not found at {plan_file_path}. "
+                        "The agent may not have written the plan to the file."
+                    ),
                 )
             except Exception as e:
                 logger.error("plan_file_read_error", plan_file_path=plan_file_path, error=str(e))
@@ -197,7 +199,10 @@ class CursorAgent(BaseAgent):
                     error=error_msg,
                     prompt_length=prompt_length,
                     issue_content_length=issue_content_length,
-                    message="Prompt is too large for the CLI tool to process. Consider truncating or summarizing the issue content.",
+                    message=(
+                        "Prompt is too large for the CLI tool to process. "
+                        "Consider truncating or summarizing the issue content."
+                    ),
                 )
                 enhanced_error = (
                     f"Prompt too large for processing (length: {prompt_length} chars, "
@@ -545,9 +550,7 @@ Please provide the commit message.
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             cwd=cwd if cwd else None,
-            limit=10
-            * 2
-            ** 20,  # 10MB buffer limit to prevent "Separator is not found, and chunk exceed the limit" errors
+            limit=10 * 2**20,  # 10MB buffer limit to prevent chunk separator errors
         )
         logger.debug("cursor_agent_streaming_process_started", pid=process.pid)
 

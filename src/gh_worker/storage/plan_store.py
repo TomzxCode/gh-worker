@@ -1,6 +1,6 @@
 """Plan storage management."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from gh_worker.models.plan import PlanMetadata
@@ -56,7 +56,7 @@ class PlanStore:
         issue_dir = self.get_issue_dir(repository, issue_number)
         issue_dir.mkdir(parents=True, exist_ok=True)
 
-        timestamp = datetime.now(timezone.utc)
+        timestamp = datetime.now(UTC)
         plan_filename = f"plan-{timestamp.strftime('%Y%m%d-%H%M%S')}.md"
         plan_file = issue_dir / plan_filename
 
@@ -98,7 +98,7 @@ class PlanStore:
         issue_dir = self.get_issue_dir(repository, issue_number)
         issue_dir.mkdir(parents=True, exist_ok=True)
 
-        timestamp = datetime.now(timezone.utc)
+        timestamp = datetime.now(UTC)
         plan_filename = f"plan-{timestamp.strftime('%Y%m%d-%H%M%S')}.md"
         plan_file = issue_dir / plan_filename
 
@@ -204,7 +204,7 @@ class PlanStore:
                 metadata = PlanMetadata(
                     issue_number=issue_number,
                     repository=repository.full_name,
-                    created_at=datetime.fromtimestamp(plan_file.stat().st_mtime, tz=timezone.utc),
+                    created_at=datetime.fromtimestamp(plan_file.stat().st_mtime, tz=UTC),
                     plan_file=plan_file,
                 )
 
@@ -250,22 +250,22 @@ class PlanStore:
             updated_at = datetime.fromisoformat(timestamp_str)
             # Normalize to UTC-aware datetime for comparison
             if updated_at.tzinfo is None:
-                updated_at = updated_at.replace(tzinfo=timezone.utc)
+                updated_at = updated_at.replace(tzinfo=UTC)
             else:
-                updated_at = updated_at.astimezone(timezone.utc)
+                updated_at = updated_at.astimezone(UTC)
         except (ValueError, OSError):
             return False
 
         # Check if there's a plan matching this timestamp
         # A plan matches if it was created at or after the updated-at timestamp
         plans = self.list_plans(repository, issue_number)
-        for plan_file, metadata in plans:
+        for _plan_file, metadata in plans:
             # Normalize plan created_at to UTC-aware datetime for comparison
             plan_created_at = metadata.created_at
             if plan_created_at.tzinfo is None:
-                plan_created_at = plan_created_at.replace(tzinfo=timezone.utc)
+                plan_created_at = plan_created_at.replace(tzinfo=UTC)
             else:
-                plan_created_at = plan_created_at.astimezone(timezone.utc)
+                plan_created_at = plan_created_at.astimezone(UTC)
 
             # Plan matches if created_at is at or after the updated_at timestamp
             if plan_created_at >= updated_at:

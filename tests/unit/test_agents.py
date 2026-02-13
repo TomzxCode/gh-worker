@@ -2,7 +2,6 @@
 
 import pytest
 
-from gh_worker.agents.base import AgentEventType
 from gh_worker.agents.claude_code import ClaudeCodeAgent
 from gh_worker.agents.codex import CodexAgent
 from gh_worker.agents.gemini import GeminiAgent

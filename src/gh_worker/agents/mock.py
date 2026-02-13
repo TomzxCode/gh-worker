@@ -82,7 +82,9 @@ Use a real agent (e.g., claude-code) for actual plan generation.
         """
         yield AgentEvent(
             type=AgentEventType.ERROR,
-            content="Mock agent does not support implementation. Use a real agent for implementation.",
+            content=(
+                "Mock agent does not support implementation. Use a real agent for implementation."
+            ),
             metadata={"agent": "mock", "issue_number": issue_number},
         )
 

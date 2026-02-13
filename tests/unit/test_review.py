@@ -1,7 +1,5 @@
 """Unit tests for review commands."""
 
-import pytest
-
 from gh_worker.commands.review import (
     _find_implementations_waiting_review,
     _find_issues_with_plans_waiting_review,
