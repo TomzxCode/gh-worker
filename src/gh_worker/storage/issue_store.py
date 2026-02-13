@@ -1,5 +1,6 @@
 """Issue storage management."""
 
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -78,6 +79,29 @@ class IssueStore:
         # For now, return None as we'd need to parse the markdown
         # This is a simplified implementation
         return None
+
+    def get_issue_assignees(self, repository: Repository, issue_number: int) -> list[str]:
+        """Get assignees for an issue from its description file.
+
+        Args:
+            repository: Repository object
+            issue_number: Issue number
+
+        Returns:
+            List of assignee usernames, empty if not found or no assignees
+        """
+        issue_dir = self.get_issue_dir(repository, issue_number)
+        description_file = issue_dir / "description.md"
+
+        if not description_file.exists():
+            return []
+
+        content = description_file.read_text()
+        match = re.search(r"\*\*Assignees\*\*:\s*(.+)", content)
+        if not match:
+            return []
+
+        return [a.strip() for a in match.group(1).split(",") if a.strip()]
 
     def get_updated_at(self, repository: Repository, issue_number: int) -> datetime | None:
         """Get the last updated timestamp for an issue.

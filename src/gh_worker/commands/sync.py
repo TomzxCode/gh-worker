@@ -21,6 +21,7 @@ def sync_repository(
     since: str | None = None,
     issue_numbers: list[int] | None = None,
     search: str | None = None,
+    assigned_to_me: bool = False,
 ) -> int:
     """Sync issues for a single repository.
 
@@ -31,6 +32,7 @@ def sync_repository(
         since: Only sync issues updated after this timestamp
         issue_numbers: Specific issue numbers to sync
         search: GitHub search query
+        assigned_to_me: Only sync issues assigned to the current user
 
     Returns:
         Number of issues synced
@@ -53,7 +55,9 @@ def sync_repository(
             if repo_updated_at:
                 since_filter = repo_updated_at.isoformat()
 
-        issues_data = gh_client.list_issues(repository, since=since_filter, search=search)
+        issues_data = gh_client.list_issues(
+            repository, since=since_filter, search=search, assigned_to_me=assigned_to_me
+        )
 
     # Save issues
     count = 0
@@ -80,6 +84,7 @@ def sync_command(
     since: str | None = None,
     issue_numbers: list[int] | None = None,
     search: str | None = None,
+    assigned_to_me: bool = False,
     config_path: Path | None = None,
 ) -> None:
     """Execute sync command.
@@ -90,6 +95,7 @@ def sync_command(
         since: Only sync issues updated since this timestamp
         issue_numbers: Specific issue numbers to sync
         search: GitHub search query
+        assigned_to_me: Only sync issues assigned to the current user
         config_path: Path to config file
     """
     config = ConfigManager(config_path)
@@ -118,7 +124,13 @@ def sync_command(
         total = 0
         for repository in repositories:
             count = sync_repository(
-                repository, issue_store, gh_client, since, issue_numbers, search
+                repository,
+                issue_store,
+                gh_client,
+                since,
+                issue_numbers,
+                search,
+                assigned_to_me,
             )
             total += count
 
@@ -126,7 +138,9 @@ def sync_command(
 
     elif repo:
         repository = Repository.from_string(repo)
-        count = sync_repository(repository, issue_store, gh_client, since, issue_numbers, search)
+        count = sync_repository(
+            repository, issue_store, gh_client, since, issue_numbers, search, assigned_to_me
+        )
         print(f"Synced {count} issues from {repository.full_name}")
 
     else:

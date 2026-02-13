@@ -8,6 +8,7 @@ import structlog
 
 from gh_worker.agents.registry import get_registry
 from gh_worker.config.manager import ConfigManager
+from gh_worker.github.client import GHClient
 from gh_worker.executor.parallel import ParallelExecutor
 from gh_worker.models.repository import Repository
 from gh_worker.storage.issue_store import IssueStore
@@ -101,8 +102,18 @@ async def generate_plan_for_issue(
         )
         raise RuntimeError(f"Plan generation failed: {result.error}")
 
+    # Get model from agent config or agent instance (ensure string for serialization)
+    model_val = agent_config.get("model") or getattr(agent, "model", None)
+    model = model_val if isinstance(model_val, str) else None
+
     # Save plan
-    plan_store.create_plan(task.repository, task.issue_number, result.output)
+    plan_store.create_plan(
+        task.repository,
+        task.issue_number,
+        result.output,
+        agent=agent_name,
+        model=model,
+    )
 
     logger.info(
         "plan_generated",
@@ -118,6 +129,8 @@ def find_issues_needing_plans(
     plan_store: PlanStore,
     issue_numbers: list[int] | None = None,
     force: bool = False,
+    assigned_to_me: bool = False,
+    current_user: str | None = None,
 ) -> list[PlanTask]:
     """Find issues that need plans generated.
 
@@ -127,6 +140,8 @@ def find_issues_needing_plans(
         plan_store: PlanStore instance
         issue_numbers: Optional list of specific issue numbers to check
         force: If True, generate plan even if one already exists
+        assigned_to_me: If True, only include issues assigned to current_user
+        current_user: Current user login (required when assigned_to_me is True)
 
     Returns:
         List of PlanTask objects for issues needing plans
@@ -139,6 +154,17 @@ def find_issues_needing_plans(
         issues_to_check = issue_store.list_issues(repository)
 
     for issue_number in issues_to_check:
+        # Filter by assignee when assigned_to_me is True
+        if assigned_to_me and current_user:
+            assignees = issue_store.get_issue_assignees(repository, issue_number)
+            if current_user not in assignees:
+                logger.debug(
+                    "issue_not_assigned_to_me",
+                    repository=repository.full_name,
+                    issue_number=issue_number,
+                )
+                continue
+
         # Check if plan already exists (unless force is True)
         if not force and plan_store.has_plan(repository, issue_number):
             logger.debug(
@@ -177,6 +203,7 @@ async def plan_command_async(
     all_repos: bool = False,
     parallelism: int | None = None,
     force: bool = False,
+    assigned_to_me: bool = False,
     config_path: Path | None = None,
     agent: str | None = None,
 ) -> None:
@@ -188,6 +215,7 @@ async def plan_command_async(
         all_repos: Generate plans for all repositories
         parallelism: Number of parallel executions
         force: Generate plan even if one already exists
+        assigned_to_me: Only plan issues assigned to the current user
         config_path: Path to config file
         agent: Agent to use (e.g., 'mock', 'claude-code', 'opencode', 'gemini', 'codex')
             Uses config default if None
@@ -199,6 +227,19 @@ async def plan_command_async(
         logger.error("issues_path_not_configured")
         print("Error: issues-path not configured. Run: gh-worker config issues-path <path>")
         return
+
+    current_user = None
+    if assigned_to_me:
+        gh_client = GHClient(app_config.repository_path)
+        if not gh_client.check_auth():
+            logger.error("gh_not_authenticated")
+            print("Error: gh CLI not authenticated. Run: gh auth login")
+            return
+        current_user = gh_client.get_current_user()
+        if not current_user:
+            logger.error("could_not_get_current_user")
+            print("Error: Could not determine current user. Run: gh auth login")
+            return
 
     issue_store = IssueStore(app_config.issues_path)
     plan_store = PlanStore(app_config.issues_path)
@@ -223,7 +264,15 @@ async def plan_command_async(
     # Find all issues needing plans
     all_tasks = []
     for repository in repositories:
-        tasks = find_issues_needing_plans(repository, issue_store, plan_store, issue_numbers, force)
+        tasks = find_issues_needing_plans(
+            repository,
+            issue_store,
+            plan_store,
+            issue_numbers,
+            force,
+            assigned_to_me,
+            current_user,
+        )
         all_tasks.extend(tasks)
 
     if not all_tasks:
@@ -235,6 +284,7 @@ async def plan_command_async(
     agent_name = agent if agent is not None else app_config.agent.default
     agent_config = {
         "claude_code_path": app_config.agent.claude_code_path,
+        "opencode_path": app_config.agent.opencode_path,
     }
 
     logger.info(
@@ -243,7 +293,9 @@ async def plan_command_async(
         parallelism=max_workers,
         agent=agent_name,
     )
-    print(f"Generating plans for {len(all_tasks)} issues using agent '{agent_name}' (parallelism: {max_workers})")
+    print(
+        f"Generating plans for {len(all_tasks)} issues using agent '{agent_name}' (parallelism: {max_workers})"
+    )
 
     # Create task function
     async def task_func(task: PlanTask):
@@ -282,6 +334,7 @@ def plan_command(
     all_repos: bool = False,
     parallelism: int | None = None,
     force: bool = False,
+    assigned_to_me: bool = False,
     config_path: Path | None = None,
     agent: str | None = None,
 ) -> None:
@@ -293,6 +346,7 @@ def plan_command(
         all_repos: Generate plans for all repositories
         parallelism: Number of parallel executions
         force: Generate plan even if one already exists
+        assigned_to_me: Only plan issues assigned to the current user
         config_path: Path to config file
         agent: Agent to use (e.g., 'mock', 'claude-code', 'opencode', 'gemini', 'codex')
             Uses config default if None
@@ -304,6 +358,7 @@ def plan_command(
             all_repos=all_repos,
             parallelism=parallelism,
             force=force,
+            assigned_to_me=assigned_to_me,
             config_path=config_path,
             agent=agent,
         )

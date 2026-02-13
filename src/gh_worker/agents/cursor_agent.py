@@ -86,9 +86,7 @@ class CursorAgent(BaseAgent):
         logger.debug("environment_validation_success", cli_path=cli_location)
         return True, None
 
-    async def plan(
-        self, issue_content: str, repository_path: str
-    ) -> AgentResult:
+    async def plan(self, issue_content: str, repository_path: str) -> AgentResult:
         """Generate an implementation plan for an issue using cursor-agent.
 
         Args:
@@ -104,7 +102,7 @@ class CursorAgent(BaseAgent):
         )
 
         # Generate a temporary file path for the plan
-        temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False)
+        temp_file = tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False)
         plan_file_path = temp_file.name
         temp_file.close()
         logger.debug("plan_file_path_generated", plan_file_path=plan_file_path)
@@ -163,7 +161,7 @@ class CursorAgent(BaseAgent):
 
             # Read the plan from the generated file
             try:
-                with open(plan_file_path, 'r', encoding='utf-8') as f:
+                with open(plan_file_path, "r", encoding="utf-8") as f:
                     plan_content = f.read()
                 logger.debug(
                     "plan_file_read",
@@ -264,9 +262,7 @@ class CursorAgent(BaseAgent):
             # Stream output from cursor-agent
             logger.debug("starting_cursor_agent_streaming", issue_number=issue_number)
             event_count = 0
-            async for event in self._run_cursor_agent_streaming(
-                prompt, repository_path
-            ):
+            async for event in self._run_cursor_agent_streaming(prompt, repository_path):
                 event_count += 1
                 logger.debug(
                     "streaming_event_received",
@@ -549,7 +545,9 @@ Please provide the commit message.
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             cwd=cwd if cwd else None,
-            limit=10 * 2**20,  # 10MB buffer limit to prevent "Separator is not found, and chunk exceed the limit" errors
+            limit=10
+            * 2
+            ** 20,  # 10MB buffer limit to prevent "Separator is not found, and chunk exceed the limit" errors
         )
         logger.debug("cursor_agent_streaming_process_started", pid=process.pid)
 
@@ -578,7 +576,9 @@ Please provide the commit message.
                 try:
                     # Parse JSON line from stream-json format
                     data = json.loads(content)
-                    logger.debug("json_line_parsed", line_number=line_count, data_keys=list(data.keys()))
+                    logger.debug(
+                        "json_line_parsed", line_number=line_count, data_keys=list(data.keys())
+                    )
 
                     # Extract text content from the message structure
                     # Structure may vary, so we'll handle different formats
@@ -630,12 +630,16 @@ Please provide the commit message.
 
                         # Extract session_id/chat_id from JSON data if present
                         metadata = {}
-                        session_id = data.get("session_id") or data.get("chat_id") or data.get("chatId")
+                        session_id = (
+                            data.get("session_id") or data.get("chat_id") or data.get("chatId")
+                        )
                         if session_id:
                             metadata["session_id"] = session_id
 
                         event_count += 1
-                        event_counts_by_type[event_type.value] = event_counts_by_type.get(event_type.value, 0) + 1
+                        event_counts_by_type[event_type.value] = (
+                            event_counts_by_type.get(event_type.value, 0) + 1
+                        )
 
                         logger.info(
                             "cursor_agent_streaming_event",
@@ -676,7 +680,9 @@ Please provide the commit message.
                             result_parts.append(content)
 
                         event_count += 1
-                        event_counts_by_type[event_type.value] = event_counts_by_type.get(event_type.value, 0) + 1
+                        event_counts_by_type[event_type.value] = (
+                            event_counts_by_type.get(event_type.value, 0) + 1
+                        )
 
                         logger.info(
                             "cursor_agent_streaming_event",
@@ -721,9 +727,13 @@ Please provide the commit message.
             )
             if stderr_output:
                 event_count += 1
-                event_counts_by_type[AgentEventType.ERROR.value] = event_counts_by_type.get(AgentEventType.ERROR.value, 0) + 1
+                event_counts_by_type[AgentEventType.ERROR.value] = (
+                    event_counts_by_type.get(AgentEventType.ERROR.value, 0) + 1
+                )
 
-                error_content = f"Process failed with exit code {process.returncode}: {stderr_output}"
+                error_content = (
+                    f"Process failed with exit code {process.returncode}: {stderr_output}"
+                )
                 logger.info(
                     "cursor_agent_streaming_event",
                     event_number=event_count,
@@ -741,7 +751,9 @@ Please provide the commit message.
             if result_parts:
                 result_content = "\n".join(result_parts)
                 event_count += 1
-                event_counts_by_type[AgentEventType.RESULT.value] = event_counts_by_type.get(AgentEventType.RESULT.value, 0) + 1
+                event_counts_by_type[AgentEventType.RESULT.value] = (
+                    event_counts_by_type.get(AgentEventType.RESULT.value, 0) + 1
+                )
 
                 logger.info(
                     "cursor_agent_streaming_event",
@@ -783,11 +795,7 @@ Please provide the commit message.
                 continue
             try:
                 data = json.loads(line)
-                session_id = (
-                    data.get("session_id")
-                    or data.get("chat_id")
-                    or data.get("chatId")
-                )
+                session_id = data.get("session_id") or data.get("chat_id") or data.get("chatId")
                 if session_id:
                     logger.debug("session_id_found_in_json", session_id=session_id)
                     return session_id

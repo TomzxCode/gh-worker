@@ -21,9 +21,7 @@ class ImplementConfig(BaseModel):
     push_branch: bool = Field(
         default=False, description="Push branch to remote after implementation"
     )
-    create_pr: bool = Field(
-        default=False, description="Create pull request after implementation"
-    )
+    create_pr: bool = Field(default=False, description="Create pull request after implementation")
     delete_worktree: bool = Field(
         default=True, description="Delete worktree after implementation completes"
     )
@@ -40,6 +38,7 @@ class AgentConfig(BaseModel):
 
     default: str = Field(default="claude-code", description="Default agent to use")
     claude_code_path: str | None = Field(default=None, description="Path to claude-code binary")
+    opencode_path: str | None = Field(default=None, description="Path to opencode binary")
 
 
 class AppConfig(BaseModel):

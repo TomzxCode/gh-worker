@@ -30,13 +30,23 @@ class PlanStore:
         """
         return self.issues_path / repository.owner / repository.name / str(issue_number)
 
-    def create_plan(self, repository: Repository, issue_number: int, content: str) -> PlanMetadata:
+    def create_plan(
+        self,
+        repository: Repository,
+        issue_number: int,
+        content: str,
+        *,
+        agent: str | None = None,
+        model: str | None = None,
+    ) -> PlanMetadata:
         """Create a new plan for an issue.
 
         Args:
             repository: Repository object
             issue_number: Issue number
             content: Plan content in markdown
+            agent: Name of agent used to generate the plan
+            model: Model used by the agent
 
         Returns:
             PlanMetadata object
@@ -57,6 +67,8 @@ class PlanStore:
             repository=repository.full_name,
             created_at=timestamp,
             plan_file=plan_file,
+            agent=agent,
+            model=model,
         )
 
         # Save metadata

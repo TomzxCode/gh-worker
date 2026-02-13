@@ -49,6 +49,7 @@ def mock_agent():
         repository_path = kwargs.get("repository_path", args[2] if len(args) > 2 else "")
         if repository_path:
             from pathlib import Path
+
             (Path(repository_path) / "implemented.py").write_text("# Implementation by agent\n")
         yield AgentEvent(
             type=AgentEventType.STATUS,
@@ -270,7 +271,9 @@ class TestImplementIssue:
         # Create repository directory and initialize git repo
         repo_path = tmp_repository_path / repository.owner / repository.name
         repo_path.mkdir(parents=True, exist_ok=True)
-        subprocess.run(["git", "init", "-b", "main"], cwd=repo_path, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "init", "-b", "main"], cwd=repo_path, check=True, capture_output=True
+        )
         (repo_path / "README.md").write_text("# Test repo")
         subprocess.run(["git", "add", "README.md"], cwd=repo_path, check=True, capture_output=True)
         subprocess.run(
@@ -278,7 +281,13 @@ class TestImplementIssue:
             cwd=repo_path,
             check=True,
             capture_output=True,
-            env={**os.environ, "GIT_AUTHOR_NAME": "Test", "GIT_AUTHOR_EMAIL": "test@test.com", "GIT_COMMITTER_NAME": "Test", "GIT_COMMITTER_EMAIL": "test@test.com"},
+            env={
+                **os.environ,
+                "GIT_AUTHOR_NAME": "Test",
+                "GIT_AUTHOR_EMAIL": "test@test.com",
+                "GIT_COMMITTER_NAME": "Test",
+                "GIT_COMMITTER_EMAIL": "test@test.com",
+            },
         )
 
         # Create issue and plan

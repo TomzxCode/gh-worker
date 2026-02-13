@@ -51,9 +51,7 @@ class GeminiAgent(BaseAgent):
             )
         return True, None
 
-    async def plan(
-        self, issue_content: str, repository_path: str
-    ) -> AgentResult:
+    async def plan(self, issue_content: str, repository_path: str) -> AgentResult:
         """Generate an implementation plan for an issue using Gemini.
 
         Args:

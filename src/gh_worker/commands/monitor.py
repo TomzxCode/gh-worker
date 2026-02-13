@@ -79,6 +79,7 @@ async def monitor_command_async(
     agent_name = agent if agent is not None else app_config.agent.default
     agent_config = {
         "claude_code_path": app_config.agent.claude_code_path,
+        "opencode_path": app_config.agent.opencode_path,
     }
     agent = registry.get(agent_name, agent_config)
 

@@ -120,39 +120,65 @@ class TestClaudeCodeAgent:
         assert "not found" in error
 
 
-class TestPlaceholderAgents:
-    """Test placeholder agent implementations."""
+class TestOpenCodeAgent:
+    """Test OpenCode agent implementation."""
+
+    def test_agent_initialization(self):
+        """Test agent initialization."""
+        agent = OpenCodeAgent()
+
+        assert agent.name == "opencode"
+        assert agent.requires_cli is True
+
+    def test_agent_with_config(self):
+        """Test agent initialization with config."""
+        config = {"cli_path": "/usr/local/bin/opencode"}
+        agent = OpenCodeAgent(config)
+
+        assert agent.cli_path == "/usr/local/bin/opencode"
 
     @pytest.mark.asyncio
-    async def test_opencode_agent_plan_fails(self):
-        """Test that OpenCode agent plan returns error."""
-        agent = OpenCodeAgent()
-        result = await agent.plan("Test issue", "/tmp/repo")
+    async def test_validate_environment_no_cli(self):
+        """Test environment validation when CLI is not available."""
+        agent = OpenCodeAgent({"cli_path": "/nonexistent/opencode"})
 
-        assert result.success is False
-        assert "not yet implemented" in result.error
-
-    @pytest.mark.asyncio
-    async def test_opencode_agent_implement_fails(self):
-        """Test that OpenCode agent implement returns error."""
-        agent = OpenCodeAgent()
-        events = []
-
-        async for event in agent.implement("Test issue", "Test plan", "/tmp/repo", 1, "branch"):
-            events.append(event)
-
-        assert len(events) > 0
-        assert events[0].type == AgentEventType.ERROR
-        assert "not yet implemented" in events[0].content
-
-    @pytest.mark.asyncio
-    async def test_opencode_agent_validate_environment(self):
-        """Test OpenCode agent environment validation."""
-        agent = OpenCodeAgent()
         is_valid, error = await agent.validate_environment()
 
         assert is_valid is False
-        assert "API key" in error
+        assert error is not None
+        assert "not found" in error
+
+    @pytest.mark.asyncio
+    async def test_opencode_agent_plan_returns_result(self, tmp_path):
+        """Test that OpenCode agent plan returns a result (may fail if opencode not installed)."""
+        agent = OpenCodeAgent()
+        result = await agent.plan("Test issue", str(tmp_path))
+
+        # OpenCode agent is implemented - should not return placeholder error
+        assert "not yet implemented" not in (result.error or "")
+        # Result is either success (plan generated) or failure (opencode not installed, etc.)
+        assert result.success or result.error is not None
+
+    @pytest.mark.asyncio
+    async def test_opencode_agent_implement_yields_events(self, tmp_path):
+        """Test that OpenCode agent implement yields events (not placeholder)."""
+        agent = OpenCodeAgent()
+        events = []
+
+        async for event in agent.implement(
+            "Test issue", "Test plan", str(tmp_path), 1, "branch"
+        ):
+            events.append(event)
+
+        assert len(events) > 0
+        # OpenCode agent is implemented - should not return placeholder error
+        assert not any(
+            "not yet implemented" in (e.content or "") for e in events
+        )
+
+
+class TestPlaceholderAgents:
+    """Test placeholder agent implementations."""
 
     @pytest.mark.asyncio
     async def test_gemini_agent_plan_fails(self):

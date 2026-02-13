@@ -62,7 +62,14 @@ def config_command(
                 typed_value = int(value)
 
             # Handle boolean types
-            if isinstance(typed_value, str) and typed_value.lower() in ("true", "false", "1", "0", "yes", "no"):
+            if isinstance(typed_value, str) and typed_value.lower() in (
+                "true",
+                "false",
+                "1",
+                "0",
+                "yes",
+                "no",
+            ):
                 typed_value = typed_value.lower() in ("true", "1", "yes")
 
             manager.set(key, typed_value)

@@ -44,7 +44,9 @@ def config(
         str | None,
         Parameter(help="Configuration key (e.g., 'issues-path', 'plan.parallelism')"),
     ] = None,
-    value: Annotated[str | None, Parameter(help="Value to set (if None, gets the current value)")] = None,
+    value: Annotated[
+        str | None, Parameter(help="Value to set (if None, gets the current value)")
+    ] = None,
     list_: Annotated[
         bool, Parameter(name="--list", help="List all set configuration values")
     ] = False,
@@ -134,6 +136,9 @@ def sync(
     ] = None,
     *,
     all_repos: Annotated[bool, Parameter(help="Sync all repositories")] = False,
+    assigned_to_me: Annotated[
+        bool, Parameter(help="Only sync issues assigned to the current user")
+    ] = False,
     since: Annotated[
         str | None, Parameter(help="Only sync issues updated since this timestamp")
     ] = None,
@@ -152,6 +157,7 @@ def sync(
         since=since,
         issue_numbers=issue_numbers,
         search=search,
+        assigned_to_me=assigned_to_me,
         config_path=config_path,
     )
 
@@ -163,14 +169,11 @@ def plan(
         list[int] | None, Parameter(help="Specific issue numbers to plan")
     ] = None,
     *,
-    all_repos: Annotated[
-        bool, Parameter(help="Generate plans for all repositories")
-    ] = False,
-    parallelism: Annotated[
-        int | None, Parameter(help="Number of parallel executions")
-    ] = None,
-    force: Annotated[
-        bool, Parameter(help="Generate plan even if one already exists")
+    all_repos: Annotated[bool, Parameter(help="Generate plans for all repositories")] = False,
+    parallelism: Annotated[int | None, Parameter(help="Number of parallel executions")] = None,
+    force: Annotated[bool, Parameter(help="Generate plan even if one already exists")] = False,
+    assigned_to_me: Annotated[
+        bool, Parameter(help="Only plan issues assigned to the current user")
     ] = False,
     config_path: Annotated[
         Path | None,
@@ -179,7 +182,9 @@ def plan(
     agent: Annotated[
         str | None,
         Parameter(
-            help="Override agent to use. Choices: " + available_agents + f". Uses config default if None.",
+            help="Override agent to use. Choices: "
+            + available_agents
+            + f". Uses config default if None.",
         ),
     ] = None,
 ) -> None:
@@ -192,6 +197,7 @@ def plan(
         all_repos=all_repos,
         parallelism=parallelism,
         force=force,
+        assigned_to_me=assigned_to_me,
         config_path=config_path,
         agent=agent,
     )
@@ -204,14 +210,11 @@ def implement(
         list[int] | None, Parameter(help="Specific issue numbers to implement")
     ] = None,
     *,
-    all_repos: Annotated[
-        bool, Parameter(help="Implement plans for all repositories")
-    ] = False,
-    parallelism: Annotated[
-        int | None, Parameter(help="Number of parallel executions")
-    ] = None,
-    force: Annotated[
-        bool, Parameter(help="Implement even if already completed")
+    all_repos: Annotated[bool, Parameter(help="Implement plans for all repositories")] = False,
+    parallelism: Annotated[int | None, Parameter(help="Number of parallel executions")] = None,
+    force: Annotated[bool, Parameter(help="Implement even if already completed")] = False,
+    assigned_to_me: Annotated[
+        bool, Parameter(help="Only implement issues assigned to the current user")
     ] = False,
     use_worktree: Annotated[
         bool | None,
@@ -235,7 +238,11 @@ def implement(
     ] = None,
     agent: Annotated[
         str | None,
-        Parameter(help="Override agent to use. Choices: " + available_agents + ". Uses config default if None."),
+        Parameter(
+            help="Override agent to use. Choices: "
+            + available_agents
+            + ". Uses config default if None."
+        ),
     ] = None,
 ) -> None:
     """Implement plans and create PRs."""
@@ -247,6 +254,7 @@ def implement(
         all_repos=all_repos,
         parallelism=parallelism,
         force=force,
+        assigned_to_me=assigned_to_me,
         use_worktree=use_worktree,
         push_branch=push_branch,
         create_pr=create_pr,
@@ -266,7 +274,11 @@ def monitor(
     ] = None,
     agent: Annotated[
         str | None,
-        Parameter(help="Override agent to use. Choices: " + available_agents + ". Uses config default if None."),
+        Parameter(
+            help="Override agent to use. Choices: "
+            + available_agents
+            + ". Uses config default if None."
+        ),
     ] = None,
 ) -> None:
     """Monitor LLM agent session progress."""
@@ -282,15 +294,11 @@ def monitor(
 
 @app.command(sort_key=4)
 def work(
-    once: Annotated[
-        bool, Parameter(help="Run once and exit (default: continuous mode)")
-    ] = False,
+    once: Annotated[bool, Parameter(help="Run once and exit (default: continuous mode)")] = False,
     frequency: Annotated[
         str | None, Parameter(help="Sync frequency (e.g., '10m', '1h', '1d')")
     ] = None,
-    repos: Annotated[
-        list[str] | None, Parameter(help="Repositories to process")
-    ] = None,
+    repos: Annotated[list[str] | None, Parameter(help="Repositories to process")] = None,
     since: Annotated[
         str | None, Parameter(help="Only process issues updated since this timestamp")
     ] = None,
@@ -303,7 +311,11 @@ def work(
     ] = None,
     agent: Annotated[
         str | None,
-        Parameter(help="Override agent to use. Choices: " + available_agents + ". Uses config default if None."),
+        Parameter(
+            help="Override agent to use. Choices: "
+            + available_agents
+            + ". Uses config default if None."
+        ),
     ] = None,
 ) -> None:
     """Run sync, plan, implement workflow."""

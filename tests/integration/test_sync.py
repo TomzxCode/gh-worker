@@ -97,6 +97,21 @@ class TestSyncRepository:
         updated_at = issue_store.get_repo_updated_at(repository)
         assert updated_at is not None
 
+    def test_sync_repository_assigned_to_me(
+        self, tmp_issues_path, mock_gh_client, sample_issue_data
+    ):
+        """Test sync with assigned_to_me passes flag to list_issues."""
+        repository = Repository(owner="owner", name="repo")
+        issue_store = IssueStore(tmp_issues_path)
+
+        mock_gh_client.list_issues.return_value = [sample_issue_data]
+
+        sync_repository(repository, issue_store, mock_gh_client, assigned_to_me=True)
+
+        mock_gh_client.list_issues.assert_called_once_with(
+            repository, since=None, search=None, assigned_to_me=True
+        )
+
 
 class TestSyncCommand:
     """Tests for sync_command function."""

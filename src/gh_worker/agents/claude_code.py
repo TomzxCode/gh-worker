@@ -100,9 +100,7 @@ class ClaudeCodeAgent(BaseAgent):
         logger.debug("environment_validation_success", cli_path=cli_location)
         return True, None
 
-    async def plan(
-        self, issue_content: str, repository_path: str
-    ) -> AgentResult:
+    async def plan(self, issue_content: str, repository_path: str) -> AgentResult:
         """Generate an implementation plan for an issue using claude.
 
         Args:
@@ -169,7 +167,7 @@ class ClaudeCodeAgent(BaseAgent):
 
             # Read the plan from the generated file
             try:
-                with open(plan_file_path, 'r', encoding='utf-8') as f:
+                with open(plan_file_path, "r", encoding="utf-8") as f:
                     plan_content = f.read()
                 logger.debug(
                     "plan_file_read",
@@ -492,15 +490,17 @@ Please provide the commit message.
 
         # Build command with --print and --output-format=stream-json for streaming
         # Pass prompt as argument for better compatibility
-        cmd = [
-            self.cli_executable
-        ] + self.cli_args + [
-            "--debug",
-            "--print",
-            "--output-format=stream-json",
-            "--verbose",
-            prompt,
-        ]
+        cmd = (
+            [self.cli_executable]
+            + self.cli_args
+            + [
+                "--debug",
+                "--print",
+                "--output-format=stream-json",
+                "--verbose",
+                prompt,
+            ]
+        )
 
         # Add --permission-mode flag if provided
         if permission_mode:
@@ -521,7 +521,9 @@ Please provide the commit message.
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             cwd=cwd,
-            limit=10 * 2**20,  # 10MB buffer limit to prevent "Separator is not found, and chunk exceed the limit" errors
+            limit=10
+            * 2
+            ** 20,  # 10MB buffer limit to prevent "Separator is not found, and chunk exceed the limit" errors
         )
         logger.debug("claude_code_streaming_process_started", pid=process.pid)
 
@@ -549,7 +551,9 @@ Please provide the commit message.
                 try:
                     # Parse JSON line from stream-json format
                     data = json.loads(content)
-                    logger.debug("json_line_parsed", line_number=line_count, data_keys=list(data.keys()))
+                    logger.debug(
+                        "json_line_parsed", line_number=line_count, data_keys=list(data.keys())
+                    )
 
                     # Extract text content from the message.content array
                     # Structure: {'type': 'assistant', 'message': {'content': [{'type': 'text', 'text': '...'}]}, ...}
@@ -602,7 +606,9 @@ Please provide the commit message.
                             metadata["session_id"] = session_id
 
                         event_count += 1
-                        event_counts_by_type[event_type.value] = event_counts_by_type.get(event_type.value, 0) + 1
+                        event_counts_by_type[event_type.value] = (
+                            event_counts_by_type.get(event_type.value, 0) + 1
+                        )
 
                         logger.info(
                             "claude_code_streaming_event",
@@ -642,7 +648,9 @@ Please provide the commit message.
                             result_parts.append(content)
 
                         event_count += 1
-                        event_counts_by_type[event_type.value] = event_counts_by_type.get(event_type.value, 0) + 1
+                        event_counts_by_type[event_type.value] = (
+                            event_counts_by_type.get(event_type.value, 0) + 1
+                        )
 
                         logger.info(
                             "claude_code_streaming_event",
@@ -687,9 +695,13 @@ Please provide the commit message.
             )
             if stderr_output:
                 event_count += 1
-                event_counts_by_type[AgentEventType.ERROR.value] = event_counts_by_type.get(AgentEventType.ERROR.value, 0) + 1
+                event_counts_by_type[AgentEventType.ERROR.value] = (
+                    event_counts_by_type.get(AgentEventType.ERROR.value, 0) + 1
+                )
 
-                error_content = f"Process failed with exit code {process.returncode}: {stderr_output}"
+                error_content = (
+                    f"Process failed with exit code {process.returncode}: {stderr_output}"
+                )
                 logger.info(
                     "claude_code_streaming_event",
                     event_number=event_count,
@@ -707,7 +719,9 @@ Please provide the commit message.
             if result_parts:
                 result_content = "\n".join(result_parts)
                 event_count += 1
-                event_counts_by_type[AgentEventType.RESULT.value] = event_counts_by_type.get(AgentEventType.RESULT.value, 0) + 1
+                event_counts_by_type[AgentEventType.RESULT.value] = (
+                    event_counts_by_type.get(AgentEventType.RESULT.value, 0) + 1
+                )
 
                 logger.info(
                     "claude_code_streaming_event",

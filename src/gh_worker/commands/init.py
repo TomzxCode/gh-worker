@@ -170,7 +170,9 @@ def init_command(config_path: Path | None = None) -> None:
     print("-" * 50)
     registry = get_registry()
     available_agents = registry.list_agents()
-    default_agent = config.agent.default if config.agent.default in available_agents else available_agents[0]
+    default_agent = (
+        config.agent.default if config.agent.default in available_agents else available_agents[0]
+    )
     agent_name = _prompt_choice("Default agent", available_agents, default=default_agent)
     config.agent.default = agent_name
 

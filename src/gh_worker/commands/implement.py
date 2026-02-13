@@ -72,16 +72,19 @@ async def implement_issue(
 
     _, metadata = plan_result
 
-    # Update status to in_progress
-    metadata.status = PlanStatus.IN_PROGRESS
-    plan_store.update_metadata(metadata)
-
     # Load issue content
     issue_content = task.description_file.read_text()
 
     # Get agent
     registry = get_registry()
     agent = registry.get(agent_name, agent_config)
+
+    # Update status and record agent/model in metadata
+    metadata.status = PlanStatus.IN_PROGRESS
+    metadata.agent = agent_name
+    model_val = agent_config.get("model") or getattr(agent, "model", None)
+    metadata.model = model_val if isinstance(model_val, str) else None
+    plan_store.update_metadata(metadata)
 
     # Validate agent environment
     is_valid, error_msg = await agent.validate_environment()
@@ -578,7 +581,9 @@ async def implement_issue(
                     )
                     # Don't fail the whole implementation if PR creation fails
                     if not metadata.error_message:
-                        metadata.error_message = f"Implementation completed but PR creation failed: {pr_error}"
+                        metadata.error_message = (
+                            f"Implementation completed but PR creation failed: {pr_error}"
+                        )
             else:
                 logger.info(
                     "pr_creation_skipped_branch_not_pushed",
@@ -643,6 +648,8 @@ def find_issues_needing_implementation(
     plan_store: PlanStore,
     issue_numbers: list[int] | None = None,
     force: bool = False,
+    assigned_to_me: bool = False,
+    current_user: str | None = None,
 ) -> list[ImplementTask]:
     """Find issues that need implementation.
 
@@ -652,6 +659,8 @@ def find_issues_needing_implementation(
         plan_store: PlanStore instance
         issue_numbers: Optional list of specific issue numbers to check
         force: If True, implement even if already completed
+        assigned_to_me: If True, only include issues assigned to current_user
+        current_user: Current user login (required when assigned_to_me is True)
 
     Returns:
         List of ImplementTask objects for issues needing implementation
@@ -664,6 +673,17 @@ def find_issues_needing_implementation(
         issues_to_check = issue_store.list_issues(repository)
 
     for issue_number in issues_to_check:
+        # Filter by assignee when assigned_to_me is True
+        if assigned_to_me and current_user:
+            assignees = issue_store.get_issue_assignees(repository, issue_number)
+            if current_user not in assignees:
+                logger.debug(
+                    "issue_not_assigned_to_me",
+                    repository=repository.full_name,
+                    issue_number=issue_number,
+                )
+                continue
+
         # Check if plan exists
         plan_result = plan_store.get_latest_plan(repository, issue_number)
         if not plan_result:
@@ -728,6 +748,7 @@ async def implement_command_async(
     all_repos: bool = False,
     parallelism: int | None = None,
     force: bool = False,
+    assigned_to_me: bool = False,
     use_worktree: bool | None = None,
     push_branch: bool | None = None,
     create_pr: bool | None = None,
@@ -743,6 +764,7 @@ async def implement_command_async(
         all_repos: Implement plans for all repositories
         parallelism: Number of parallel executions
         force: Implement even if already completed
+        assigned_to_me: Only implement issues assigned to the current user
         use_worktree: Override worktree usage (uses config default if None)
         push_branch: Override push branch setting (uses config default if None)
         create_pr: Override create PR setting (uses config default if None)
@@ -757,6 +779,19 @@ async def implement_command_async(
         logger.error("issues_path_not_configured")
         print("Error: issues-path not configured. Run: gh-worker config issues-path <path>")
         return
+
+    current_user = None
+    if assigned_to_me:
+        gh_client = GHClient(app_config.repository_path)
+        if not gh_client.check_auth():
+            logger.error("gh_not_authenticated")
+            print("Error: gh CLI not authenticated. Run: gh auth login")
+            return
+        current_user = gh_client.get_current_user()
+        if not current_user:
+            logger.error("could_not_get_current_user")
+            print("Error: Could not determine current user. Run: gh auth login")
+            return
 
     issue_store = IssueStore(app_config.issues_path)
     plan_store = PlanStore(app_config.issues_path)
@@ -782,7 +817,13 @@ async def implement_command_async(
     all_tasks = []
     for repository in repositories:
         tasks = find_issues_needing_implementation(
-            repository, issue_store, plan_store, issue_numbers, force
+            repository,
+            issue_store,
+            plan_store,
+            issue_numbers,
+            force,
+            assigned_to_me,
+            current_user,
         )
         all_tasks.extend(tasks)
 
@@ -802,22 +843,17 @@ async def implement_command_async(
     agent_name = agent if agent is not None else app_config.agent.default
     agent_config = {
         "claude_code_path": app_config.agent.claude_code_path,
+        "opencode_path": app_config.agent.opencode_path,
     }
 
     # Determine settings (CLI override > config > default)
     use_worktree_flag = (
         use_worktree if use_worktree is not None else app_config.implement.use_worktree
     )
-    push_branch_flag = (
-        push_branch if push_branch is not None else app_config.implement.push_branch
-    )
-    create_pr_flag = (
-        create_pr if create_pr is not None else app_config.implement.create_pr
-    )
+    push_branch_flag = push_branch if push_branch is not None else app_config.implement.push_branch
+    create_pr_flag = create_pr if create_pr is not None else app_config.implement.create_pr
     delete_worktree_flag = (
-        delete_worktree
-        if delete_worktree is not None
-        else app_config.implement.delete_worktree
+        delete_worktree if delete_worktree is not None else app_config.implement.delete_worktree
     )
 
     # Create task function
@@ -860,6 +896,7 @@ def implement_command(
     all_repos: bool = False,
     parallelism: int | None = None,
     force: bool = False,
+    assigned_to_me: bool = False,
     use_worktree: bool | None = None,
     push_branch: bool | None = None,
     create_pr: bool | None = None,
@@ -875,6 +912,7 @@ def implement_command(
         all_repos: Implement plans for all repositories
         parallelism: Number of parallel executions
         force: Implement even if already completed
+        assigned_to_me: Only implement issues assigned to the current user
         use_worktree: Override worktree usage (uses config default if None)
         push_branch: Override push branch setting (uses config default if None)
         create_pr: Override create PR setting (uses config default if None)
@@ -889,6 +927,7 @@ def implement_command(
             all_repos=all_repos,
             parallelism=parallelism,
             force=force,
+            assigned_to_me=assigned_to_me,
             use_worktree=use_worktree,
             push_branch=push_branch,
             create_pr=create_pr,

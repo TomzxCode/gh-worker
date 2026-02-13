@@ -31,6 +31,8 @@ class PlanMetadata:
     pr_url: str | None = None
     error_message: str | None = None
     completed_at: datetime | None = None
+    agent: str | None = None
+    model: str | None = None
     plan_file: Path | None = field(default=None, repr=False)
 
     def to_dict(self) -> dict[str, Any]:
@@ -49,6 +51,8 @@ class PlanMetadata:
             "pr_url": self.pr_url,
             "error_message": self.error_message,
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+            "agent": self.agent,
+            "model": self.model,
         }
 
     @classmethod
@@ -73,6 +77,8 @@ class PlanMetadata:
             completed_at=(
                 datetime.fromisoformat(data["completed_at"]) if data.get("completed_at") else None
             ),
+            agent=data.get("agent"),
+            model=data.get("model"),
         )
 
     def save(self, path: Path) -> None:

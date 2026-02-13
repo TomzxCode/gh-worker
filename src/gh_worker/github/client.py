@@ -66,6 +66,7 @@ class GHClient:
         state: str = "open",
         since: str | None = None,
         search: str | None = None,
+        assigned_to_me: bool = False,
     ) -> list[dict[str, Any]]:
         """List issues from a repository.
 
@@ -74,6 +75,7 @@ class GHClient:
             state: Issue state (open, closed, all)
             since: Only return issues updated after this date
             search: Search query
+            assigned_to_me: Only return issues assigned to the current user
 
         Returns:
             List of issue data dictionaries
@@ -90,6 +92,9 @@ class GHClient:
             "--limit",
             "1000",
         ]
+
+        if assigned_to_me:
+            args.extend(["--assignee", "@me"])
 
         if search:
             args.extend(["--search", search])
@@ -223,6 +228,18 @@ class GHClient:
         except subprocess.CalledProcessError:
             return False
 
+    def get_current_user(self) -> str | None:
+        """Get the current authenticated user's login.
+
+        Returns:
+            Username/login of current user, or None if not authenticated
+        """
+        try:
+            output = self._run_command(["api", "user", "--jq", ".login"])
+            return output.strip() or None
+        except (subprocess.CalledProcessError, RuntimeError):
+            return None
+
     def create_worktree(
         self, repository: Repository, branch_name: str, worktree_path: Path
     ) -> Path:
@@ -260,9 +277,7 @@ class GHClient:
             for default_branch in ["main", "master"]:
                 try:
                     # Check if branch exists locally
-                    self._run_git_command(
-                        ["rev-parse", "--verify", default_branch], cwd=repo_path
-                    )
+                    self._run_git_command(["rev-parse", "--verify", default_branch], cwd=repo_path)
                     base_branch = default_branch
                     break
                 except RuntimeError:
@@ -281,9 +296,7 @@ class GHClient:
 
         # Check if branch already exists
         try:
-            self._run_git_command(
-                ["rev-parse", "--verify", branch_name], cwd=repo_path
-            )
+            self._run_git_command(["rev-parse", "--verify", branch_name], cwd=repo_path)
             branch_exists = True
         except RuntimeError:
             branch_exists = False
@@ -400,7 +413,10 @@ class GHClient:
             if e.stderr:
                 error_msg += f"\n{e.stderr}"
             logger.error(
-                "git_command_failed", command=" ".join(cmd), stderr=e.stderr, returncode=e.returncode
+                "git_command_failed",
+                command=" ".join(cmd),
+                stderr=e.stderr,
+                returncode=e.returncode,
             )
             raise RuntimeError(error_msg) from e
         except subprocess.TimeoutExpired as e:
@@ -470,9 +486,7 @@ class GHClient:
             base_branch = None
             for default_branch in ["main", "master"]:
                 try:
-                    self._run_git_command(
-                        ["rev-parse", "--verify", default_branch], cwd=repo_path
-                    )
+                    self._run_git_command(["rev-parse", "--verify", default_branch], cwd=repo_path)
                     base_branch = default_branch
                     break
                 except RuntimeError:
@@ -488,9 +502,7 @@ class GHClient:
             if not base_branch:
                 logger.warning("could_not_determine_base_branch", repository=repository.full_name)
                 # If we can't determine base branch, check if branch has any commits
-                output = self._run_git_command(
-                    ["rev-list", "--count", branch_name], cwd=repo_path
-                )
+                output = self._run_git_command(["rev-list", "--count", branch_name], cwd=repo_path)
                 return int(output.strip()) > 0
 
             # Check if branch has commits ahead of base branch

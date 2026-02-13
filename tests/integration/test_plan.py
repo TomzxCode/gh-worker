@@ -150,6 +150,41 @@ class TestFindIssuesNeedingPlans:
         assert len(tasks) == 2
         assert [task.issue_number for task in tasks] == [1, 3]
 
+    def test_filter_by_assigned_to_me(self, tmp_issues_path):
+        """Test filtering by assigned_to_me only includes assigned issues."""
+        repository = Repository(owner="owner", name="repo")
+        issue_store = IssueStore(tmp_issues_path)
+        plan_store = PlanStore(tmp_issues_path)
+
+        # Create issues with different assignees (using markdown format from Issue.to_markdown)
+        for issue_number, assignees in [(1, "alice"), (2, "bob"), (3, "alice, bob")]:
+            issue_dir = issue_store.get_issue_dir(repository, issue_number)
+            issue_dir.mkdir(parents=True, exist_ok=True)
+            content = f"# Issue {issue_number}\n\n**Assignees**: {assignees}\n\n---\n\nBody"
+            (issue_dir / "description.md").write_text(content)
+
+        # Only alice's issues (1 and 3)
+        tasks = find_issues_needing_plans(
+            repository,
+            issue_store,
+            plan_store,
+            assigned_to_me=True,
+            current_user="alice",
+        )
+        assert len(tasks) == 2
+        assert [task.issue_number for task in tasks] == [1, 3]
+
+        # Only bob's issues (2 and 3)
+        tasks = find_issues_needing_plans(
+            repository,
+            issue_store,
+            plan_store,
+            assigned_to_me=True,
+            current_user="bob",
+        )
+        assert len(tasks) == 2
+        assert [task.issue_number for task in tasks] == [2, 3]
+
 
 class TestGeneratePlanForIssue:
     """Tests for generate_plan_for_issue function."""

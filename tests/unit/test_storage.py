@@ -96,6 +96,37 @@ class TestIssueStore:
         updated_at = issue_store.get_updated_at(sample_repo, 999)
         assert updated_at is None
 
+    def test_get_issue_assignees(self, issue_store, sample_repo):
+        """Test getting assignees from issue description."""
+        issue_with_assignees = Issue(
+            number=42,
+            title="Test",
+            body="Body",
+            state="open",
+            created_at=datetime(2024, 1, 1, 12, 0, 0),
+            updated_at=datetime(2024, 1, 2, 12, 0, 0),
+            author="alice",
+            labels=[],
+            assignees=["alice", "bob"],
+            url="https://github.com/owner/repo/issues/42",
+            repository="owner/repo",
+        )
+        issue_store.save_issue(issue_with_assignees)
+
+        assignees = issue_store.get_issue_assignees(sample_repo, 42)
+        assert assignees == ["alice", "bob"]
+
+    def test_get_issue_assignees_empty(self, issue_store, sample_issue, sample_repo):
+        """Test getting assignees when issue has none."""
+        issue_store.save_issue(sample_issue)
+        assignees = issue_store.get_issue_assignees(sample_repo, 123)
+        assert assignees == []
+
+    def test_get_issue_assignees_not_found(self, issue_store, sample_repo):
+        """Test getting assignees for non-existent issue."""
+        assignees = issue_store.get_issue_assignees(sample_repo, 999)
+        assert assignees == []
+
     def test_set_repo_updated_at(self, issue_store, sample_repo):
         """Test setting repository updated timestamp."""
         timestamp = datetime(2024, 1, 1, 12, 0, 0)
