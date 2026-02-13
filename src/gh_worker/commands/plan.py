@@ -1,6 +1,7 @@
 """Plan command implementation."""
 
 import asyncio
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -8,13 +9,32 @@ import structlog
 
 from gh_worker.agents.registry import get_registry
 from gh_worker.config.manager import ConfigManager
-from gh_worker.github.client import GHClient
 from gh_worker.executor.parallel import ParallelExecutor
+from gh_worker.github.client import GHClient
 from gh_worker.models.repository import Repository
 from gh_worker.storage.issue_store import IssueStore
 from gh_worker.storage.plan_store import PlanStore
 
 logger = structlog.get_logger()
+
+
+def _get_repo_commit_hash(repo_path: Path) -> str | None:
+    """Get current HEAD commit hash if path is a git repository."""
+    if not repo_path.exists():
+        return None
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=repo_path,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        pass
+    return None
 
 
 @dataclass
@@ -106,6 +126,9 @@ async def generate_plan_for_issue(
     model_val = agent_config.get("model") or getattr(agent, "model", None)
     model = model_val if isinstance(model_val, str) else None
 
+    # Get repository commit hash for plan metadata
+    commit_hash = _get_repo_commit_hash(repo_path)
+
     # Save plan
     metadata = plan_store.create_plan(
         task.repository,
@@ -113,6 +136,7 @@ async def generate_plan_for_issue(
         result.output,
         agent=agent_name,
         model=model,
+        commit_hash=commit_hash,
     )
 
     logger.info(

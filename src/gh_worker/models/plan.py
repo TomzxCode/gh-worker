@@ -33,6 +33,7 @@ class PlanMetadata:
     completed_at: datetime | None = None
     agent: str | None = None
     model: str | None = None
+    commit_hash: str | None = None
     plan_file: Path | None = field(default=None, repr=False)
 
     def to_dict(self) -> dict[str, Any]:
@@ -53,6 +54,7 @@ class PlanMetadata:
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
             "agent": self.agent,
             "model": self.model,
+            "commit_hash": self.commit_hash,
         }
 
     @classmethod
@@ -79,6 +81,7 @@ class PlanMetadata:
             ),
             agent=data.get("agent"),
             model=data.get("model"),
+            commit_hash=data.get("commit_hash"),
         )
 
     def save(self, path: Path) -> None:

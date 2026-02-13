@@ -145,9 +145,7 @@ def sync(
     search: Annotated[str | None, Parameter(help="GitHub search query")] = None,
     force: Annotated[
         bool,
-        Parameter(
-            help="Refresh all issues (re-fetch and update description.md)"
-        ),
+        Parameter(help="Refresh all issues (re-fetch and update description.md)"),
     ] = False,
     config_path: Annotated[
         Path | None,

@@ -183,3 +183,19 @@ class TestPlanMetadata:
         assert metadata.session_id is None
         assert metadata.branch_name is None
         assert metadata.pr_url is None
+        assert metadata.commit_hash is None
+
+    def test_commit_hash_roundtrip(self):
+        """Test commit_hash serialization and deserialization."""
+        data = {
+            "issue_number": 123,
+            "repository": "owner/repo",
+            "created_at": "2024-01-01T12:00:00",
+            "commit_hash": "abc123def456",
+        }
+
+        metadata = PlanMetadata.from_dict(data)
+        assert metadata.commit_hash == "abc123def456"
+
+        serialized = metadata.to_dict()
+        assert serialized["commit_hash"] == "abc123def456"

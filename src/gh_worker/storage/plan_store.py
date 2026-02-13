@@ -38,6 +38,7 @@ class PlanStore:
         *,
         agent: str | None = None,
         model: str | None = None,
+        commit_hash: str | None = None,
     ) -> PlanMetadata:
         """Create a new plan for an issue.
 
@@ -47,6 +48,7 @@ class PlanStore:
             content: Plan content in markdown
             agent: Name of agent used to generate the plan
             model: Model used by the agent
+            commit_hash: Repository commit hash when plan was generated
 
         Returns:
             PlanMetadata object
@@ -69,6 +71,7 @@ class PlanStore:
             plan_file=plan_file,
             agent=agent,
             model=model,
+            commit_hash=commit_hash,
         )
 
         # Save metadata
