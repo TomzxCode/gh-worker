@@ -5,7 +5,7 @@ import json
 import re
 import shutil
 import tempfile
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from typing import Any
 
 import structlog
@@ -85,7 +85,13 @@ class CursorAgent(BaseAgent):
         logger.debug("Environment validation success", cli_path=cli_location)
         return True, None
 
-    async def plan(self, issue_content: str, repository_path: str) -> AgentResult:
+    async def plan(
+        self,
+        issue_content: str,
+        repository_path: str,
+        *,
+        on_session_id: Callable[[str], None] | None = None,
+    ) -> AgentResult:
         """Generate an implementation plan for an issue using cursor-agent.
 
         Args:
@@ -145,6 +151,8 @@ class CursorAgent(BaseAgent):
                 # Extract session_id from event metadata if present
                 if event.metadata and "session_id" in event.metadata:
                     session_id = event.metadata["session_id"]
+                    if on_session_id:
+                        on_session_id(session_id)
                     logger.debug(
                         "Session ID found in event",
                         session_id=session_id,
@@ -153,6 +161,8 @@ class CursorAgent(BaseAgent):
             # Extract session ID from output if not found in events
             if not session_id and agent_output:
                 session_id = self._extract_session_id(agent_output)
+                if session_id and on_session_id:
+                    on_session_id(session_id)
                 logger.debug(
                     "Session ID extracted from output",
                     session_id=session_id,

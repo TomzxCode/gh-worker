@@ -76,6 +76,8 @@ async def generate_plan_for_issue(
     )
 
     plan_file, metadata = plan_store.start_plan_generation(task.repository, task.issue_number)
+    metadata.agent = agent_name
+    plan_store.update_metadata(metadata)
 
     try:
         # Load issue content
@@ -172,10 +174,16 @@ async def generate_plan_for_issue(
             raise FileNotFoundError(f"Repository not found at {repo_path}")
 
         try:
+            # Callback to persist session_id as soon as we get it (enables monitor during plan)
+            def on_session_id(sid: str) -> None:
+                metadata.session_id = sid
+                plan_store.update_metadata(metadata)
+
             # Generate plan
             result = await agent.plan(
                 issue_content=issue_content,
                 repository_path=str(repo_path) if agent_name != "mock" else "",
+                on_session_id=on_session_id,
             )
 
             if not result.success:
@@ -202,6 +210,7 @@ async def generate_plan_for_issue(
                 agent=agent_name,
                 model=model,
                 commit_hash=commit_hash,
+                session_id=result.session_id,
             )
 
             logger.info(
@@ -321,6 +330,7 @@ async def plan_command_async(
     assignee: str | None = None,
     config_path: Path | None = None,
     agent: str | None = None,
+    model: str | None = None,
 ) -> None:
     """Execute plan command asynchronously.
 
@@ -334,6 +344,7 @@ async def plan_command_async(
         config_path: Path to config file
         agent: Agent to use (e.g., 'mock', 'claude-code', 'opencode', 'gemini', 'codex')
             Uses config default if None
+        model: Override model to use (agent-specific). Uses config default if None
     """
     config = ConfigManager(config_path)
     app_config = config.load()
@@ -400,6 +411,7 @@ async def plan_command_async(
     agent_config = {
         "claude_code_path": app_config.agent.claude_code_path,
         "opencode_path": app_config.agent.opencode_path,
+        "model": model if model is not None else app_config.agent.model,
     }
 
     logger.info(
@@ -451,6 +463,7 @@ def plan_command(
     assignee: str | None = None,
     config_path: Path | None = None,
     agent: str | None = None,
+    model: str | None = None,
 ) -> None:
     """Execute plan command.
 
@@ -464,6 +477,7 @@ def plan_command(
         config_path: Path to config file
         agent: Agent to use (e.g., 'mock', 'claude-code', 'opencode', 'gemini', 'codex')
             Uses config default if None
+        model: Override model to use (agent-specific). Uses config default if None
     """
     asyncio.run(
         plan_command_async(
@@ -475,5 +489,6 @@ def plan_command(
             assignee=assignee,
             config_path=config_path,
             agent=agent,
+            model=model,
         )
     )

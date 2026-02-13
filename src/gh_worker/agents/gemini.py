@@ -1,6 +1,6 @@
 """Gemini agent implementation (placeholder)."""
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from typing import Any
 
 import structlog
@@ -51,7 +51,13 @@ class GeminiAgent(BaseAgent):
             )
         return True, None
 
-    async def plan(self, issue_content: str, repository_path: str) -> AgentResult:
+    async def plan(
+        self,
+        issue_content: str,
+        repository_path: str,
+        *,
+        on_session_id: Callable[[str], None] | None = None,
+    ) -> AgentResult:
         """Generate an implementation plan for an issue using Gemini.
 
         Args:

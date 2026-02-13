@@ -37,6 +37,7 @@ class AgentConfig(BaseModel):
     """Configuration for LLM agents."""
 
     default: str = Field(default="claude-code", description="Default agent to use")
+    model: str | None = Field(default=None, description="Default model to use (agent-specific)")
     claude_code_path: str | None = Field(default=None, description="Path to claude-code binary")
     opencode_path: str | None = Field(default=None, description="Path to opencode binary")
 

@@ -65,7 +65,7 @@ async def monitor_command_async(
 
     if not metadata.session_id:
         logger.error(
-            "No session ID found. Implementation may not have started yet.",
+            "No session ID found. Plan or implementation may not have started yet.",
             repository=repository.full_name,
             issue_number=issue_number,
         )
@@ -78,9 +78,14 @@ async def monitor_command_async(
         session_id=metadata.session_id,
     )
 
-    # Get agent (use override if provided, otherwise use config default)
+    # Get agent: override > agent that created the session (from metadata) > config default
+    # Session IDs are agent-specific, so we must use the same agent that ran plan/implement
     registry = get_registry()
-    agent_name = agent if agent is not None else app_config.agent.default
+    agent_name = (
+        agent
+        if agent is not None
+        else (metadata.agent if metadata.agent else app_config.agent.default)
+    )
     agent_config = {
         "claude_code_path": app_config.agent.claude_code_path,
         "opencode_path": app_config.agent.opencode_path,

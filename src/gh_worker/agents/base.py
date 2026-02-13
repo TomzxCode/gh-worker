@@ -1,7 +1,7 @@
 """Base agent interface for LLM agents."""
 
 from abc import ABC, abstractmethod
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any
@@ -53,12 +53,20 @@ class BaseAgent(ABC):
         self.config = config or {}
 
     @abstractmethod
-    async def plan(self, issue_content: str, repository_path: str) -> AgentResult:
+    async def plan(
+        self,
+        issue_content: str,
+        repository_path: str,
+        *,
+        on_session_id: Callable[[str], None] | None = None,
+    ) -> AgentResult:
         """Generate an implementation plan for an issue.
 
         Args:
             issue_content: The full issue description
             repository_path: Path to the cloned repository
+            on_session_id: Optional callback invoked when session_id is available
+                (enables monitoring while plan generation is in progress)
 
         Returns:
             AgentResult with the generated plan

@@ -264,6 +264,12 @@ def plan(
             + ". Uses config default if None.",
         ),
     ] = None,
+    model: Annotated[
+        str | None,
+        Parameter(
+            help="Override model to use (agent-specific). Uses config default if None.",
+        ),
+    ] = None,
 ) -> None:
     """Generate implementation plans for issues."""
     from gh_worker.commands.plan import plan_command
@@ -277,6 +283,7 @@ def plan(
         assignee=assignee,
         config_path=config_path,
         agent=agent,
+        model=model,
     )
 
 
@@ -382,6 +389,12 @@ def implement(
             + ". Uses config default if None."
         ),
     ] = None,
+    model: Annotated[
+        str | None,
+        Parameter(
+            help="Override model to use (agent-specific). Uses config default if None.",
+        ),
+    ] = None,
 ) -> None:
     """Implement plans and create PRs."""
     from gh_worker.commands.implement import implement_command
@@ -399,6 +412,7 @@ def implement(
         delete_worktree=delete_worktree,
         config_path=config_path,
         agent=agent,
+        model=model,
     )
 
 

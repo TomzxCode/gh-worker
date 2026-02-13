@@ -5,7 +5,7 @@ import json
 import re
 import shutil
 import tempfile
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from pathlib import Path
 from typing import Any
 
@@ -100,7 +100,13 @@ class ClaudeCodeAgent(BaseAgent):
         logger.debug("Environment validation success", cli_path=cli_location)
         return True, None
 
-    async def plan(self, issue_content: str, repository_path: str) -> AgentResult:
+    async def plan(
+        self,
+        issue_content: str,
+        repository_path: str,
+        *,
+        on_session_id: Callable[[str], None] | None = None,
+    ) -> AgentResult:
         """Generate an implementation plan for an issue using claude.
 
         Args:
@@ -153,6 +159,8 @@ class ClaudeCodeAgent(BaseAgent):
                 # Extract session_id from event metadata if present
                 if event.metadata and "session_id" in event.metadata:
                     session_id = event.metadata["session_id"]
+                    if on_session_id:
+                        on_session_id(session_id)
                     logger.debug(
                         "Session ID found in event",
                         session_id=session_id,
@@ -161,6 +169,8 @@ class ClaudeCodeAgent(BaseAgent):
             # Extract session ID from output if not found in events
             if not session_id and agent_output:
                 session_id = self._extract_session_id(agent_output)
+                if session_id and on_session_id:
+                    on_session_id(session_id)
                 logger.debug(
                     "Session ID extracted from output",
                     session_id=session_id,
@@ -354,6 +364,8 @@ class ClaudeCodeAgent(BaseAgent):
     async def monitor(self, session_id: str) -> AsyncIterator[AgentEvent]:
         """Monitor an ongoing claude session.
 
+        Uses --resume to connect to the session and stream its output.
+
         Args:
             session_id: The session ID to monitor
 
@@ -361,15 +373,21 @@ class ClaudeCodeAgent(BaseAgent):
             AgentEvent objects from the session
         """
         logger.info("Monitoring session", session_id=session_id)
-        logger.debug("Monitor not implemented", session_id=session_id)
 
-        # Note: claude CLI may not support session monitoring directly
-        # This would need to be implemented based on the actual CLI capabilities
-        yield AgentEvent(
-            type=AgentEventType.STATUS,
-            content=f"Monitoring session {session_id} (not yet implemented)",
-            metadata={"session_id": session_id},
-        )
+        try:
+            async for event in self._run_claude_code_streaming(
+                "",  # Empty prompt when resuming - just stream existing output
+                ".",  # cwd - sessions can be accessed from any directory
+                resume_session_id=session_id,
+            ):
+                yield event
+        except Exception as e:
+            logger.error("Monitoring failed", error=str(e), session_id=session_id)
+            yield AgentEvent(
+                type=AgentEventType.ERROR,
+                content=f"Failed to monitor session: {e}",
+                metadata={"session_id": session_id, "error": str(e)},
+            )
 
     def _build_plan_prompt(self, issue_content: str, plan_file_path: str) -> str:
         """Build the prompt for plan generation.
@@ -479,21 +497,22 @@ Please provide the commit message.
         cwd: str,
         permission_mode: str | None = None,
         allowed_tools: list[str] | None = None,
+        resume_session_id: str | None = None,
     ) -> AsyncIterator[AgentEvent]:
         """Run claude CLI and stream output.
 
         Args:
-            prompt: The prompt to send to claude
+            prompt: The prompt to send to claude (empty when resuming)
             cwd: Working directory for the command
             permission_mode: Optional permission mode (e.g., "plan") for --permission-mode flag.
             allowed_tools: Optional list of allowed tools to pass as --allowedTools flags.
+            resume_session_id: Session ID to resume (if provided, connects to existing session)
 
         Yields:
             AgentEvent objects with output chunks
         """
 
         # Build command with --print and --output-format=stream-json for streaming
-        # Pass prompt as argument for better compatibility
         cmd = (
             [self.cli_executable]
             + self.cli_args
@@ -502,16 +521,22 @@ Please provide the commit message.
                 "--print",
                 "--output-format=stream-json",
                 "--verbose",
-                prompt,
             ]
         )
 
-        # Add --permission-mode flag if provided
-        if permission_mode:
+        # Add --resume to connect to existing session
+        if resume_session_id:
+            cmd.extend(["--resume", resume_session_id])
+
+        # Add prompt (empty when resuming to just stream existing output)
+        cmd.append(prompt)
+
+        # Add --permission-mode flag if provided (not when resuming)
+        if permission_mode and not resume_session_id:
             cmd.extend(["--permission-mode", permission_mode])
 
-        # Add --allowedTools flags for each allowed tool
-        if allowed_tools:
+        # Add --allowedTools flags for each allowed tool (not when resuming)
+        if allowed_tools and not resume_session_id:
             cmd.extend(["--allowedTools", " ".join(allowed_tools)])
 
         logger.debug(
@@ -519,6 +544,7 @@ Please provide the commit message.
             command=cmd,
             cwd=cwd,
             prompt_length=len(prompt),
+            resume_session_id=resume_session_id,
         )
         process = await asyncio.create_subprocess_exec(
             *cmd,

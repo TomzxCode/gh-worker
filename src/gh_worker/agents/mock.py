@@ -1,6 +1,6 @@
 """Mock agent implementation for testing and dry-run mode."""
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 
 from gh_worker.agents.base import AgentEvent, AgentEventType, AgentResult, BaseAgent
 
@@ -18,7 +18,13 @@ class MockAgent(BaseAgent):
         """Return whether this agent requires an external CLI tool."""
         return False
 
-    async def plan(self, issue_content: str, repository_path: str) -> AgentResult:
+    async def plan(
+        self,
+        issue_content: str,
+        repository_path: str,
+        *,
+        on_session_id: Callable[[str], None] | None = None,
+    ) -> AgentResult:
         """Generate an implementation plan for an issue (mock implementation).
 
         Args:

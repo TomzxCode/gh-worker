@@ -120,6 +120,7 @@ class PlanStore:
         agent: str | None = None,
         model: str | None = None,
         commit_hash: str | None = None,
+        session_id: str | None = None,
     ) -> PlanMetadata:
         """Complete plan generation: write content and update metadata.
 
@@ -130,6 +131,7 @@ class PlanStore:
             agent: Agent name
             model: Model name
             commit_hash: Repository commit hash
+            session_id: Session ID (if not already set via callback during generation)
 
         Returns:
             Updated metadata
@@ -138,6 +140,8 @@ class PlanStore:
         metadata.agent = agent
         metadata.model = model
         metadata.commit_hash = commit_hash
+        if session_id is not None:
+            metadata.session_id = session_id
         metadata.save(plan_file.with_suffix(".yaml"))
         return metadata
 

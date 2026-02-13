@@ -788,6 +788,7 @@ async def implement_command_async(
     delete_worktree: bool | None = None,
     config_path: Path | None = None,
     agent: str | None = None,
+    model: str | None = None,
 ) -> None:
     """Execute implement command asynchronously.
 
@@ -804,6 +805,7 @@ async def implement_command_async(
         delete_worktree: Override delete worktree setting (uses config default if None)
         config_path: Path to config file
         agent: Override agent to use (uses config default if None)
+        model: Override model to use (agent-specific). Uses config default if None
     """
     config = ConfigManager(config_path)
     app_config = config.load()
@@ -877,6 +879,7 @@ async def implement_command_async(
     agent_config = {
         "claude_code_path": app_config.agent.claude_code_path,
         "opencode_path": app_config.agent.opencode_path,
+        "model": model if model is not None else app_config.agent.model,
     }
 
     # Determine settings (CLI override > config > default)
@@ -938,6 +941,7 @@ def implement_command(
     delete_worktree: bool | None = None,
     config_path: Path | None = None,
     agent: str | None = None,
+    model: str | None = None,
 ) -> None:
     """Execute implement command.
 
@@ -954,6 +958,7 @@ def implement_command(
         delete_worktree: Override delete worktree setting (uses config default if None)
         config_path: Path to config file
         agent: Override agent to use (uses config default if None)
+        model: Override model to use (agent-specific). Uses config default if None
     """
     asyncio.run(
         implement_command_async(
@@ -969,5 +974,6 @@ def implement_command(
             delete_worktree=delete_worktree,
             config_path=config_path,
             agent=agent,
+            model=model,
         )
     )
