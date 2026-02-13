@@ -149,9 +149,10 @@ def sync(
     ] = None,
     *,
     all_repos: Annotated[bool, Parameter(help="Sync all repositories")] = False,
-    assigned_to_me: Annotated[
-        bool, Parameter(help="Only sync issues assigned to the current user")
-    ] = False,
+    assignee: Annotated[
+        str | None,
+        Parameter(help="Filter by assignee (substring match). Use @me for current user"),
+    ] = None,
     since: Annotated[
         str | None, Parameter(help="Only sync issues updated since this timestamp")
     ] = None,
@@ -174,7 +175,7 @@ def sync(
         since=since,
         issue_numbers=issue_numbers,
         search=search,
-        assigned_to_me=assigned_to_me,
+        assignee=assignee,
         force=force,
         config_path=config_path,
     )
@@ -238,9 +239,10 @@ def plan(
     all_repos: Annotated[bool, Parameter(help="Generate plans for all repositories")] = False,
     parallelism: Annotated[int | None, Parameter(help="Number of parallel executions")] = None,
     force: Annotated[bool, Parameter(help="Generate plan even if one already exists")] = False,
-    assigned_to_me: Annotated[
-        bool, Parameter(help="Only plan issues assigned to the current user")
-    ] = False,
+    assignee: Annotated[
+        str | None,
+        Parameter(help="Filter by assignee (substring match). Use @me for current user"),
+    ] = None,
     config_path: Annotated[
         Path | None,
         Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
@@ -263,7 +265,7 @@ def plan(
         all_repos=all_repos,
         parallelism=parallelism,
         force=force,
-        assigned_to_me=assigned_to_me,
+        assignee=assignee,
         config_path=config_path,
         agent=agent,
     )
@@ -279,9 +281,10 @@ def implement(
     all_repos: Annotated[bool, Parameter(help="Implement plans for all repositories")] = False,
     parallelism: Annotated[int | None, Parameter(help="Number of parallel executions")] = None,
     force: Annotated[bool, Parameter(help="Implement even if already completed")] = False,
-    assigned_to_me: Annotated[
-        bool, Parameter(help="Only implement issues assigned to the current user")
-    ] = False,
+    assignee: Annotated[
+        str | None,
+        Parameter(help="Filter by assignee (substring match). Use @me for current user"),
+    ] = None,
     use_worktree: Annotated[
         bool | None,
         Parameter(help="Use git worktree for isolated implementation (overrides config)"),
@@ -320,7 +323,7 @@ def implement(
         all_repos=all_repos,
         parallelism=parallelism,
         force=force,
-        assigned_to_me=assigned_to_me,
+        assignee=assignee,
         use_worktree=use_worktree,
         push_branch=push_branch,
         create_pr=create_pr,

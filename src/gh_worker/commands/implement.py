@@ -648,8 +648,7 @@ def find_issues_needing_implementation(
     plan_store: PlanStore,
     issue_numbers: list[int] | None = None,
     force: bool = False,
-    assigned_to_me: bool = False,
-    current_user: str | None = None,
+    assignee_filter: str | None = None,
 ) -> list[ImplementTask]:
     """Find issues that need implementation.
 
@@ -659,8 +658,7 @@ def find_issues_needing_implementation(
         plan_store: PlanStore instance
         issue_numbers: Optional list of specific issue numbers to check
         force: If True, implement even if already completed
-        assigned_to_me: If True, only include issues assigned to current_user
-        current_user: Current user login (required when assigned_to_me is True)
+        assignee_filter: If set, only include issues assigned to this user (substring match)
 
     Returns:
         List of ImplementTask objects for issues needing implementation
@@ -673,12 +671,13 @@ def find_issues_needing_implementation(
         issues_to_check = issue_store.list_issues(repository)
 
     for issue_number in issues_to_check:
-        # Filter by assignee when assigned_to_me is True
-        if assigned_to_me and current_user:
+        # Filter by assignee when assignee_filter is set
+        if assignee_filter:
             assignees = issue_store.get_issue_assignees(repository, issue_number)
-            if current_user not in assignees:
+            assignees_str = ",".join(assignees).lower()
+            if assignee_filter.lower() not in assignees_str:
                 logger.debug(
-                    "issue_not_assigned_to_me",
+                    "issue_not_assigned_to_filter",
                     repository=repository.full_name,
                     issue_number=issue_number,
                 )
@@ -748,7 +747,7 @@ async def implement_command_async(
     all_repos: bool = False,
     parallelism: int | None = None,
     force: bool = False,
-    assigned_to_me: bool = False,
+    assignee: str | None = None,
     use_worktree: bool | None = None,
     push_branch: bool | None = None,
     create_pr: bool | None = None,
@@ -764,7 +763,7 @@ async def implement_command_async(
         all_repos: Implement plans for all repositories
         parallelism: Number of parallel executions
         force: Implement even if already completed
-        assigned_to_me: Only implement issues assigned to the current user
+        assignee: Filter by assignee (substring match). Use @me for current user
         use_worktree: Override worktree usage (uses config default if None)
         push_branch: Override push branch setting (uses config default if None)
         create_pr: Override create PR setting (uses config default if None)
@@ -780,8 +779,8 @@ async def implement_command_async(
         print("Error: issues-path not configured. Run: gh-worker config issues-path <path>")
         return
 
-    current_user = None
-    if assigned_to_me:
+    assignee_filter = assignee
+    if assignee == "@me":
         gh_client = GHClient(app_config.repository_path)
         if not gh_client.check_auth():
             logger.error("gh_not_authenticated")
@@ -792,6 +791,7 @@ async def implement_command_async(
             logger.error("could_not_get_current_user")
             print("Error: Could not determine current user. Run: gh auth login")
             return
+        assignee_filter = current_user
 
     issue_store = IssueStore(app_config.issues_path)
     plan_store = PlanStore(app_config.issues_path)
@@ -822,8 +822,7 @@ async def implement_command_async(
             plan_store,
             issue_numbers,
             force,
-            assigned_to_me,
-            current_user,
+            assignee_filter,
         )
         all_tasks.extend(tasks)
 
@@ -896,7 +895,7 @@ def implement_command(
     all_repos: bool = False,
     parallelism: int | None = None,
     force: bool = False,
-    assigned_to_me: bool = False,
+    assignee: str | None = None,
     use_worktree: bool | None = None,
     push_branch: bool | None = None,
     create_pr: bool | None = None,
@@ -912,7 +911,7 @@ def implement_command(
         all_repos: Implement plans for all repositories
         parallelism: Number of parallel executions
         force: Implement even if already completed
-        assigned_to_me: Only implement issues assigned to the current user
+        assignee: Filter by assignee (substring match). Use @me for current user
         use_worktree: Override worktree usage (uses config default if None)
         push_branch: Override push branch setting (uses config default if None)
         create_pr: Override create PR setting (uses config default if None)
@@ -927,7 +926,7 @@ def implement_command(
             all_repos=all_repos,
             parallelism=parallelism,
             force=force,
-            assigned_to_me=assigned_to_me,
+            assignee=assignee,
             use_worktree=use_worktree,
             push_branch=push_branch,
             create_pr=create_pr,

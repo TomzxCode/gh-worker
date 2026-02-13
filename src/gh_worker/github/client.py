@@ -66,7 +66,7 @@ class GHClient:
         state: str = "open",
         since: str | None = None,
         search: str | None = None,
-        assigned_to_me: bool = False,
+        assignee: str | None = None,
     ) -> list[dict[str, Any]]:
         """List issues from a repository.
 
@@ -75,7 +75,7 @@ class GHClient:
             state: Issue state (open, closed, all)
             since: Only return issues updated after this date
             search: Search query
-            assigned_to_me: Only return issues assigned to the current user
+            assignee: Filter by assignee (e.g. @me or username)
 
         Returns:
             List of issue data dictionaries
@@ -93,8 +93,8 @@ class GHClient:
             "1000",
         ]
 
-        if assigned_to_me:
-            args.extend(["--assignee", "@me"])
+        if assignee:
+            args.extend(["--assignee", assignee])
 
         if search:
             args.extend(["--search", search])

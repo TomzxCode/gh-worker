@@ -150,8 +150,8 @@ class TestFindIssuesNeedingPlans:
         assert len(tasks) == 2
         assert [task.issue_number for task in tasks] == [1, 3]
 
-    def test_filter_by_assigned_to_me(self, tmp_issues_path):
-        """Test filtering by assigned_to_me only includes assigned issues."""
+    def test_filter_by_assignee(self, tmp_issues_path):
+        """Test filtering by assignee only includes assigned issues."""
         repository = Repository(owner="owner", name="repo")
         issue_store = IssueStore(tmp_issues_path)
         plan_store = PlanStore(tmp_issues_path)
@@ -168,8 +168,7 @@ class TestFindIssuesNeedingPlans:
             repository,
             issue_store,
             plan_store,
-            assigned_to_me=True,
-            current_user="alice",
+            assignee_filter="alice",
         )
         assert len(tasks) == 2
         assert [task.issue_number for task in tasks] == [1, 3]
@@ -179,8 +178,7 @@ class TestFindIssuesNeedingPlans:
             repository,
             issue_store,
             plan_store,
-            assigned_to_me=True,
-            current_user="bob",
+            assignee_filter="bob",
         )
         assert len(tasks) == 2
         assert [task.issue_number for task in tasks] == [2, 3]

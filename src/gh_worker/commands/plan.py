@@ -233,8 +233,7 @@ def find_issues_needing_plans(
     plan_store: PlanStore,
     issue_numbers: list[int] | None = None,
     force: bool = False,
-    assigned_to_me: bool = False,
-    current_user: str | None = None,
+    assignee_filter: str | None = None,
 ) -> list[PlanTask]:
     """Find issues that need plans generated.
 
@@ -244,8 +243,7 @@ def find_issues_needing_plans(
         plan_store: PlanStore instance
         issue_numbers: Optional list of specific issue numbers to check
         force: If True, generate plan even if one already exists
-        assigned_to_me: If True, only include issues assigned to current_user
-        current_user: Current user login (required when assigned_to_me is True)
+        assignee_filter: If set, only include issues assigned to this user (substring match)
 
     Returns:
         List of PlanTask objects for issues needing plans
@@ -258,12 +256,13 @@ def find_issues_needing_plans(
         issues_to_check = issue_store.list_issues(repository)
 
     for issue_number in issues_to_check:
-        # Filter by assignee when assigned_to_me is True
-        if assigned_to_me and current_user:
+        # Filter by assignee when assignee_filter is set
+        if assignee_filter:
             assignees = issue_store.get_issue_assignees(repository, issue_number)
-            if current_user not in assignees:
+            assignees_str = ",".join(assignees).lower()
+            if assignee_filter.lower() not in assignees_str:
                 logger.debug(
-                    "issue_not_assigned_to_me",
+                    "issue_not_assigned_to_filter",
                     repository=repository.full_name,
                     issue_number=issue_number,
                 )
@@ -307,7 +306,7 @@ async def plan_command_async(
     all_repos: bool = False,
     parallelism: int | None = None,
     force: bool = False,
-    assigned_to_me: bool = False,
+    assignee: str | None = None,
     config_path: Path | None = None,
     agent: str | None = None,
 ) -> None:
@@ -319,7 +318,7 @@ async def plan_command_async(
         all_repos: Generate plans for all repositories
         parallelism: Number of parallel executions
         force: Generate plan even if one already exists
-        assigned_to_me: Only plan issues assigned to the current user
+        assignee: Filter by assignee (substring match). Use @me for current user
         config_path: Path to config file
         agent: Agent to use (e.g., 'mock', 'claude-code', 'opencode', 'gemini', 'codex')
             Uses config default if None
@@ -332,8 +331,8 @@ async def plan_command_async(
         print("Error: issues-path not configured. Run: gh-worker config issues-path <path>")
         return
 
-    current_user = None
-    if assigned_to_me:
+    assignee_filter = assignee
+    if assignee == "@me":
         gh_client = GHClient(app_config.repository_path)
         if not gh_client.check_auth():
             logger.error("gh_not_authenticated")
@@ -344,6 +343,7 @@ async def plan_command_async(
             logger.error("could_not_get_current_user")
             print("Error: Could not determine current user. Run: gh auth login")
             return
+        assignee_filter = current_user
 
     issue_store = IssueStore(app_config.issues_path)
     plan_store = PlanStore(app_config.issues_path)
@@ -374,8 +374,7 @@ async def plan_command_async(
             plan_store,
             issue_numbers,
             force,
-            assigned_to_me,
-            current_user,
+            assignee_filter,
         )
         all_tasks.extend(tasks)
 
@@ -438,7 +437,7 @@ def plan_command(
     all_repos: bool = False,
     parallelism: int | None = None,
     force: bool = False,
-    assigned_to_me: bool = False,
+    assignee: str | None = None,
     config_path: Path | None = None,
     agent: str | None = None,
 ) -> None:
@@ -450,7 +449,7 @@ def plan_command(
         all_repos: Generate plans for all repositories
         parallelism: Number of parallel executions
         force: Generate plan even if one already exists
-        assigned_to_me: Only plan issues assigned to the current user
+        assignee: Filter by assignee (substring match). Use @me for current user
         config_path: Path to config file
         agent: Agent to use (e.g., 'mock', 'claude-code', 'opencode', 'gemini', 'codex')
             Uses config default if None
@@ -462,7 +461,7 @@ def plan_command(
             all_repos=all_repos,
             parallelism=parallelism,
             force=force,
-            assigned_to_me=assigned_to_me,
+            assignee=assignee,
             config_path=config_path,
             agent=agent,
         )

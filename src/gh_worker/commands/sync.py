@@ -21,7 +21,7 @@ def sync_repository(
     since: str | None = None,
     issue_numbers: list[int] | None = None,
     search: str | None = None,
-    assigned_to_me: bool = False,
+    assignee: str | None = None,
     force: bool = False,
 ) -> int:
     """Sync issues for a single repository.
@@ -33,7 +33,7 @@ def sync_repository(
         since: Only sync issues updated after this timestamp
         issue_numbers: Specific issue numbers to sync
         search: GitHub search query
-        assigned_to_me: Only sync issues assigned to the current user
+        assignee: Filter by assignee (e.g. @me or username)
         force: If True, fetch all issues (ignore since filter) to refresh description.md
 
     Returns:
@@ -61,7 +61,7 @@ def sync_repository(
                     since_filter = repo_updated_at.isoformat()
 
         issues_data = gh_client.list_issues(
-            repository, since=since_filter, search=search, assigned_to_me=assigned_to_me
+            repository, since=since_filter, search=search, assignee=assignee
         )
 
     # Save issues
@@ -89,7 +89,7 @@ def sync_command(
     since: str | None = None,
     issue_numbers: list[int] | None = None,
     search: str | None = None,
-    assigned_to_me: bool = False,
+    assignee: str | None = None,
     force: bool = False,
     config_path: Path | None = None,
 ) -> None:
@@ -101,7 +101,7 @@ def sync_command(
         since: Only sync issues updated since this timestamp
         issue_numbers: Specific issue numbers to sync
         search: GitHub search query
-        assigned_to_me: Only sync issues assigned to the current user
+        assignee: Filter by assignee (e.g. @me or username)
         force: Refresh all issues (re-fetch and update description.md even if unchanged)
         config_path: Path to config file
     """
@@ -137,7 +137,7 @@ def sync_command(
                 since,
                 issue_numbers,
                 search,
-                assigned_to_me,
+                assignee,
                 force,
             )
             total += count
@@ -153,7 +153,7 @@ def sync_command(
             since,
             issue_numbers,
             search,
-            assigned_to_me,
+            assignee,
             force,
         )
         print(f"Synced {count} issues from {repository.full_name}")
