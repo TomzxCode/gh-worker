@@ -110,18 +110,24 @@ class GhWorkerApp(App):
         max-width: 18;
     }
 
-    #config-view #config-table-container {
-        height: auto;
-        max-height: 50%;
-        position: relative;
+    #config-view {
+        layout: vertical;
+        height: 1fr;
     }
 
-    #config-view #config-table {
-        height: auto;
+    #config-view #config-entries {
+        height: 1fr;
+        min-height: 5;
     }
 
-    #config-view #config-inline-edit {
-        display: none;
+    #config-view .config-row {
+        height: auto;
+        margin-bottom: 1;
+    }
+
+    #config-view .config-key {
+        width: 25;
+        min-width: 20;
     }
 
     /* Select dropdown: show full text without wrapping */
