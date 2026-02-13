@@ -38,7 +38,7 @@ def main(
     app(tokens)
 
 
-@app.command(sort_key=0)
+@app.command(sort_key=1)
 def init(
     config_path: Annotated[
         Path | None,
@@ -51,7 +51,7 @@ def init(
     init_command(config_path=config_path)
 
 
-@app.command(sort_key=5)
+@app.command(sort_key=8)
 def config(
     key: Annotated[
         str | None,
@@ -81,11 +81,11 @@ def config(
 
 repositories_app = cyclopts.App(name="repositories", help="Manage tracked repositories")
 app.command(repositories_app)
-app["repositories"].sort_key = 1
+app["repositories"].sort_key = 2
 
 plans_app = cyclopts.App(name="plans", help="Approve or unapprove implementation plans")
 app.command(plans_app)
-app["plans"].sort_key = 1.5
+app["plans"].sort_key = 4
 
 
 @repositories_app.command
@@ -147,7 +147,7 @@ def remove(
 
 issues_app = cyclopts.App(name="issues", help="Sync, plan, and implement issues")
 app.command(issues_app)
-app["issues"].sort_key = 2
+app["issues"].sort_key = 3
 
 
 @issues_app.command(sort_key=0)
@@ -295,7 +295,7 @@ implementations_app = cyclopts.App(
     name="implementations", help="Review implementations (push branch, create PR)"
 )
 app.command(implementations_app)
-app["implementations"].sort_key = 1.6
+app["implementations"].sort_key = 5
 
 
 @plans_app.command
@@ -459,7 +459,7 @@ def implement(
     )
 
 
-@app.command(sort_key=3)
+@app.command(sort_key=6)
 def monitor(
     repo: Annotated[str, Parameter(help="Repository (e.g., 'owner/repo')")],
     issue_number: Annotated[int, Parameter(help="Issue number to monitor")],
@@ -487,7 +487,7 @@ def monitor(
     )
 
 
-@app.command(sort_key=3.9)
+@app.command(sort_key=0)
 def tui(
     config_path: Annotated[
         Path | None,
@@ -501,7 +501,7 @@ def tui(
     app.run()
 
 
-@app.command(sort_key=4)
+@app.command(sort_key=7)
 def work(
     once: Annotated[bool, Parameter(help="Run once and exit (default: continuous mode)")] = False,
     frequency: Annotated[
