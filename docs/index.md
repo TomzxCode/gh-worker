@@ -56,9 +56,8 @@ Automatic retry logic with exponential backoff for transient failures, ensuring 
 # Install with uv
 uv tool install https://github.com/tomzxcode/gh-worker.git
 
-# Configure
-ghw config issues-path ~/gh-worker/issues
-ghw config repository-path ~/gh-worker/repos
+# Initialize configuration (interactive setup)
+ghw init
 
 # Add a repository
 ghw repositories add owner/repo

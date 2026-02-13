@@ -109,9 +109,25 @@ Both `ghw` (short alias) and `gh-worker` (full name) are available as commands.
 
 ## Post-Installation Setup
 
-### Configure Base Paths
+### Initialize Configuration
 
-Set up the base paths where gh-worker will store data:
+The easiest way to set up gh-worker is with the interactive init command:
+
+```bash
+ghw init
+```
+
+This guides you through configuring:
+
+- **issues-path** - Where to store synced issues
+- **repository-path** - Where to clone repositories
+- **Agent settings** - Default agent and parallelism options
+
+Directories are created automatically as needed.
+
+### Manual Configuration (Alternative)
+
+If you prefer to configure manually instead of using `ghw init`:
 
 ```bash
 # Set the path where issues will be stored

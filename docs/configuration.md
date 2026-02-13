@@ -14,9 +14,17 @@ This follows the [XDG Base Directory Specification](https://specifications.freed
 
 ## Managing Configuration
 
+### Initial Setup with `ghw init`
+
+For first-time setup, run `ghw init` to configure gh-worker interactively. It prompts for required paths and sets sensible defaults.
+
+```bash
+ghw init
+```
+
 ### Using the CLI
 
-The easiest way to manage configuration is using the `config` command:
+To view or change configuration after setup, use the `config` command:
 
 ```bash
 # List all configuration values
