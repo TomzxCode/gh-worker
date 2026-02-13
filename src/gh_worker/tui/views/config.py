@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from textual.containers import Container
+from textual.geometry import Offset
 from textual.widgets import Button, DataTable, Input, Label, Static
 
 from gh_worker.config.manager import ConfigManager
@@ -33,14 +34,14 @@ def _format_config_value(value: Any) -> str:
 
 
 class ConfigView(Container):
-    """Config view with key/value table and edit capability."""
+    """Config view with key/value table and inline edit capability."""
 
     def __init__(self, config_path: Path | None = None, **kwargs) -> None:
         super().__init__(**kwargs)
         self.config_path = config_path
         self._config_manager: ConfigManager | None = None
         self._config_data: list[tuple[str, str]] = []
-        self._selected_key: str | None = None
+        self._editing_key: str | None = None
 
     def compose(self):
         """Compose config view layout."""
@@ -48,14 +49,16 @@ class ConfigView(Container):
         yield Static("", id="config-path")
         yield Button("Open in editor", id="config-open-editor")
         yield Label("Settings", classes="section-title")
-        yield DataTable(id="config-table", cursor_type="row")
-        yield Input(placeholder="Edit value (Enter to save)", id="config-edit-input")
+        with Container(id="config-table-container"):
+            yield DataTable(id="config-table", cursor_type="cell")
+            yield Input(id="config-inline-edit")
 
     def on_mount(self) -> None:
         """Load config on mount."""
         self._config_manager = ConfigManager(self.config_path)
         self._refresh_config_path()
         self._refresh_table()
+        self._hide_inline_edit()
 
     def _refresh_config_path(self) -> None:
         """Update config path display."""
@@ -76,25 +79,51 @@ class ConfigView(Container):
         for key, val in self._config_data:
             table.add_row(key, val, key=key)
 
-    def on_data_table_row_selected(self, event) -> None:
-        """Handle row selection - show current value in input for editing."""
-        row_key = event.row_key
-        if row_key is None:
+    def _hide_inline_edit(self) -> None:
+        """Hide the inline edit input."""
+        inp = self.query_one("#config-inline-edit", Input)
+        inp.display = False
+        self._editing_key = None
+
+    def _show_inline_edit(self, table: DataTable, coordinate: Any, key: str, value: str) -> None:
+        """Position and show the inline edit input over the selected cell."""
+        cell_region = table._get_cell_region(coordinate)
+        scroll_x = table.scroll_offset.x
+        scroll_y = table.scroll_offset.y
+
+        inp = self.query_one("#config-inline-edit", Input)
+        inp.styles.position = "absolute"
+        inp.styles.offset = Offset(
+            cell_region.x - int(scroll_x),
+            cell_region.y - int(scroll_y),
+        )
+        inp.styles.width = cell_region.width
+        inp.value = value
+        inp.display = True
+        inp.focus()
+        self._editing_key = key
+
+    def on_data_table_cell_selected(self, event: DataTable.CellSelected) -> None:
+        """Handle cell selection - show inline edit for Value column."""
+        if event.coordinate.column != 1:
             return
-        self._selected_key = str(row_key)
-        for k, v in self._config_data:
-            if k == self._selected_key:
-                inp = self.query_one("#config-edit-input", Input)
-                inp.value = v
-                inp.placeholder = f"Edit {k} (Enter to save)"
-                break
+        if self._editing_key:
+            self._hide_inline_edit()
+
+        table = event.data_table
+        key = event.cell_key.row_key.value
+        if not key:
+            return
+        value = str(event.value) if event.value is not None else ""
+
+        self._show_inline_edit(table, event.coordinate, key, value)
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         """Handle input submit - save config value."""
         inp = event.input
-        if inp.id != "config-edit-input":
+        if inp.id != "config-inline-edit":
             return
-        key = self._selected_key
+        key = self._editing_key
         if not key:
             return
         value = inp.value.strip()
@@ -102,9 +131,16 @@ class ConfigView(Container):
             typed = _parse_config_value(key, value)
             self._config_manager.set(key, typed)
             self.notify(f"Updated {key}")
+            self._hide_inline_edit()
             self._refresh_table()
         except (KeyError, ValueError) as e:
             self.notify(f"Error: {e}", severity="error")
+            self._hide_inline_edit()
+
+    def on_input_blurred(self, event: Input.Blurred) -> None:
+        """Hide inline edit when input loses focus."""
+        if event.input.id == "config-inline-edit":
+            self._hide_inline_edit()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle Open in editor button."""
@@ -112,6 +148,8 @@ class ConfigView(Container):
             import os
             import subprocess
 
+            if self._editing_key:
+                self._hide_inline_edit()
             editor = os.environ.get("EDITOR", "vim")
             path = self._config_manager.config_path
             path.parent.mkdir(parents=True, exist_ok=True)

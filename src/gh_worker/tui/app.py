@@ -110,6 +110,20 @@ class GhWorkerApp(App):
         max-width: 18;
     }
 
+    #config-view #config-table-container {
+        height: auto;
+        max-height: 50%;
+        position: relative;
+    }
+
+    #config-view #config-table {
+        height: auto;
+    }
+
+    #config-view #config-inline-edit {
+        display: none;
+    }
+
     /* Select dropdown: show full text without wrapping */
     Select > SelectOverlay {
         min-width: 40;
