@@ -28,7 +28,7 @@ def remove_command(
     app_config = config.load()
 
     if not app_config.issues_path:
-        logger.error("issues_path_not_configured")
+        logger.error("Issues path not configured")
         print("Error: issues-path not configured. Run: gh-worker config issues-path <path>")
         return
 
@@ -40,13 +40,13 @@ def remove_command(
             repo_dir = issue_store.get_repo_dir(repository)
 
             if not repo_dir.exists():
-                logger.warning("repository_not_tracked", repository=repository.full_name)
+                logger.warning("Repository not tracked", repository=repository.full_name)
                 print(f"Repository {repository.full_name} is not under management.")
                 continue
 
             # Remove issues/plans directory
             shutil.rmtree(repo_dir)
-            logger.info("removed_repository", repository=repository.full_name)
+            logger.info("Removed repository", repository=repository.full_name)
             print(f"Removed repository: {repository.full_name}")
 
             # Optionally remove cloned repository
@@ -54,12 +54,12 @@ def remove_command(
                 clone_path = Path(app_config.repository_path) / repository.owner / repository.name
                 if clone_path.exists():
                     shutil.rmtree(clone_path)
-                    logger.info("removed_clone", path=str(clone_path))
+                    logger.info("Removed clone", path=str(clone_path))
                     print(f"Removed clone: {clone_path}")
 
         except ValueError as e:
-            logger.error("invalid_repository_format", repo=repo_str, error=str(e))
+            logger.error("Invalid repository format", repo=repo_str, error=str(e))
             print(f"Error: {e}")
         except OSError as e:
-            logger.error("failed_to_remove_repository", repo=repo_str, error=str(e))
+            logger.error("Failed to remove repository", repo=repo_str, error=str(e))
             print(f"Error: Failed to remove repository {repo_str}: {e}")

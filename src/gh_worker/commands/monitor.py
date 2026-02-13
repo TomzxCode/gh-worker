@@ -32,7 +32,7 @@ async def monitor_command_async(
     app_config = config.load()
 
     if not app_config.issues_path:
-        logger.error("issues_path_not_configured")
+        logger.error("Issues path not configured")
         print("Error: issues-path not configured. Run: gh-worker config issues-path <path>")
         return
 
@@ -42,7 +42,7 @@ async def monitor_command_async(
     try:
         repository = issue_store.resolve_repo(repo)
     except ValueError as e:
-        logger.error("invalid_repository", repo=repo, error=str(e))
+        logger.error("Invalid repository", repo=repo, error=str(e))
         print(f"Error: {e}")
         return
 
@@ -50,7 +50,7 @@ async def monitor_command_async(
     plan_result = plan_store.get_latest_plan(repository, issue_number)
     if not plan_result:
         logger.error(
-            "no_plan_found",
+            "No plan found",
             repository=repository.full_name,
             issue_number=issue_number,
         )
@@ -61,7 +61,7 @@ async def monitor_command_async(
 
     if not metadata.session_id:
         logger.error(
-            "no_session_id",
+            "No session ID",
             repository=repository.full_name,
             issue_number=issue_number,
         )
@@ -72,7 +72,7 @@ async def monitor_command_async(
         return
 
     logger.info(
-        "monitoring_session",
+        "Monitoring session",
         repository=repository.full_name,
         issue_number=issue_number,
         session_id=metadata.session_id,
@@ -94,7 +94,7 @@ async def monitor_command_async(
     is_valid, error_msg = await agent.validate_environment()
     if not is_valid:
         logger.error(
-            "agent_environment_invalid",
+            "Agent environment invalid",
             agent=agent_name,
             error=error_msg,
         )
@@ -121,10 +121,10 @@ async def monitor_command_async(
                 break
 
     except KeyboardInterrupt:
-        logger.info("monitor_interrupted")
+        logger.info("Monitor interrupted")
         print("\nMonitoring interrupted by user")
     except Exception as e:
-        logger.error("monitor_failed", error=str(e))
+        logger.error("Monitor failed", error=str(e))
         print(f"\nError: Monitoring failed: {e}")
 
 

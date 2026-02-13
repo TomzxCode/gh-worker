@@ -31,7 +31,7 @@ class ClaudeCodeAgent(BaseAgent):
             config: Agent configuration (e.g., model, temperature)
         """
         super().__init__(config)
-        logger.debug("initializing_claude_code_agent", config=config)
+        logger.debug("Initializing claude code agent", config=config)
         # Support both cli_path and claude_code_path config keys
         if config:
             cli_path = config.get("cli_path") or config.get("claude_code_path")
@@ -41,10 +41,10 @@ class ClaudeCodeAgent(BaseAgent):
         # Default to claude (without file reference)
         if not cli_path:
             cli_path = "claude"
-            logger.debug("using_default_cli_path", cli_path=cli_path)
+            logger.debug("Using default CLI path", cli_path=cli_path)
 
         self.cli_path = cli_path
-        logger.debug("cli_path_set", cli_path=self.cli_path)
+        logger.debug("CLI path set", cli_path=self.cli_path)
         # Parse the command: if it contains @, split into command and args
         self._parse_cli_command()
 
@@ -60,13 +60,13 @@ class ClaudeCodeAgent(BaseAgent):
         - "claude-code" -> ["claude-code"]
         - "claude@path/to/file.py" -> ["claude", "@path/to/file.py"]
         """
-        logger.debug("parsing_cli_command", cli_path=self.cli_path)
+        logger.debug("Parsing CLI command", cli_path=self.cli_path)
         if "@" in self.cli_path:
             parts = self.cli_path.split("@", 1)
             self.cli_executable = parts[0]
             self.cli_args = [f"@{parts[1]}"]
             logger.debug(
-                "cli_command_parsed",
+                "CLI command parsed",
                 executable=self.cli_executable,
                 args=self.cli_args,
             )
@@ -74,7 +74,7 @@ class ClaudeCodeAgent(BaseAgent):
             self.cli_executable = self.cli_path
             self.cli_args = []
             logger.debug(
-                "cli_command_parsed",
+                "CLI command parsed",
                 executable=self.cli_executable,
                 args=self.cli_args,
             )
@@ -90,14 +90,14 @@ class ClaudeCodeAgent(BaseAgent):
         Returns:
             Tuple of (is_valid, error_message)
         """
-        logger.debug("validating_environment", executable=self.cli_executable)
+        logger.debug("Validating environment", executable=self.cli_executable)
         cli_location = shutil.which(self.cli_executable)
-        logger.debug("cli_location_check", executable=self.cli_executable, found=cli_location)
+        logger.debug("CLI location check", executable=self.cli_executable, found=cli_location)
         if cli_location is None:
             error_msg = f"claude CLI not found at '{self.cli_executable}'. Please install it first."
-            logger.debug("environment_validation_failed", error=error_msg)
+            logger.debug("Environment validation failed", error=error_msg)
             return (False, error_msg)
-        logger.debug("environment_validation_success", cli_path=cli_location)
+        logger.debug("Environment validation success", cli_path=cli_location)
         return True, None
 
     async def plan(self, issue_content: str, repository_path: str) -> AgentResult:
@@ -111,18 +111,18 @@ class ClaudeCodeAgent(BaseAgent):
             AgentResult with the generated plan
         """
         logger.info(
-            "generating_plan",
+            "Generating plan",
             repository_path=repository_path,
         )
 
         # Generate a temporary directory for the plan
         temp_dir = tempfile.mkdtemp()
         plan_file_path = str(Path(temp_dir) / "PLAN.md")
-        logger.debug("temp_dir_generated", temp_dir=temp_dir, plan_file_path=plan_file_path)
+        logger.debug("Temp dir generated", temp_dir=temp_dir, plan_file_path=plan_file_path)
 
         prompt = self._build_plan_prompt(issue_content, plan_file_path)
         logger.debug(
-            "plan_prompt_built",
+            "Plan prompt built",
             prompt_length=len(prompt),
             temp_dir=temp_dir,
         )
@@ -130,7 +130,7 @@ class ClaudeCodeAgent(BaseAgent):
         try:
             # Run claude in the repository directory with streaming
             # Add the temporary directory so claude can access the plan file
-            logger.debug("running_claude_code_for_plan")
+            logger.debug("Running claude code for plan")
             agent_output = None
             session_id = None
             # Allow Edit tool for the temporary directory
@@ -146,7 +146,7 @@ class ClaudeCodeAgent(BaseAgent):
                 if event.type == AgentEventType.RESULT:
                     agent_output = event.content
                     logger.debug(
-                        "result_extracted",
+                        "Result extracted",
                         output_length=len(agent_output) if agent_output else 0,
                     )
 
@@ -154,7 +154,7 @@ class ClaudeCodeAgent(BaseAgent):
                 if event.metadata and "session_id" in event.metadata:
                     session_id = event.metadata["session_id"]
                     logger.debug(
-                        "session_id_found_in_event",
+                        "Session ID found in event",
                         session_id=session_id,
                     )
 
@@ -162,7 +162,7 @@ class ClaudeCodeAgent(BaseAgent):
             if not session_id and agent_output:
                 session_id = self._extract_session_id(agent_output)
                 logger.debug(
-                    "session_id_extracted_from_output",
+                    "Session ID extracted from output",
                     session_id=session_id,
                 )
 
@@ -171,12 +171,12 @@ class ClaudeCodeAgent(BaseAgent):
                 with open(plan_file_path, encoding="utf-8") as f:
                     plan_content = f.read()
                 logger.debug(
-                    "plan_file_read",
+                    "Plan file read",
                     plan_file_path=plan_file_path,
                     content_length=len(plan_content),
                 )
             except FileNotFoundError:
-                logger.warning("plan_file_not_found", plan_file_path=plan_file_path)
+                logger.warning("Plan file not found", plan_file_path=plan_file_path)
                 return AgentResult(
                     success=False,
                     output="",
@@ -186,7 +186,7 @@ class ClaudeCodeAgent(BaseAgent):
                     ),
                 )
             except Exception as e:
-                logger.error("plan_file_read_error", plan_file_path=plan_file_path, error=str(e))
+                logger.error("Plan file read error", plan_file_path=plan_file_path, error=str(e))
                 return AgentResult(
                     success=False,
                     output="",
@@ -199,8 +199,8 @@ class ClaudeCodeAgent(BaseAgent):
                 session_id=session_id,
             )
         except Exception as e:
-            logger.error("plan_generation_failed", error=str(e))
-            logger.debug("plan_generation_exception", exc_info=True)
+            logger.error("Plan generation failed", error=str(e))
+            logger.debug("Plan generation exception", exc_info=True)
             return AgentResult(
                 success=False,
                 output="",
@@ -210,9 +210,9 @@ class ClaudeCodeAgent(BaseAgent):
             # Clean up the temporary directory
             try:
                 shutil.rmtree(temp_dir)
-                logger.debug("temp_dir_cleaned_up", temp_dir=temp_dir)
+                logger.debug("Temp dir cleaned up", temp_dir=temp_dir)
             except Exception as e:
-                logger.warning("temp_dir_cleanup_failed", temp_dir=temp_dir, error=str(e))
+                logger.warning("Temp dir cleanup failed", temp_dir=temp_dir, error=str(e))
 
     async def implement(
         self,
@@ -235,7 +235,7 @@ class ClaudeCodeAgent(BaseAgent):
             AgentEvent objects as the implementation progresses
         """
         logger.info(
-            "starting_implementation",
+            "Starting implementation",
             issue_number=issue_number,
             branch_name=branch_name,
             repository_path=repository_path,
@@ -245,7 +245,7 @@ class ClaudeCodeAgent(BaseAgent):
             issue_content, plan_content, issue_number, branch_name
         )
         logger.debug(
-            "implement_prompt_built",
+            "Implement prompt built",
             issue_number=issue_number,
             branch_name=branch_name,
             prompt_length=len(prompt),
@@ -254,12 +254,12 @@ class ClaudeCodeAgent(BaseAgent):
 
         try:
             # Stream output from claude
-            logger.debug("starting_claude_code_streaming", issue_number=issue_number)
+            logger.debug("Starting claude code streaming", issue_number=issue_number)
             event_count = 0
             async for event in self._run_claude_code_streaming(prompt, repository_path):
                 event_count += 1
                 logger.debug(
-                    "streaming_event_received",
+                    "Streaming event received",
                     issue_number=issue_number,
                     event_type=event.type.value,
                     event_count=event_count,
@@ -267,7 +267,7 @@ class ClaudeCodeAgent(BaseAgent):
                 yield event
 
             logger.debug(
-                "streaming_completed",
+                "Streaming completed",
                 issue_number=issue_number,
                 total_events=event_count,
             )
@@ -278,8 +278,8 @@ class ClaudeCodeAgent(BaseAgent):
             )
 
         except Exception as e:
-            logger.error("implementation_failed", error=str(e), issue_number=issue_number)
-            logger.debug("implementation_exception", exc_info=True)
+            logger.error("Implementation failed", error=str(e), issue_number=issue_number)
+            logger.debug("Implementation exception", exc_info=True)
             yield AgentEvent(
                 type=AgentEventType.FAILURE,
                 content=f"Implementation failed: {e}",
@@ -303,7 +303,7 @@ class ClaudeCodeAgent(BaseAgent):
             AgentEvent objects as the commit progresses
         """
         logger.info(
-            "starting_commit",
+            "Starting commit",
             issue_number=issue_number,
             branch_name=branch_name,
             repository_path=repository_path,
@@ -311,7 +311,7 @@ class ClaudeCodeAgent(BaseAgent):
 
         prompt = self._build_commit_prompt(issue_number, branch_name)
         logger.debug(
-            "commit_prompt_built",
+            "Commit prompt built",
             issue_number=issue_number,
             branch_name=branch_name,
             prompt_length=len(prompt),
@@ -319,12 +319,12 @@ class ClaudeCodeAgent(BaseAgent):
 
         try:
             # Stream output from claude
-            logger.debug("starting_claude_code_streaming_for_commit", issue_number=issue_number)
+            logger.debug("Starting claude code streaming for commit", issue_number=issue_number)
             event_count = 0
             async for event in self._run_claude_code_streaming(prompt, repository_path):
                 event_count += 1
                 logger.debug(
-                    "streaming_event_received",
+                    "Streaming event received",
                     issue_number=issue_number,
                     event_type=event.type.value,
                     event_count=event_count,
@@ -332,7 +332,7 @@ class ClaudeCodeAgent(BaseAgent):
                 yield event
 
             logger.debug(
-                "streaming_completed",
+                "Streaming completed",
                 issue_number=issue_number,
                 total_events=event_count,
             )
@@ -343,8 +343,8 @@ class ClaudeCodeAgent(BaseAgent):
             )
 
         except Exception as e:
-            logger.error("commit_failed", error=str(e), issue_number=issue_number)
-            logger.debug("commit_exception", exc_info=True)
+            logger.error("Commit failed", error=str(e), issue_number=issue_number)
+            logger.debug("Commit exception", exc_info=True)
             yield AgentEvent(
                 type=AgentEventType.FAILURE,
                 content=f"Commit failed: {e}",
@@ -360,8 +360,8 @@ class ClaudeCodeAgent(BaseAgent):
         Yields:
             AgentEvent objects from the session
         """
-        logger.info("monitoring_session", session_id=session_id)
-        logger.debug("monitor_not_implemented", session_id=session_id)
+        logger.info("Monitoring session", session_id=session_id)
+        logger.debug("Monitor not implemented", session_id=session_id)
 
         # Note: claude CLI may not support session monitoring directly
         # This would need to be implemented based on the actual CLI capabilities
@@ -395,7 +395,7 @@ Create a comprehensive plan that includes:
 Write the plan to the following file: {plan_file_path}
 """
         logger.debug(
-            "plan_prompt_built",
+            "Plan prompt built",
             issue_content_length=len(issue_content),
             prompt_length=len(prompt),
             plan_file_path=plan_file_path,
@@ -434,7 +434,7 @@ Do not commit changes yet - that will be done separately after implementation.
 Please proceed with the implementation.
 """
         logger.debug(
-            "implement_prompt_built",
+            "Implement prompt built",
             issue_number=issue_number,
             branch_name=branch_name,
             issue_content_length=len(issue_content),
@@ -466,7 +466,7 @@ Requirements:
 Please provide the commit message.
 """
         logger.debug(
-            "commit_prompt_built",
+            "Commit prompt built",
             issue_number=issue_number,
             branch_name=branch_name,
             prompt_length=len(prompt),
@@ -515,7 +515,7 @@ Please provide the commit message.
             cmd.extend(["--allowedTools", " ".join(allowed_tools)])
 
         logger.debug(
-            "executing_claude_code_streaming_command",
+            "Executing claude code streaming command",
             command=cmd,
             cwd=cwd,
             prompt_length=len(prompt),
@@ -527,7 +527,7 @@ Please provide the commit message.
             cwd=cwd,
             limit=10 * 2**20,  # 10MB buffer limit to prevent chunk separator errors
         )
-        logger.debug("claude_code_streaming_process_started", pid=process.pid)
+        logger.debug("Claude code streaming process started", pid=process.pid)
 
         # Stream stdout (JSON lines format)
         line_count = 0
@@ -539,22 +539,22 @@ Please provide the commit message.
             while True:
                 line = await process.stdout.readline()
                 if not line:
-                    logger.debug("streaming_complete_no_more_lines", line_count=line_count)
+                    logger.debug("Streaming complete, no more lines", line_count=line_count)
                     break
 
                 line_count += 1
                 content = line.decode().rstrip()
                 if not content:
-                    logger.debug("skipping_empty_line", line_number=line_count)
+                    logger.debug("Skipping empty line", line_number=line_count)
                     continue
 
-                logger.debug("processing_stream_line", line_number=line_count, content=content)
+                logger.debug("Processing stream line", line_number=line_count, content=content)
 
                 try:
                     # Parse JSON line from stream-json format
                     data = json.loads(content)
                     logger.debug(
-                        "json_line_parsed", line_number=line_count, data_keys=list(data.keys())
+                        "JSON line parsed", line_number=line_count, data_keys=list(data.keys())
                     )
 
                     # Extract text content from the message.content array
@@ -613,7 +613,7 @@ Please provide the commit message.
                         )
 
                         logger.info(
-                            "claude_code_streaming_event",
+                            "Claude code streaming event",
                             event_number=event_count,
                             event_type=event_type.value,
                             content_length=len(text_content),
@@ -628,11 +628,11 @@ Please provide the commit message.
                             metadata=metadata if metadata else None,
                         )
                     else:
-                        logger.debug("no_text_content_in_json", line_number=line_count, data=data)
+                        logger.debug("No text content in JSON", line_number=line_count, data=data)
                 except json.JSONDecodeError as e:
                     json_parse_errors += 1
                     logger.debug(
-                        "json_decode_error_fallback_to_text",
+                        "JSON decode error, fallback to text",
                         line_number=line_count,
                         error=str(e),
                         content=content,
@@ -655,7 +655,7 @@ Please provide the commit message.
                         )
 
                         logger.info(
-                            "claude_code_streaming_event",
+                            "Claude code streaming event",
                             event_number=event_count,
                             event_type=event_type.value,
                             content_length=len(content),
@@ -669,7 +669,7 @@ Please provide the commit message.
                         )
 
         logger.debug(
-            "waiting_for_streaming_process_completion",
+            "Waiting for streaming process completion",
             line_count=line_count,
             json_parse_errors=json_parse_errors,
         )
@@ -677,7 +677,7 @@ Please provide the commit message.
         await process.wait()
 
         logger.debug(
-            "streaming_process_completed",
+            "Streaming process completed",
             returncode=process.returncode,
             line_count=line_count,
             json_parse_errors=json_parse_errors,
@@ -691,7 +691,7 @@ Please provide the commit message.
                 stderr_output = stderr_output.decode()
 
             logger.debug(
-                "streaming_process_failed",
+                "Streaming process failed",
                 returncode=process.returncode,
                 stderr_length=len(stderr_output) if stderr_output else 0,
             )
@@ -705,7 +705,7 @@ Please provide the commit message.
                     f"Process failed with exit code {process.returncode}: {stderr_output}"
                 )
                 logger.info(
-                    "claude_code_streaming_event",
+                    "Claude code streaming event",
                     event_number=event_count,
                     event_type=AgentEventType.ERROR.value,
                     content_length=len(error_content),
@@ -726,7 +726,7 @@ Please provide the commit message.
                 )
 
                 logger.info(
-                    "claude_code_streaming_event",
+                    "Claude code streaming event",
                     event_number=event_count,
                     event_type=AgentEventType.RESULT.value,
                     content_length=len(result_content),
@@ -738,7 +738,7 @@ Please provide the commit message.
 
         # Log summary of all events
         logger.info(
-            "claude_code_streaming_completed",
+            "Claude code streaming completed",
             total_events=event_count,
             events_by_type=event_counts_by_type,
             total_lines=line_count,
@@ -755,7 +755,7 @@ Please provide the commit message.
         Returns:
             Session ID if found, None otherwise
         """
-        logger.debug("extracting_session_id", output_length=len(output))
+        logger.debug("Extracting session ID", output_length=len(output))
 
         # First, try to extract from JSON structures in the output
         # Look for JSON lines with session_id field
@@ -767,7 +767,7 @@ Please provide the commit message.
                 data = json.loads(line)
                 session_id = data.get("session_id")
                 if session_id:
-                    logger.debug("session_id_found_in_json", session_id=session_id)
+                    logger.debug("Session ID found in JSON", session_id=session_id)
                     return session_id
             except (json.JSONDecodeError, AttributeError):
                 # Not JSON, continue to next line
@@ -781,12 +781,12 @@ Please provide the commit message.
         ]
 
         for i, pattern in enumerate(patterns):
-            logger.debug("trying_session_id_pattern", pattern_index=i, pattern=pattern)
+            logger.debug("Trying session ID pattern", pattern_index=i, pattern=pattern)
             match = re.search(pattern, output, re.IGNORECASE)
             if match:
                 session_id = match.group(1)
-                logger.debug("session_id_found", pattern_index=i, session_id=session_id)
+                logger.debug("Session ID found", pattern_index=i, session_id=session_id)
                 return session_id
 
-        logger.debug("session_id_not_found", patterns_tried=len(patterns))
+        logger.debug("Session ID not found", patterns_tried=len(patterns))
         return None

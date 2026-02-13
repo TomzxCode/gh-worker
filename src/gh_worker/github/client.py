@@ -39,7 +39,7 @@ class GHClient:
             subprocess.CalledProcessError: If command fails
         """
         cmd = ["gh"] + args
-        logger.debug("running_gh_command", command=" ".join(cmd), cwd=str(cwd) if cwd else None)
+        logger.debug("Running gh command", command=" ".join(cmd), cwd=str(cwd) if cwd else None)
 
         try:
             result = subprocess.run(
@@ -52,12 +52,12 @@ class GHClient:
             if e.stderr:
                 error_msg += f"\n{e.stderr}"
             logger.error(
-                "gh_command_failed", command=" ".join(cmd), stderr=e.stderr, returncode=e.returncode
+                "gh command failed", command=" ".join(cmd), stderr=e.stderr, returncode=e.returncode
             )
             raise RuntimeError(error_msg) from e
         except subprocess.TimeoutExpired as e:
             error_msg = f"GitHub CLI command timed out after 300s: {' '.join(cmd)}"
-            logger.error("gh_command_timeout", command=" ".join(cmd))
+            logger.error("gh command timeout", command=" ".join(cmd))
             raise RuntimeError(error_msg) from e
 
     def list_issues(
@@ -188,7 +188,7 @@ class GHClient:
         repo_path = self._get_repo_path(repository)
 
         if repo_path.exists():
-            logger.info("repository_already_exists", path=str(repo_path))
+            logger.info("Repository already exists", path=str(repo_path))
             return repo_path
 
         repo_path.parent.mkdir(parents=True, exist_ok=True)
@@ -196,7 +196,7 @@ class GHClient:
         args = ["repo", "clone", repository.full_name, str(repo_path)]
         self._run_command(args)
 
-        logger.info("repository_cloned", path=str(repo_path))
+        logger.info("Repository cloned", path=str(repo_path))
         return repo_path
 
     def _get_repo_path(self, repository: Repository) -> Path:
@@ -312,7 +312,7 @@ class GHClient:
         try:
             self._run_git_command(args, cwd=repo_path)
             logger.info(
-                "worktree_created",
+                "Worktree created",
                 repository=repository.full_name,
                 branch=branch_name,
                 worktree_path=str(worktree_path),
@@ -320,7 +320,7 @@ class GHClient:
             return worktree_path
         except RuntimeError as e:
             logger.error(
-                "worktree_creation_failed",
+                "Worktree creation failed",
                 repository=repository.full_name,
                 branch=branch_name,
                 error=str(e),
@@ -341,7 +341,7 @@ class GHClient:
 
         if not repo_path.exists():
             logger.warning(
-                "repository_not_found_for_worktree_removal",
+                "Repository not found for worktree removal",
                 repository=repository.full_name,
                 path=str(repo_path),
             )
@@ -349,7 +349,7 @@ class GHClient:
 
         if not worktree_path.exists():
             logger.debug(
-                "worktree_path_already_removed",
+                "Worktree path already removed",
                 worktree_path=str(worktree_path),
             )
             return
@@ -358,13 +358,13 @@ class GHClient:
         try:
             self._run_git_command(args, cwd=repo_path)
             logger.info(
-                "worktree_removed",
+                "Worktree removed",
                 repository=repository.full_name,
                 worktree_path=str(worktree_path),
             )
         except RuntimeError as e:
             logger.error(
-                "worktree_removal_failed",
+                "Worktree removal failed",
                 repository=repository.full_name,
                 worktree_path=str(worktree_path),
                 error=str(e),
@@ -374,13 +374,13 @@ class GHClient:
                 args = ["worktree", "remove", "--force", str(worktree_path)]
                 self._run_git_command(args, cwd=repo_path)
                 logger.info(
-                    "worktree_force_removed",
+                    "Worktree force removed",
                     repository=repository.full_name,
                     worktree_path=str(worktree_path),
                 )
             except RuntimeError as force_error:
                 logger.error(
-                    "worktree_force_removal_failed",
+                    "Worktree force removal failed",
                     repository=repository.full_name,
                     worktree_path=str(worktree_path),
                     error=str(force_error),
@@ -404,12 +404,12 @@ class GHClient:
         try:
             self._run_git_command(["fetch", "origin"], cwd=repo_path)
             logger.info(
-                "repository_fetched",
+                "Repository fetched",
                 repository=repository.full_name,
             )
         except RuntimeError as e:
             logger.error(
-                "repository_fetch_failed",
+                "Repository fetch failed",
                 repository=repository.full_name,
                 error=str(e),
             )
@@ -459,7 +459,7 @@ class GHClient:
         try:
             self._run_git_command(args, cwd=repo_path)
             logger.info(
-                "planning_worktree_created",
+                "Planning worktree created",
                 repository=repository.full_name,
                 worktree_path=str(worktree_path),
                 ref=remote_ref,
@@ -467,7 +467,7 @@ class GHClient:
             return worktree_path
         except RuntimeError as e:
             logger.error(
-                "planning_worktree_creation_failed",
+                "Planning worktree creation failed",
                 repository=repository.full_name,
                 worktree_path=str(worktree_path),
                 error=str(e),
@@ -488,7 +488,7 @@ class GHClient:
             RuntimeError: If command fails
         """
         cmd = ["git"] + args
-        logger.debug("running_git_command", command=" ".join(cmd), cwd=str(cwd) if cwd else None)
+        logger.debug("Running git command", command=" ".join(cmd), cwd=str(cwd) if cwd else None)
 
         try:
             result = subprocess.run(
@@ -500,7 +500,7 @@ class GHClient:
             if e.stderr:
                 error_msg += f"\n{e.stderr}"
             logger.error(
-                "git_command_failed",
+                "Git command failed",
                 command=" ".join(cmd),
                 stderr=e.stderr,
                 returncode=e.returncode,
@@ -508,7 +508,7 @@ class GHClient:
             raise RuntimeError(error_msg) from e
         except subprocess.TimeoutExpired as e:
             error_msg = f"Git command timed out after 300s: {' '.join(cmd)}"
-            logger.error("git_command_timeout", command=" ".join(cmd))
+            logger.error("Git command timeout", command=" ".join(cmd))
             raise RuntimeError(error_msg) from e
 
     def get_current_commit_sha(self, repo_path: Path, branch_name: str | None = None) -> str:
@@ -535,7 +535,7 @@ class GHClient:
         output = self._run_git_command(args, cwd=repo_path)
         commit_sha = output.strip()
         logger.debug(
-            "current_commit_sha",
+            "Current commit SHA",
             repo_path=str(repo_path),
             branch=branch_name,
             commit_sha=commit_sha,
@@ -587,7 +587,7 @@ class GHClient:
                         continue
 
             if not base_branch:
-                logger.warning("could_not_determine_base_branch", repository=repository.full_name)
+                logger.warning("Could not determine base branch", repository=repository.full_name)
                 # If we can't determine base branch, check if branch has any commits
                 output = self._run_git_command(["rev-list", "--count", branch_name], cwd=repo_path)
                 return int(output.strip()) > 0
@@ -598,7 +598,7 @@ class GHClient:
             )
             commit_count = int(output.strip())
             logger.debug(
-                "branch_commit_check",
+                "Branch commit check",
                 repository=repository.full_name,
                 branch=branch_name,
                 base_branch=base_branch,
@@ -607,7 +607,7 @@ class GHClient:
             return commit_count > 0
         except RuntimeError as e:
             logger.error(
-                "failed_to_check_branch_commits",
+                "Failed to check branch commits",
                 repository=repository.full_name,
                 branch=branch_name,
                 error=str(e),
@@ -629,9 +629,9 @@ class GHClient:
         args = ["add", "."]
         try:
             self._run_git_command(args, cwd=repo_path)
-            logger.info("changes_staged", repo_path=str(repo_path))
+            logger.info("Changes staged", repo_path=str(repo_path))
         except RuntimeError as e:
-            logger.error("staging_failed", repo_path=str(repo_path), error=str(e))
+            logger.error("Staging failed", repo_path=str(repo_path), error=str(e))
             raise RuntimeError(f"Failed to stage changes: {e}") from e
 
     def create_commit(self, repo_path: Path, commit_message: str) -> str:
@@ -656,7 +656,7 @@ class GHClient:
             # Get the commit SHA
             commit_sha = self.get_current_commit_sha(repo_path)
             logger.info(
-                "commit_created",
+                "Commit created",
                 repo_path=str(repo_path),
                 commit_sha=commit_sha,
                 message_length=len(commit_message),
@@ -664,7 +664,7 @@ class GHClient:
             return commit_sha
         except RuntimeError as e:
             logger.error(
-                "commit_failed",
+                "Commit failed",
                 repo_path=str(repo_path),
                 error=str(e),
                 message_length=len(commit_message),
@@ -702,14 +702,14 @@ class GHClient:
         try:
             self._run_git_command(args, cwd=repo_path)
             logger.info(
-                "branch_pushed",
+                "Branch pushed",
                 repository=repository.full_name,
                 branch=branch_name,
                 remote=remote,
             )
         except RuntimeError as e:
             logger.error(
-                "branch_push_failed",
+                "Branch push failed",
                 repository=repository.full_name,
                 branch=branch_name,
                 error=str(e),

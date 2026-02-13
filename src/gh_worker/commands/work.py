@@ -49,10 +49,10 @@ async def work_command_async(
 
     # Run in appropriate mode
     if once:
-        logger.info("executing_work_once")
+        logger.info("Executing work once")
         await orchestrator.run_once()
     else:
-        logger.info("executing_work_continuous", frequency=frequency)
+        logger.info("Executing work continuous", frequency=frequency)
         await orchestrator.run_continuous(frequency)
 
 

@@ -49,18 +49,18 @@ class WorkOrchestrator:
         Raises:
             Exception: If any phase of the cycle fails
         """
-        logger.info("starting_work_cycle")
+        logger.info("Starting work cycle")
 
         # Load configuration
         app_config = self.config_manager.load()
 
         if not app_config.issues_path:
-            logger.error("issues_path_not_configured")
+            logger.error("Issues path not configured")
             print("Error: issues-path not configured. Run: gh-worker config issues-path <path>")
             return
 
         # Phase 1: Sync
-        logger.info("work_cycle_phase", phase="sync")
+        logger.info("Work cycle phase", phase="sync")
         print("\n=== Syncing issues ===")
         if self.repos:
             for repo in self.repos:
@@ -83,7 +83,7 @@ class WorkOrchestrator:
             )
 
         # Phase 2: List issues (show what we're working on)
-        logger.info("work_cycle_phase", phase="list")
+        logger.info("Work cycle phase", phase="list")
         print("\n=== Issues being worked on ===")
         if self.repos:
             for repo in self.repos:
@@ -102,7 +102,7 @@ class WorkOrchestrator:
             )
 
         # Phase 3: Plan
-        logger.info("work_cycle_phase", phase="plan")
+        logger.info("Work cycle phase", phase="plan")
         print("\n=== Generating plans ===")
         if self.repos:
             for repo in self.repos:
@@ -127,7 +127,7 @@ class WorkOrchestrator:
             )
 
         # Phase 4: Implement
-        logger.info("work_cycle_phase", phase="implement")
+        logger.info("Work cycle phase", phase="implement")
         print("\n=== Implementing plans ===")
         if self.repos:
             for repo in self.repos:
@@ -151,12 +151,12 @@ class WorkOrchestrator:
                 agent=self.agent,
             )
 
-        logger.info("work_cycle_completed")
+        logger.info("Work cycle completed")
         print("\n=== Work cycle completed ===")
 
     async def run_once(self) -> None:
         """Run a single work cycle and exit."""
-        logger.info("running_one_shot_mode")
+        logger.info("Running one-shot mode")
         await self.run_cycle()
 
     async def run_continuous(self, frequency: str) -> None:
@@ -165,13 +165,13 @@ class WorkOrchestrator:
         Args:
             frequency: Frequency string (e.g., '10m', '1h', '1d')
         """
-        logger.info("running_continuous_mode", frequency=frequency)
+        logger.info("Running continuous mode", frequency=frequency)
 
         # Parse frequency
         try:
             interval = parse_duration(frequency)
         except ValueError as e:
-            logger.error("invalid_frequency", frequency=frequency, error=str(e))
+            logger.error("Invalid frequency", frequency=frequency, error=str(e))
             print(f"Error: Invalid frequency format: {frequency}")
             print("Expected format like '10m', '1h', '2d', or '1h30m'")
             return
@@ -181,7 +181,7 @@ class WorkOrchestrator:
         cycle_count = 0
         while True:
             cycle_count += 1
-            logger.info("starting_cycle", cycle=cycle_count)
+            logger.info("Starting cycle", cycle=cycle_count)
             print(f"\n{'=' * 60}")
             print(f"Starting work cycle #{cycle_count} at {datetime.now().isoformat()}")
             print(f"{'=' * 60}")
@@ -189,11 +189,11 @@ class WorkOrchestrator:
             try:
                 await self.run_cycle()
             except Exception as e:
-                logger.error("work_cycle_failed", cycle=cycle_count, error=str(e))
+                logger.error("Work cycle failed", cycle=cycle_count, error=str(e))
                 print(f"\nError in work cycle #{cycle_count}: {e}")
                 print("Continuing to next cycle...")
 
             # Wait for next cycle
-            logger.info("waiting_for_next_cycle", interval_seconds=interval.total_seconds())
+            logger.info("Waiting for next cycle", interval_seconds=interval.total_seconds())
             print(f"\nWaiting {frequency} until next cycle...")
             await asyncio.sleep(interval.total_seconds())

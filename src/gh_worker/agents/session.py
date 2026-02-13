@@ -99,7 +99,7 @@ class SessionStore:
             session: Session to save
         """
         session_path = self._get_session_path(session.session_id)
-        logger.info("saving_session", session_id=session.session_id, path=str(session_path))
+        logger.info("Saving session", session_id=session.session_id, path=str(session_path))
 
         with open(session_path, "w") as f:
             json.dump(session.to_dict(), f, indent=2)
@@ -116,10 +116,10 @@ class SessionStore:
         session_path = self._get_session_path(session_id)
 
         if not session_path.exists():
-            logger.warning("session_not_found", session_id=session_id)
+            logger.warning("Session not found", session_id=session_id)
             return None
 
-        logger.info("loading_session", session_id=session_id)
+        logger.info("Loading session", session_id=session_id)
 
         with open(session_path) as f:
             data = json.load(f)
@@ -145,7 +145,7 @@ class SessionStore:
         """
         session = self.load(session_id)
         if session is None:
-            logger.error("cannot_update_session", session_id=session_id, reason="not_found")
+            logger.error("Cannot update session", session_id=session_id, reason="not_found")
             return
 
         session.status = status
@@ -195,7 +195,7 @@ class SessionStore:
                 sessions.append(session)
 
             except Exception as e:
-                logger.error("failed_to_load_session", file=str(session_file), error=str(e))
+                logger.error("Failed to load session", file=str(session_file), error=str(e))
 
         # Sort by updated_at descending
         sessions.sort(key=lambda s: s.updated_at, reverse=True)
@@ -211,10 +211,10 @@ class SessionStore:
         session_path = self._get_session_path(session_id)
 
         if not session_path.exists():
-            logger.warning("cannot_delete_session", session_id=session_id, reason="not_found")
+            logger.warning("Cannot delete session", session_id=session_id, reason="not_found")
             return
 
-        logger.info("deleting_session", session_id=session_id)
+        logger.info("Deleting session", session_id=session_id)
         session_path.unlink()
 
     def create_session(

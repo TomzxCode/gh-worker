@@ -20,7 +20,7 @@ def list_command(config_path: Path | None = None) -> None:
     app_config = config.load()
 
     if not app_config.issues_path:
-        logger.error("issues_path_not_configured")
+        logger.error("Issues path not configured")
         print("Error: issues-path not configured. Run: gh-worker config issues-path <path>")
         return
 

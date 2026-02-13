@@ -60,7 +60,7 @@ async def implement_issue(
         Exception: If implementation fails
     """
     logger.info(
-        "implementing_issue",
+        "Implementing issue",
         repository=task.repository.full_name,
         issue_number=task.issue_number,
     )
@@ -90,7 +90,7 @@ async def implement_issue(
     is_valid, error_msg = await agent.validate_environment()
     if not is_valid:
         logger.error(
-            "agent_environment_invalid",
+            "Agent environment invalid",
             agent=agent_name,
             error=error_msg,
         )
@@ -112,13 +112,13 @@ async def implement_issue(
                 gh_client = GHClient(repository_path)
                 gh_client.clone_repo(task.repository)
                 logger.info(
-                    "repository_cloned_for_implementation",
+                    "Repository cloned for implementation",
                     repository=task.repository.full_name,
                     path=str(repo_path),
                 )
             except Exception as e:
                 logger.error(
-                    "repository_clone_failed",
+                    "Repository clone failed",
                     repository=task.repository.full_name,
                     path=repo_path,
                     error=str(e),
@@ -131,7 +131,7 @@ async def implement_issue(
                 ) from e
         else:
             logger.error(
-                "repository_not_found",
+                "Repository not found",
                 repository=task.repository.full_name,
                 path=repo_path,
             )
@@ -153,12 +153,12 @@ async def implement_issue(
     if use_worktree:
         if not repository_path:
             logger.warning(
-                "worktree_requires_repository_path",
+                "Worktree requires repository path",
                 repository=task.repository.full_name,
                 issue_number=task.issue_number,
             )
             logger.info(
-                "falling_back_to_direct_repository",
+                "Falling back to direct repository",
                 repository=task.repository.full_name,
                 issue_number=task.issue_number,
             )
@@ -177,7 +177,7 @@ async def implement_issue(
                     task.repository, branch_name, worktree_path
                 )
                 logger.info(
-                    "using_worktree",
+                    "Using worktree",
                     repository=task.repository.full_name,
                     issue_number=task.issue_number,
                     worktree_path=str(worktree_path),
@@ -185,7 +185,7 @@ async def implement_issue(
                 )
             except Exception as e:
                 logger.error(
-                    "worktree_creation_failed",
+                    "Worktree creation failed",
                     repository=task.repository.full_name,
                     issue_number=task.issue_number,
                     error=str(e),
@@ -208,7 +208,7 @@ async def implement_issue(
         else:
             # Can't track commits without repository_path
             logger.warning(
-                "cannot_track_commits_no_repository_path",
+                "Cannot track commits without repository path",
                 repository=task.repository.full_name,
                 issue_number=task.issue_number,
             )
@@ -220,7 +220,7 @@ async def implement_issue(
         try:
             initial_commit_sha = gh_client.get_current_commit_sha(actual_repo_path, branch_name)
             logger.info(
-                "initial_commit_recorded",
+                "Initial commit recorded",
                 repository=task.repository.full_name,
                 issue_number=task.issue_number,
                 branch_name=branch_name,
@@ -228,7 +228,7 @@ async def implement_issue(
             )
         except Exception as e:
             logger.warning(
-                "failed_to_record_initial_commit",
+                "Failed to record initial commit",
                 repository=task.repository.full_name,
                 issue_number=task.issue_number,
                 branch_name=branch_name,
@@ -250,7 +250,7 @@ async def implement_issue(
         ):
             # Log event
             logger.debug(
-                "implementation_event",
+                "Implementation event",
                 repository=task.repository.full_name,
                 issue_number=task.issue_number,
                 event_type=event.type.value,
@@ -275,7 +275,7 @@ async def implement_issue(
                 # Agent implementation completed, but we'll handle commit verification
                 # and push/PR creation after the event loop
                 logger.info(
-                    "agent_implementation_completed",
+                    "Agent implementation completed",
                     repository=task.repository.full_name,
                     issue_number=task.issue_number,
                 )
@@ -287,7 +287,7 @@ async def implement_issue(
                 plan_store.update_metadata(metadata)
 
                 logger.error(
-                    "implementation_failed",
+                    "Implementation failed",
                     repository=task.repository.full_name,
                     issue_number=task.issue_number,
                     error=event.content,
@@ -306,7 +306,7 @@ async def implement_issue(
     # After agent implementation completes, ask agent for commit message and execute commit
     try:
         logger.info(
-            "requesting_commit_message",
+            "Requesting commit message",
             repository=task.repository.full_name,
             issue_number=task.issue_number,
             branch_name=branch_name,
@@ -322,7 +322,7 @@ async def implement_issue(
         ):
             # Log event
             logger.debug(
-                "commit_message_event",
+                "Commit message event",
                 repository=task.repository.full_name,
                 issue_number=task.issue_number,
                 event_type=event.type.value,
@@ -336,7 +336,7 @@ async def implement_issue(
             # Check for completion or failure
             if event.type == AgentEventType.COMPLETION:
                 logger.info(
-                    "commit_message_received",
+                    "Commit message received",
                     repository=task.repository.full_name,
                     issue_number=task.issue_number,
                 )
@@ -345,7 +345,7 @@ async def implement_issue(
             elif event.type == AgentEventType.FAILURE:
                 error_msg = f"Failed to generate commit message: {event.content}"
                 logger.error(
-                    "commit_message_failed",
+                    "Commit message failed",
                     repository=task.repository.full_name,
                     issue_number=task.issue_number,
                     error=event.content,
@@ -361,7 +361,7 @@ async def implement_issue(
         if not commit_message:
             error_msg = "No commit message received from agent"
             logger.error(
-                "no_commit_message",
+                "No commit message",
                 repository=task.repository.full_name,
                 issue_number=task.issue_number,
             )
@@ -371,7 +371,7 @@ async def implement_issue(
             raise RuntimeError(error_msg)
 
         logger.info(
-            "commit_message_extracted",
+            "Commit message extracted",
             repository=task.repository.full_name,
             issue_number=task.issue_number,
             message_length=len(commit_message),
@@ -384,7 +384,7 @@ async def implement_issue(
             else:
                 error_msg = "Cannot commit without repository_path"
                 logger.error(
-                    "cannot_commit_no_repository_path",
+                    "Cannot commit without repository path",
                     repository=task.repository.full_name,
                     issue_number=task.issue_number,
                 )
@@ -397,14 +397,14 @@ async def implement_issue(
         try:
             gh_client.stage_all_changes(actual_repo_path)
             logger.info(
-                "changes_staged",
+                "Changes staged",
                 repository=task.repository.full_name,
                 issue_number=task.issue_number,
             )
         except Exception as e:
             error_msg = f"Failed to stage changes: {e}"
             logger.error(
-                "staging_failed",
+                "Staging failed",
                 repository=task.repository.full_name,
                 issue_number=task.issue_number,
                 error=str(e),
@@ -418,7 +418,7 @@ async def implement_issue(
         try:
             commit_sha = gh_client.create_commit(actual_repo_path, commit_message)
             logger.info(
-                "commit_created",
+                "Commit created",
                 repository=task.repository.full_name,
                 issue_number=task.issue_number,
                 branch_name=branch_name,
@@ -427,7 +427,7 @@ async def implement_issue(
         except Exception as e:
             error_msg = f"Failed to create commit: {e}"
             logger.error(
-                "commit_creation_failed",
+                "Commit creation failed",
                 repository=task.repository.full_name,
                 issue_number=task.issue_number,
                 error=str(e),
@@ -452,7 +452,7 @@ async def implement_issue(
             else:
                 # Can't verify commits or push without repository_path
                 logger.warning(
-                    "cannot_verify_commits_no_repository_path",
+                    "Cannot verify commits without repository path",
                     repository=task.repository.full_name,
                     issue_number=task.issue_number,
                 )
@@ -467,7 +467,7 @@ async def implement_issue(
         if initial_commit_sha is None:
             # Fallback to old method if we couldn't record initial commit
             logger.warning(
-                "using_fallback_commit_check",
+                "Using fallback commit check",
                 repository=task.repository.full_name,
                 issue_number=task.issue_number,
                 branch_name=branch_name,
@@ -482,7 +482,7 @@ async def implement_issue(
                     "The agent was asked to commit changes but no commits were created."
                 )
                 logger.error(
-                    "no_commits_found",
+                    "No commits found",
                     repository=task.repository.full_name,
                     issue_number=task.issue_number,
                     branch_name=branch_name,
@@ -498,7 +498,7 @@ async def implement_issue(
                 commits_were_made = current_commit_sha != initial_commit_sha
 
                 logger.info(
-                    "commit_sha_comparison",
+                    "Commit SHA comparison",
                     repository=task.repository.full_name,
                     issue_number=task.issue_number,
                     branch_name=branch_name,
@@ -514,7 +514,7 @@ async def implement_issue(
                         "The agent was asked to commit changes but no commits were created."
                     )
                     logger.error(
-                        "no_commits_made",
+                        "No commits made",
                         repository=task.repository.full_name,
                         issue_number=task.issue_number,
                         branch_name=branch_name,
@@ -527,7 +527,7 @@ async def implement_issue(
                     raise RuntimeError(error_msg)
             except Exception as e:
                 logger.error(
-                    "failed_to_verify_commits",
+                    "Failed to verify commits",
                     repository=task.repository.full_name,
                     issue_number=task.issue_number,
                     branch_name=branch_name,
@@ -543,7 +543,7 @@ async def implement_issue(
         repo_path_for_git_ops = repo_path
 
         logger.info(
-            "commits_verified",
+            "Commits verified",
             repository=task.repository.full_name,
             issue_number=task.issue_number,
             branch_name=branch_name,
@@ -557,7 +557,7 @@ async def implement_issue(
                 gh_client.push_branch(task.repository, branch_name, repo_path_for_git_ops)
                 push_succeeded = True
                 logger.info(
-                    "branch_pushed",
+                    "Branch pushed",
                     repository=task.repository.full_name,
                     issue_number=task.issue_number,
                     branch_name=branch_name,
@@ -565,7 +565,7 @@ async def implement_issue(
             except Exception as push_error:
                 error_msg = f"Failed to push branch: {push_error}"
                 logger.error(
-                    "branch_push_failed",
+                    "Branch push failed",
                     repository=task.repository.full_name,
                     issue_number=task.issue_number,
                     branch_name=branch_name,
@@ -586,7 +586,7 @@ async def implement_issue(
                         head=branch_name,
                     )
                     logger.info(
-                        "pr_created",
+                        "PR created",
                         repository=task.repository.full_name,
                         issue_number=task.issue_number,
                         branch_name=branch_name,
@@ -595,7 +595,7 @@ async def implement_issue(
                 except Exception as pr_error:
                     error_msg = f"Failed to create PR: {pr_error}"
                     logger.error(
-                        "pr_creation_failed",
+                        "PR creation failed",
                         repository=task.repository.full_name,
                         issue_number=task.issue_number,
                         branch_name=branch_name,
@@ -608,7 +608,7 @@ async def implement_issue(
                         )
             else:
                 logger.info(
-                    "pr_creation_skipped_branch_not_pushed",
+                    "PR creation skipped (branch not pushed)",
                     repository=task.repository.full_name,
                     issue_number=task.issue_number,
                     branch_name=branch_name,
@@ -624,7 +624,7 @@ async def implement_issue(
         plan_store.update_metadata(metadata)
 
         logger.info(
-            "implementation_completed",
+            "Implementation completed",
             repository=task.repository.full_name,
             issue_number=task.issue_number,
             pr_url=pr_url,
@@ -642,14 +642,14 @@ async def implement_issue(
             try:
                 gh_client.remove_worktree(task.repository, worktree_path)
                 logger.info(
-                    "worktree_cleaned_up",
+                    "Worktree cleaned up",
                     repository=task.repository.full_name,
                     issue_number=task.issue_number,
                     worktree_path=str(worktree_path),
                 )
             except Exception as cleanup_error:
                 logger.warning(
-                    "worktree_cleanup_failed",
+                    "Worktree cleanup failed",
                     repository=task.repository.full_name,
                     issue_number=task.issue_number,
                     worktree_path=str(worktree_path),
@@ -657,7 +657,7 @@ async def implement_issue(
                 )
         elif worktree_path and not delete_worktree:
             logger.info(
-                "worktree_preserved",
+                "Worktree preserved",
                 repository=task.repository.full_name,
                 issue_number=task.issue_number,
                 worktree_path=str(worktree_path),
@@ -700,7 +700,7 @@ def find_issues_needing_implementation(
             assignees_str = ",".join(assignees).lower()
             if assignee_filter.lower() not in assignees_str:
                 logger.debug(
-                    "issue_not_assigned_to_filter",
+                    "Issue not assigned to filter",
                     repository=repository.full_name,
                     issue_number=issue_number,
                 )
@@ -710,7 +710,7 @@ def find_issues_needing_implementation(
         plan_result = plan_store.get_latest_plan(repository, issue_number)
         if not plan_result:
             logger.debug(
-                "issue_has_no_plan",
+                "Issue has no plan",
                 repository=repository.full_name,
                 issue_number=issue_number,
             )
@@ -722,7 +722,7 @@ def find_issues_needing_implementation(
         # Allow IN_PROGRESS and FAILED when explicitly requested (issue_numbers) for retry/continue
         if require_approved and metadata.status == PlanStatus.PENDING:
             logger.debug(
-                "plan_not_approved",
+                "Plan not approved",
                 repository=repository.full_name,
                 issue_number=issue_number,
                 status=metadata.status.value,
@@ -732,7 +732,7 @@ def find_issues_needing_implementation(
         # Skip if already completed (unless force is True)
         if not force and metadata.status == PlanStatus.COMPLETED:
             logger.debug(
-                "issue_already_implemented",
+                "Issue already implemented",
                 repository=repository.full_name,
                 issue_number=issue_number,
             )
@@ -741,7 +741,7 @@ def find_issues_needing_implementation(
         # Skip if currently in progress (unless explicitly requested)
         if metadata.status == PlanStatus.IN_PROGRESS and issue_numbers is None:
             logger.debug(
-                "issue_in_progress",
+                "Issue in progress",
                 repository=repository.full_name,
                 issue_number=issue_number,
             )
@@ -753,7 +753,7 @@ def find_issues_needing_implementation(
 
         if not description_file.exists():
             logger.warning(
-                "issue_description_missing",
+                "Issue description missing",
                 repository=repository.full_name,
                 issue_number=issue_number,
             )
@@ -809,7 +809,7 @@ async def implement_command_async(
     app_config = config.load()
 
     if not app_config.issues_path:
-        logger.error("issues_path_not_configured")
+        logger.error("Issues path not configured")
         print("Error: issues-path not configured. Run: gh-worker config issues-path <path>")
         return
 
@@ -817,12 +817,12 @@ async def implement_command_async(
     if assignee == "@me":
         gh_client = GHClient(app_config.repository_path)
         if not gh_client.check_auth():
-            logger.error("gh_not_authenticated")
+            logger.error("gh CLI not authenticated")
             print("Error: gh CLI not authenticated. Run: gh auth login")
             return
         current_user = gh_client.get_current_user()
         if not current_user:
-            logger.error("could_not_get_current_user")
+            logger.error("Could not get current user")
             print("Error: Could not determine current user. Run: gh auth login")
             return
         assignee_filter = current_user
@@ -837,18 +837,18 @@ async def implement_command_async(
     if all_repos:
         repositories = issue_store.list_repositories()
         if not repositories:
-            logger.warning("no_repositories_found")
+            logger.warning("No repositories found")
             print("No repositories found. Use 'gh-worker repositories add' to add repositories.")
             return
     elif repo:
         try:
             repositories = [issue_store.resolve_repo(repo)]
         except ValueError as e:
-            logger.error("invalid_repository", repo=repo, error=str(e))
+            logger.error("Invalid repository", repo=repo, error=str(e))
             print(f"Error: {e}")
             return
     else:
-        logger.error("no_repository_specified")
+        logger.error("No repository specified")
         print("Error: Specify --repo or --all-repos")
         return
 
@@ -867,12 +867,12 @@ async def implement_command_async(
         all_tasks.extend(tasks)
 
     if not all_tasks:
-        logger.info("no_issues_needing_implementation")
+        logger.info("No issues need implementation")
         print("No issues need implementation")
         return
 
     logger.info(
-        "starting_implementation",
+        "Starting implementation",
         total_issues=len(all_tasks),
         parallelism=max_workers,
     )

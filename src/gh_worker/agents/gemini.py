@@ -142,7 +142,7 @@ class GeminiAgent(BaseAgent):
         Yields:
             AgentEvent objects from the session
         """
-        logger.warning("gemini_agent_not_implemented", session_id=session_id)
+        logger.warning("Gemini agent not implemented", session_id=session_id)
 
         yield AgentEvent(
             type=AgentEventType.ERROR,

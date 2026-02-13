@@ -39,7 +39,7 @@ def sync_repository(
     Returns:
         Number of issues synced
     """
-    logger.info("syncing_repository", repository=repository.full_name)
+    logger.info("Syncing repository", repository=repository.full_name)
 
     if issue_numbers:
         issues_data = []
@@ -48,7 +48,7 @@ def sync_repository(
                 issue_data = gh_client.get_issue(repository, issue_number)
                 issues_data.append(issue_data)
             except Exception as e:
-                logger.error("failed_to_get_issue", issue_number=issue_number, error=str(e))
+                logger.error("Failed to get issue", issue_number=issue_number, error=str(e))
     else:
         # Get timestamp for filtering (skip when force=True to refresh all description.md)
         if force:
@@ -79,7 +79,7 @@ def sync_repository(
     if count > 0:
         issue_store.set_repo_updated_at(repository, latest_update)
 
-    logger.info("synced_repository", repository=repository.full_name, count=count)
+    logger.info("Synced repository", repository=repository.full_name, count=count)
     return count
 
 
@@ -109,7 +109,7 @@ def sync_command(
     app_config = config.load()
 
     if not app_config.issues_path:
-        logger.error("issues_path_not_configured")
+        logger.error("Issues path not configured")
         print("Error: issues-path not configured. Run: gh-worker config issues-path <path>")
         return
 
@@ -117,14 +117,14 @@ def sync_command(
     gh_client = GHClient(app_config.repository_path)
 
     if not gh_client.check_auth():
-        logger.error("gh_not_authenticated")
+        logger.error("gh CLI not authenticated")
         print("Error: gh CLI not authenticated. Run: gh auth login")
         return
 
     if all_repos:
         repositories = issue_store.list_repositories()
         if not repositories:
-            logger.warning("no_repositories_found")
+            logger.warning("No repositories found")
             print("No repositories found. Use 'gh-worker repositories add' to add repositories.")
             return
 
@@ -148,7 +148,7 @@ def sync_command(
         try:
             repository = issue_store.resolve_repo(repo)
         except ValueError as e:
-            logger.error("invalid_repository", repo=repo, error=str(e))
+            logger.error("Invalid repository", repo=repo, error=str(e))
             print(f"Error: {e}")
             return
         count = sync_repository(
@@ -164,5 +164,5 @@ def sync_command(
         print(f"Synced {count} issues from {repository.full_name}")
 
     else:
-        logger.error("no_repository_specified")
+        logger.error("No repository specified")
         print("Error: Specify --repo or --all-repos")

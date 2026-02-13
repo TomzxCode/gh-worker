@@ -114,7 +114,7 @@ def review_plan_command(
     app_config = config.load()
 
     if not app_config.issues_path:
-        logger.error("issues_path_not_configured")
+        logger.error("Issues path not configured")
         print("Error: issues-path not configured. Run: gh-worker config issues-path <path>")
         return
 
@@ -124,7 +124,7 @@ def review_plan_command(
     try:
         repository = issue_store.resolve_repo(repo)
     except ValueError as e:
-        logger.error("invalid_repository", repo=repo, error=str(e))
+        logger.error("Invalid repository", repo=repo, error=str(e))
         print(f"Error: {e}")
         return
 
@@ -144,7 +144,7 @@ def review_plan_command(
         return
 
     if not app_config.repository_path:
-        logger.error("repository_path_not_configured")
+        logger.error("Repository path not configured")
         print("Error: repository-path not configured. Run: gh-worker config repository-path <path>")
         return
 
@@ -156,13 +156,13 @@ def review_plan_command(
         try:
             gh_client.clone_repo(repository)
             logger.info(
-                "repository_cloned_for_review",
+                "Repository cloned for review",
                 repository=repository.full_name,
                 path=str(repo_path),
             )
         except Exception as e:
             logger.error(
-                "repository_clone_failed",
+                "Repository clone failed",
                 repository=repository.full_name,
                 path=str(repo_path),
                 error=str(e),
@@ -186,14 +186,14 @@ def review_plan_command(
             gh_client.fetch_repository(repository)
             gh_client.create_planning_worktree(repository, worktree_path)
             logger.info(
-                "review_plan_worktree_created",
+                "Review plan worktree created",
                 repository=repository.full_name,
                 issue_number=metadata.issue_number,
                 worktree_path=str(worktree_path),
             )
         except Exception as e:
             logger.error(
-                "review_plan_worktree_failed",
+                "Review plan worktree failed",
                 repository=repository.full_name,
                 issue_number=metadata.issue_number,
                 error=str(e),
@@ -209,7 +209,7 @@ def review_plan_command(
         plan_symlink.symlink_to(plan_file.resolve())
     except OSError as e:
         logger.error(
-            "plan_symlink_failed",
+            "Plan symlink failed",
             plan_file=str(plan_file),
             worktree_path=str(worktree_path),
             error=str(e),
@@ -245,12 +245,12 @@ def review_implementation_command(
     app_config = config.load()
 
     if not app_config.issues_path:
-        logger.error("issues_path_not_configured")
+        logger.error("Issues path not configured")
         print("Error: issues-path not configured. Run: gh-worker config issues-path <path>")
         return
 
     if not app_config.repository_path:
-        logger.error("repository_path_not_configured")
+        logger.error("Repository path not configured")
         print("Error: repository-path not configured. Run: gh-worker config repository-path <path>")
         return
 
@@ -261,7 +261,7 @@ def review_implementation_command(
     try:
         repository = issue_store.resolve_repo(repo)
     except ValueError as e:
-        logger.error("invalid_repository", repo=repo, error=str(e))
+        logger.error("Invalid repository", repo=repo, error=str(e))
         print(f"Error: {e}")
         return
 
@@ -279,7 +279,7 @@ def review_implementation_command(
         if push_branch:
             gh_client.push_branch(repository, metadata.branch_name, repo_path)
             logger.info(
-                "branch_pushed",
+                "Branch pushed",
                 repository=repository.full_name,
                 issue_number=metadata.issue_number,
                 branch_name=metadata.branch_name,
@@ -300,7 +300,7 @@ def review_implementation_command(
             )
             metadata.pr_url = pr_url
             logger.info(
-                "pr_created",
+                "PR created",
                 repository=repository.full_name,
                 issue_number=metadata.issue_number,
                 pr_url=pr_url,
@@ -313,7 +313,7 @@ def review_implementation_command(
         )
     except Exception as e:
         logger.error(
-            "review_implementation_failed",
+            "Review implementation failed",
             repository=repository.full_name,
             issue_number=metadata.issue_number,
             error=str(e),

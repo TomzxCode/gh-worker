@@ -52,11 +52,11 @@ class ParallelExecutor:
             List of TaskResult objects (one per item)
         """
         if not items:
-            logger.info("no_items_to_execute", task_name=task_name)
+            logger.info("No items to execute", task_name=task_name)
             return []
 
         logger.info(
-            "starting_parallel_execution",
+            "Starting parallel execution",
             task_name=task_name,
             total_items=len(items),
             max_workers=self.max_workers,
@@ -69,7 +69,7 @@ class ParallelExecutor:
         failures = len(results) - successes
 
         logger.info(
-            "completed_parallel_execution",
+            "Completed parallel execution",
             task_name=task_name,
             total=len(results),
             successes=successes,
@@ -93,13 +93,13 @@ class ParallelExecutor:
         """
         async with self._semaphore:
             try:
-                logger.debug("starting_task", task_name=task_name, item=str(item))
+                logger.debug("Starting task", task_name=task_name, item=str(item))
                 result = await task_func(item)
-                logger.debug("task_succeeded", task_name=task_name, item=str(item))
+                logger.debug("Task succeeded", task_name=task_name, item=str(item))
                 return TaskResult(item=item, success=True, result=result)
             except Exception as e:
                 logger.error(
-                    "task_failed",
+                    "Task failed",
                     task_name=task_name,
                     item=str(item),
                     error=str(e),

@@ -57,7 +57,7 @@ class AgentRegistry:
         if not issubclass(agent_class, BaseAgent):
             raise TypeError("Agent class must be a subclass of BaseAgent")
 
-        logger.debug("registering_agent", name=name, default=default)
+        logger.debug("Registering agent", name=name, default=default)
         self._agents[name] = agent_class
 
         if default or self._default_agent is None:
@@ -75,7 +75,7 @@ class AgentRegistry:
         if name not in self._agents:
             raise KeyError(f"Agent '{name}' is not registered")
 
-        logger.info("unregistering_agent", name=name)
+        logger.info("Unregistering agent", name=name)
         del self._agents[name]
 
         if self._default_agent == name:
@@ -107,7 +107,7 @@ class AgentRegistry:
             )
 
         agent_class = self._agents[name]
-        logger.info("creating_agent_instance", name=name)
+        logger.info("Creating agent instance", name=name)
         return agent_class(config)
 
     def list_agents(self) -> list[str]:
@@ -138,7 +138,7 @@ class AgentRegistry:
         if name not in self._agents:
             raise KeyError(f"Agent '{name}' is not registered")
 
-        logger.info("setting_default_agent", name=name)
+        logger.info("Setting default agent", name=name)
         self._default_agent = name
 
     def is_registered(self, name: str) -> bool:

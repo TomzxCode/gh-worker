@@ -30,19 +30,19 @@ class OpenCodeAgent(BaseAgent):
             config: Agent configuration (e.g., cli_path, opencode_path)
         """
         super().__init__(config)
-        logger.debug("initializing_opencode_agent", config=config)
+        logger.debug("Initializing opencode agent", config=config)
         cli_path = None
         if config:
             cli_path = config.get("cli_path") or config.get("opencode_path")
 
         if not cli_path:
             cli_path = "opencode"
-            logger.debug("using_default_cli_path", cli_path=cli_path)
+            logger.debug("Using default CLI path", cli_path=cli_path)
 
         self.cli_path = cli_path
         self.cli_executable = cli_path
         self.cli_args: list[str] = []
-        logger.debug("cli_path_set", cli_path=self.cli_path)
+        logger.debug("CLI path set", cli_path=self.cli_path)
 
     @property
     def name(self) -> str:
@@ -60,7 +60,7 @@ class OpenCodeAgent(BaseAgent):
         Returns:
             Tuple of (is_valid, error_message)
         """
-        logger.debug("validating_environment", executable=self.cli_executable)
+        logger.debug("Validating environment", executable=self.cli_executable)
         cli_location = shutil.which(self.cli_executable)
         logger.debug(
             "cli_location_check",
@@ -72,9 +72,9 @@ class OpenCodeAgent(BaseAgent):
                 f"OpenCode CLI not found at '{self.cli_executable}'. "
                 "Please install it first. Try: npm i -g opencode-ai"
             )
-            logger.debug("environment_validation_failed", error=error_msg)
+            logger.debug("Environment validation failed", error=error_msg)
             return (False, error_msg)
-        logger.debug("environment_validation_success", cli_path=cli_location)
+        logger.debug("Environment validation success", cli_path=cli_location)
         return True, None
 
     async def plan(self, issue_content: str, repository_path: str) -> AgentResult:
@@ -124,7 +124,7 @@ class OpenCodeAgent(BaseAgent):
                     )
                 if event.metadata and "session_id" in event.metadata:
                     session_id = event.metadata["session_id"]
-                    logger.debug("session_id_found_in_event", session_id=session_id)
+                    logger.debug("Session ID found in event", session_id=session_id)
 
             if not session_id and agent_output:
                 session_id = self._extract_session_id(agent_output)
@@ -142,7 +142,7 @@ class OpenCodeAgent(BaseAgent):
                     content_length=len(plan_content),
                 )
             except FileNotFoundError:
-                logger.warning("plan_file_not_found", plan_file_path=plan_file_path)
+                logger.warning("Plan file not found", plan_file_path=plan_file_path)
                 return AgentResult(
                     success=False,
                     output="",
@@ -172,8 +172,8 @@ class OpenCodeAgent(BaseAgent):
                 metadata={"agent": "opencode"},
             )
         except Exception as e:
-            logger.error("plan_generation_failed", error=str(e))
-            logger.debug("plan_generation_exception", exc_info=True)
+            logger.error("Plan generation failed", error=str(e))
+            logger.debug("Plan generation exception", exc_info=True)
             return AgentResult(
                 success=False,
                 output="",
@@ -183,7 +183,7 @@ class OpenCodeAgent(BaseAgent):
         finally:
             try:
                 shutil.rmtree(temp_dir)
-                logger.debug("temp_dir_cleaned_up", temp_dir=temp_dir)
+                logger.debug("Temp dir cleaned up", temp_dir=temp_dir)
             except Exception as e:
                 logger.warning(
                     "temp_dir_cleanup_failed",
@@ -258,7 +258,7 @@ class OpenCodeAgent(BaseAgent):
                 error=str(e),
                 issue_number=issue_number,
             )
-            logger.debug("implementation_exception", exc_info=True)
+            logger.debug("Implementation exception", exc_info=True)
             yield AgentEvent(
                 type=AgentEventType.FAILURE,
                 content=f"Implementation failed: {e}",
@@ -325,7 +325,7 @@ class OpenCodeAgent(BaseAgent):
                 error=str(e),
                 issue_number=issue_number,
             )
-            logger.debug("commit_exception", exc_info=True)
+            logger.debug("Commit exception", exc_info=True)
             yield AgentEvent(
                 type=AgentEventType.FAILURE,
                 content=f"Commit failed: {e}",
@@ -341,8 +341,8 @@ class OpenCodeAgent(BaseAgent):
         Yields:
             AgentEvent objects from the session
         """
-        logger.info("monitoring_session", session_id=session_id)
-        logger.debug("monitor_not_implemented", session_id=session_id)
+        logger.info("Monitoring session", session_id=session_id)
+        logger.debug("Monitor not implemented", session_id=session_id)
 
         yield AgentEvent(
             type=AgentEventType.STATUS,
@@ -448,7 +448,7 @@ Please provide the commit message.
             cwd=cwd,
             limit=10 * 2**20,
         )
-        logger.debug("opencode_streaming_process_started", pid=process.pid)
+        logger.debug("Opencode streaming process started", pid=process.pid)
 
         line_count = 0
         json_parse_errors = 0
@@ -469,7 +469,7 @@ Please provide the commit message.
                 line_count += 1
                 content = line.decode().rstrip()
                 if not content:
-                    logger.debug("skipping_empty_line", line_number=line_count)
+                    logger.debug("Skipping empty line", line_number=line_count)
                     continue
 
                 logger.debug(
@@ -621,7 +621,7 @@ Please provide the commit message.
 
     def _extract_session_id(self, output: str) -> str | None:
         """Extract session ID from OpenCode output."""
-        logger.debug("extracting_session_id", output_length=len(output))
+        logger.debug("Extracting session ID", output_length=len(output))
 
         for line in output.splitlines():
             line = line.strip()
@@ -631,7 +631,7 @@ Please provide the commit message.
                 data = json.loads(line)
                 sid = data.get("sessionID") or data.get("session_id")
                 if sid:
-                    logger.debug("session_id_found_in_json", session_id=sid)
+                    logger.debug("Session ID found in JSON", session_id=sid)
                     return sid
             except (json.JSONDecodeError, AttributeError):
                 continue

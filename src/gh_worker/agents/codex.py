@@ -142,7 +142,7 @@ class CodexAgent(BaseAgent):
         Yields:
             AgentEvent objects from the session
         """
-        logger.warning("codex_agent_not_implemented", session_id=session_id)
+        logger.warning("Codex agent not implemented", session_id=session_id)
 
         yield AgentEvent(
             type=AgentEventType.ERROR,

@@ -30,7 +30,7 @@ class CursorAgent(BaseAgent):
             config: Agent configuration (e.g., cli_path, model, api_key)
         """
         super().__init__(config)
-        logger.debug("initializing_cursor_agent", config=config)
+        logger.debug("Initializing cursor agent", config=config)
 
         # Support both cli_path and cursor_agent_path config keys
         if config:
@@ -51,10 +51,10 @@ class CursorAgent(BaseAgent):
                 cli_path = "agent"
             else:
                 cli_path = "cursor-agent"  # Default fallback
-            logger.debug("using_default_cli_path", cli_path=cli_path)
+            logger.debug("Using default CLI path", cli_path=cli_path)
 
         self.cli_path = cli_path
-        logger.debug("cli_path_set", cli_path=self.cli_path)
+        logger.debug("CLI path set", cli_path=self.cli_path)
 
     @property
     def name(self) -> str:
@@ -72,17 +72,17 @@ class CursorAgent(BaseAgent):
         Returns:
             Tuple of (is_valid, error_message)
         """
-        logger.debug("validating_environment", executable=self.cli_path)
+        logger.debug("Validating environment", executable=self.cli_path)
         cli_location = shutil.which(self.cli_path)
-        logger.debug("cli_location_check", executable=self.cli_path, found=cli_location)
+        logger.debug("CLI location check", executable=self.cli_path, found=cli_location)
         if cli_location is None:
             error_msg = (
                 f"cursor-agent CLI not found at '{self.cli_path}'. "
                 "Please install it first. Try: npm install -g @cursor/agent"
             )
-            logger.debug("environment_validation_failed", error=error_msg)
+            logger.debug("Environment validation failed", error=error_msg)
             return (False, error_msg)
-        logger.debug("environment_validation_success", cli_path=cli_location)
+        logger.debug("Environment validation success", cli_path=cli_location)
         return True, None
 
     async def plan(self, issue_content: str, repository_path: str) -> AgentResult:
@@ -96,7 +96,7 @@ class CursorAgent(BaseAgent):
             AgentResult with the generated plan
         """
         logger.info(
-            "generating_plan",
+            "Generating plan",
             repository_path=repository_path,
         )
 
@@ -104,14 +104,14 @@ class CursorAgent(BaseAgent):
         temp_file = tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False)
         plan_file_path = temp_file.name
         temp_file.close()
-        logger.debug("plan_file_path_generated", plan_file_path=plan_file_path)
+        logger.debug("Plan file path generated", plan_file_path=plan_file_path)
 
         prompt = self._build_plan_prompt(issue_content, plan_file_path)
         prompt_length = len(prompt)
         issue_content_length = len(issue_content)
 
         logger.debug(
-            "plan_prompt_built",
+            "Plan prompt built",
             prompt_length=prompt_length,
             issue_content_length=issue_content_length,
             plan_file_path=plan_file_path,
@@ -120,7 +120,7 @@ class CursorAgent(BaseAgent):
         # Warn if prompt is very large (likely to cause issues)
         if prompt_length > 100000:  # ~100KB
             logger.warning(
-                "large_prompt_detected",
+                "Large prompt detected",
                 prompt_length=prompt_length,
                 issue_content_length=issue_content_length,
                 message="Prompt is very large and may exceed CLI tool limits",
@@ -128,7 +128,7 @@ class CursorAgent(BaseAgent):
 
         try:
             # Run cursor-agent in plan mode with streaming
-            logger.debug("running_cursor_agent_for_plan")
+            logger.debug("Running cursor agent for plan")
             agent_output = None
             session_id = None
             async for event in self._run_cursor_agent_streaming(
@@ -138,7 +138,7 @@ class CursorAgent(BaseAgent):
                 if event.type == AgentEventType.RESULT:
                     agent_output = event.content
                     logger.debug(
-                        "result_extracted",
+                        "Result extracted",
                         output_length=len(agent_output) if agent_output else 0,
                     )
 
@@ -146,7 +146,7 @@ class CursorAgent(BaseAgent):
                 if event.metadata and "session_id" in event.metadata:
                     session_id = event.metadata["session_id"]
                     logger.debug(
-                        "session_id_found_in_event",
+                        "Session ID found in event",
                         session_id=session_id,
                     )
 
@@ -154,7 +154,7 @@ class CursorAgent(BaseAgent):
             if not session_id and agent_output:
                 session_id = self._extract_session_id(agent_output)
                 logger.debug(
-                    "session_id_extracted_from_output",
+                    "Session ID extracted from output",
                     session_id=session_id,
                 )
 
@@ -163,12 +163,12 @@ class CursorAgent(BaseAgent):
                 with open(plan_file_path, encoding="utf-8") as f:
                     plan_content = f.read()
                 logger.debug(
-                    "plan_file_read",
+                    "Plan file read",
                     plan_file_path=plan_file_path,
                     content_length=len(plan_content),
                 )
             except FileNotFoundError:
-                logger.warning("plan_file_not_found", plan_file_path=plan_file_path)
+                logger.warning("Plan file not found", plan_file_path=plan_file_path)
                 return AgentResult(
                     success=False,
                     output="",
@@ -178,7 +178,7 @@ class CursorAgent(BaseAgent):
                     ),
                 )
             except Exception as e:
-                logger.error("plan_file_read_error", plan_file_path=plan_file_path, error=str(e))
+                logger.error("Plan file read error", plan_file_path=plan_file_path, error=str(e))
                 return AgentResult(
                     success=False,
                     output="",
@@ -195,7 +195,7 @@ class CursorAgent(BaseAgent):
             # Check if this is the chunking error
             if "separator" in error_msg.lower() and "chunk" in error_msg.lower():
                 logger.error(
-                    "plan_generation_failed_chunking_error",
+                    "Plan generation failed (chunking error)",
                     error=error_msg,
                     prompt_length=prompt_length,
                     issue_content_length=issue_content_length,
@@ -211,14 +211,14 @@ class CursorAgent(BaseAgent):
                 )
             else:
                 logger.error(
-                    "plan_generation_failed",
+                    "Plan generation failed",
                     error=error_msg,
                     prompt_length=prompt_length,
                     issue_content_length=issue_content_length,
                 )
                 enhanced_error = error_msg
 
-            logger.debug("plan_generation_exception", exc_info=True)
+            logger.debug("Plan generation exception", exc_info=True)
             return AgentResult(
                 success=False,
                 output="",
@@ -246,7 +246,7 @@ class CursorAgent(BaseAgent):
             AgentEvent objects as the implementation progresses
         """
         logger.info(
-            "starting_implementation",
+            "Starting implementation",
             issue_number=issue_number,
             branch_name=branch_name,
             repository_path=repository_path,
@@ -256,7 +256,7 @@ class CursorAgent(BaseAgent):
             issue_content, plan_content, issue_number, branch_name
         )
         logger.debug(
-            "implement_prompt_built",
+            "Implement prompt built",
             issue_number=issue_number,
             branch_name=branch_name,
             prompt_length=len(prompt),
@@ -265,12 +265,12 @@ class CursorAgent(BaseAgent):
 
         try:
             # Stream output from cursor-agent
-            logger.debug("starting_cursor_agent_streaming", issue_number=issue_number)
+            logger.debug("Starting cursor agent streaming", issue_number=issue_number)
             event_count = 0
             async for event in self._run_cursor_agent_streaming(prompt, repository_path):
                 event_count += 1
                 logger.debug(
-                    "streaming_event_received",
+                    "Streaming event received",
                     issue_number=issue_number,
                     event_type=event.type.value,
                     event_count=event_count,
@@ -278,7 +278,7 @@ class CursorAgent(BaseAgent):
                 yield event
 
             logger.debug(
-                "streaming_completed",
+                "Streaming completed",
                 issue_number=issue_number,
                 total_events=event_count,
             )
@@ -289,8 +289,8 @@ class CursorAgent(BaseAgent):
             )
 
         except Exception as e:
-            logger.error("implementation_failed", error=str(e), issue_number=issue_number)
-            logger.debug("implementation_exception", exc_info=True)
+            logger.error("Implementation failed", error=str(e), issue_number=issue_number)
+            logger.debug("Implementation exception", exc_info=True)
             yield AgentEvent(
                 type=AgentEventType.FAILURE,
                 content=f"Implementation failed: {e}",
@@ -314,7 +314,7 @@ class CursorAgent(BaseAgent):
             AgentEvent objects as the commit progresses
         """
         logger.info(
-            "starting_commit",
+            "Starting commit",
             issue_number=issue_number,
             branch_name=branch_name,
             repository_path=repository_path,
@@ -322,7 +322,7 @@ class CursorAgent(BaseAgent):
 
         prompt = self._build_commit_prompt(issue_number, branch_name)
         logger.debug(
-            "commit_prompt_built",
+            "Commit prompt built",
             issue_number=issue_number,
             branch_name=branch_name,
             prompt_length=len(prompt),
@@ -330,12 +330,12 @@ class CursorAgent(BaseAgent):
 
         try:
             # Stream output from cursor-agent
-            logger.debug("starting_cursor_agent_streaming_for_commit", issue_number=issue_number)
+            logger.debug("Starting cursor agent streaming for commit", issue_number=issue_number)
             event_count = 0
             async for event in self._run_cursor_agent_streaming(prompt, repository_path):
                 event_count += 1
                 logger.debug(
-                    "streaming_event_received",
+                    "Streaming event received",
                     issue_number=issue_number,
                     event_type=event.type.value,
                     event_count=event_count,
@@ -343,7 +343,7 @@ class CursorAgent(BaseAgent):
                 yield event
 
             logger.debug(
-                "streaming_completed",
+                "Streaming completed",
                 issue_number=issue_number,
                 total_events=event_count,
             )
@@ -354,8 +354,8 @@ class CursorAgent(BaseAgent):
             )
 
         except Exception as e:
-            logger.error("commit_failed", error=str(e), issue_number=issue_number)
-            logger.debug("commit_exception", exc_info=True)
+            logger.error("Commit failed", error=str(e), issue_number=issue_number)
+            logger.debug("Commit exception", exc_info=True)
             yield AgentEvent(
                 type=AgentEventType.FAILURE,
                 content=f"Commit failed: {e}",
@@ -371,7 +371,7 @@ class CursorAgent(BaseAgent):
         Yields:
             AgentEvent objects from the session
         """
-        logger.info("monitoring_session", session_id=session_id)
+        logger.info("Monitoring session", session_id=session_id)
 
         # Use --resume to continue the session
         try:
@@ -382,7 +382,7 @@ class CursorAgent(BaseAgent):
             ):
                 yield event
         except Exception as e:
-            logger.error("monitoring_failed", error=str(e), session_id=session_id)
+            logger.error("Monitoring failed", error=str(e), session_id=session_id)
             yield AgentEvent(
                 type=AgentEventType.ERROR,
                 content=f"Failed to monitor session: {e}",
@@ -413,7 +413,7 @@ Create a comprehensive plan that includes:
 Write the plan to the following file: {plan_file_path}
 """
         logger.debug(
-            "plan_prompt_built",
+            "Plan prompt built",
             issue_content_length=len(issue_content),
             prompt_length=len(prompt),
             plan_file_path=plan_file_path,
@@ -452,7 +452,7 @@ Do not commit changes yet - that will be done separately after implementation.
 Please proceed with the implementation.
 """
         logger.debug(
-            "implement_prompt_built",
+            "Implement prompt built",
             issue_number=issue_number,
             branch_name=branch_name,
             issue_content_length=len(issue_content),
@@ -484,7 +484,7 @@ Requirements:
 Please provide the commit message.
 """
         logger.debug(
-            "commit_prompt_built",
+            "Commit prompt built",
             issue_number=issue_number,
             branch_name=branch_name,
             prompt_length=len(prompt),
@@ -537,7 +537,7 @@ Please provide the commit message.
             cmd.append(prompt)
 
         logger.debug(
-            "executing_cursor_agent_streaming_command",
+            "Executing cursor agent streaming command",
             command=cmd,
             cwd=cwd,
             prompt_length=len(prompt) if prompt else 0,
@@ -552,7 +552,7 @@ Please provide the commit message.
             cwd=cwd if cwd else None,
             limit=10 * 2**20,  # 10MB buffer limit to prevent chunk separator errors
         )
-        logger.debug("cursor_agent_streaming_process_started", pid=process.pid)
+        logger.debug("Cursor agent streaming process started", pid=process.pid)
 
         # Stream stdout (JSON lines format)
         line_count = 0
@@ -565,22 +565,22 @@ Please provide the commit message.
             while True:
                 line = await process.stdout.readline()
                 if not line:
-                    logger.debug("streaming_complete_no_more_lines", line_count=line_count)
+                    logger.debug("Streaming complete, no more lines", line_count=line_count)
                     break
 
                 line_count += 1
                 content = line.decode().rstrip()
                 if not content:
-                    logger.debug("skipping_empty_line", line_number=line_count)
+                    logger.debug("Skipping empty line", line_number=line_count)
                     continue
 
-                logger.debug("processing_stream_line", line_number=line_count, content=content)
+                logger.debug("Processing stream line", line_number=line_count, content=content)
 
                 try:
                     # Parse JSON line from stream-json format
                     data = json.loads(content)
                     logger.debug(
-                        "json_line_parsed", line_number=line_count, data_keys=list(data.keys())
+                        "JSON line parsed", line_number=line_count, data_keys=list(data.keys())
                     )
 
                     # Extract text content from the message structure
@@ -645,7 +645,7 @@ Please provide the commit message.
                         )
 
                         logger.info(
-                            "cursor_agent_streaming_event",
+                            "Cursor agent streaming event",
                             event_number=event_count,
                             event_type=event_type.value,
                             content_length=len(text_content),
@@ -660,12 +660,12 @@ Please provide the commit message.
                             metadata=metadata if metadata else None,
                         )
                     else:
-                        logger.debug("no_text_content_in_json", line_number=line_count, data=data)
+                        logger.debug("No text content in JSON", line_number=line_count, data=data)
 
                 except json.JSONDecodeError as e:
                     json_parse_errors += 1
                     logger.debug(
-                        "json_decode_error_fallback_to_text",
+                        "JSON decode error, fallback to text",
                         line_number=line_count,
                         error=str(e),
                         content=content,
@@ -688,7 +688,7 @@ Please provide the commit message.
                         )
 
                         logger.info(
-                            "cursor_agent_streaming_event",
+                            "Cursor agent streaming event",
                             event_number=event_count,
                             event_type=event_type.value,
                             content_length=len(content),
@@ -702,7 +702,7 @@ Please provide the commit message.
                         )
 
         logger.debug(
-            "waiting_for_streaming_process_completion",
+            "Waiting for streaming process completion",
             line_count=line_count,
             json_parse_errors=json_parse_errors,
         )
@@ -710,7 +710,7 @@ Please provide the commit message.
         await process.wait()
 
         logger.debug(
-            "streaming_process_completed",
+            "Streaming process completed",
             returncode=process.returncode,
             line_count=line_count,
             json_parse_errors=json_parse_errors,
@@ -724,7 +724,7 @@ Please provide the commit message.
                 stderr_output = stderr_output.decode()
 
             logger.debug(
-                "streaming_process_failed",
+                "Streaming process failed",
                 returncode=process.returncode,
                 stderr_length=len(stderr_output) if stderr_output else 0,
             )
@@ -771,7 +771,7 @@ Please provide the commit message.
 
         # Log summary of all events
         logger.info(
-            "cursor_agent_streaming_completed",
+            "Cursor agent streaming completed",
             total_events=event_count,
             events_by_type=event_counts_by_type,
             total_lines=line_count,
@@ -788,7 +788,7 @@ Please provide the commit message.
         Returns:
             Session ID if found, None otherwise
         """
-        logger.debug("extracting_session_id", output_length=len(output))
+        logger.debug("Extracting session ID", output_length=len(output))
 
         # First, try to extract from JSON structures in the output
         # Look for JSON lines with session_id, chat_id, or chatId field
@@ -800,7 +800,7 @@ Please provide the commit message.
                 data = json.loads(line)
                 session_id = data.get("session_id") or data.get("chat_id") or data.get("chatId")
                 if session_id:
-                    logger.debug("session_id_found_in_json", session_id=session_id)
+                    logger.debug("Session ID found in JSON", session_id=session_id)
                     return session_id
             except (json.JSONDecodeError, AttributeError):
                 # Not JSON, continue to next line
@@ -816,12 +816,12 @@ Please provide the commit message.
         ]
 
         for i, pattern in enumerate(patterns):
-            logger.debug("trying_session_id_pattern", pattern_index=i, pattern=pattern)
+            logger.debug("Trying session ID pattern", pattern_index=i, pattern=pattern)
             match = re.search(pattern, output, re.IGNORECASE)
             if match:
                 session_id = match.group(1)
-                logger.debug("session_id_found", pattern_index=i, session_id=session_id)
+                logger.debug("Session ID found", pattern_index=i, session_id=session_id)
                 return session_id
 
-        logger.debug("session_id_not_found", patterns_tried=len(patterns))
+        logger.debug("Session ID not found", patterns_tried=len(patterns))
         return None

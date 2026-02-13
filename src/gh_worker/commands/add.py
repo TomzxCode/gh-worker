@@ -28,7 +28,7 @@ def add_command(
     app_config = config.load()
 
     if not app_config.issues_path:
-        logger.error("issues_path_not_configured")
+        logger.error("Issues path not configured")
         print("Error: issues-path not configured. Run: gh-worker config issues-path <path>")
         return
 
@@ -36,7 +36,7 @@ def add_command(
     gh_client = GHClient(app_config.repository_path)
 
     if not gh_client.check_auth():
-        logger.error("gh_not_authenticated")
+        logger.error("gh CLI not authenticated")
         print("Error: gh CLI not authenticated. Run: gh auth login")
         return
 
@@ -48,7 +48,7 @@ def add_command(
             repo_dir = issue_store.get_repo_dir(repository)
             repo_dir.mkdir(parents=True, exist_ok=True)
 
-            logger.info("created_repository_directory", repository=repository.full_name)
+            logger.info("Created repository directory", repository=repository.full_name)
             print(f"Added repository: {repository.full_name}")
 
             # Clone repository only if --clone was passed and repository_path is configured
@@ -57,7 +57,7 @@ def add_command(
                     gh_client.clone_repo(repository)
                     print(f"Cloned repository to: {gh_client._get_repo_path(repository)}")
                 except Exception as e:
-                    logger.warning("failed_to_clone_repository", error=str(e))
+                    logger.warning("Failed to clone repository", error=str(e))
                     print(f"Warning: Failed to clone repository: {e}")
             elif clone and not app_config.repository_path:
                 print(
@@ -71,8 +71,8 @@ def add_command(
                 )
 
         except ValueError as e:
-            logger.error("invalid_repository_format", repo=repo_str, error=str(e))
+            logger.error("Invalid repository format", repo=repo_str, error=str(e))
             print(f"Error: {e}")
         except Exception as e:
-            logger.error("failed_to_add_repository", repo=repo_str, error=str(e))
+            logger.error("Failed to add repository", repo=repo_str, error=str(e))
             print(f"Error: Failed to add repository {repo_str}: {e}")

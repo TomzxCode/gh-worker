@@ -92,7 +92,7 @@ def retry(
                     # Check if we should retry
                     if transient_only and not is_transient_error(e):
                         logger.error(
-                            "non_transient_error_not_retrying",
+                            "Non-transient error, not retrying",
                             function=func.__name__,
                             error=str(e),
                             error_type=type(e).__name__,
@@ -102,7 +102,7 @@ def retry(
                     # Check if we're out of attempts
                     if attempt == max_attempts:
                         logger.error(
-                            "max_retry_attempts_reached",
+                            "Max retry attempts reached",
                             function=func.__name__,
                             attempts=attempt,
                             error=str(e),
@@ -111,7 +111,7 @@ def retry(
 
                     # Log and wait before retry
                     logger.warning(
-                        "retrying_after_error",
+                        "Retrying after error",
                         function=func.__name__,
                         attempt=attempt,
                         max_attempts=max_attempts,
@@ -176,7 +176,7 @@ def async_retry(
                     # Check if we should retry
                     if transient_only and not is_transient_error(e):
                         logger.error(
-                            "non_transient_error_not_retrying",
+                            "Non-transient error, not retrying",
                             function=func.__name__,
                             error=str(e),
                             error_type=type(e).__name__,
@@ -186,7 +186,7 @@ def async_retry(
                     # Check if we're out of attempts
                     if attempt == max_attempts:
                         logger.error(
-                            "max_retry_attempts_reached",
+                            "Max retry attempts reached",
                             function=func.__name__,
                             attempts=attempt,
                             error=str(e),
@@ -195,7 +195,7 @@ def async_retry(
 
                     # Log and wait before retry
                     logger.warning(
-                        "retrying_after_error",
+                        "Retrying after error",
                         function=func.__name__,
                         attempt=attempt,
                         max_attempts=max_attempts,
