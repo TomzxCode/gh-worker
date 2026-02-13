@@ -20,6 +20,7 @@ class Issue:
     assignees: list[str]
     url: str
     repository: str
+    milestone: str | None = None
 
     @classmethod
     def from_gh_json(cls, data: dict[str, Any], repository: str) -> "Issue":
@@ -32,6 +33,9 @@ class Issue:
         Returns:
             Issue instance
         """
+        milestone_data = data.get("milestone")
+        milestone = milestone_data.get("title") if isinstance(milestone_data, dict) else None
+
         return cls(
             number=data["number"],
             title=data["title"],
@@ -44,6 +48,7 @@ class Issue:
             assignees=[a["login"] for a in data.get("assignees", [])],
             url=data["url"],
             repository=repository,
+            milestone=milestone,
         )
 
     def to_markdown(self) -> str:
@@ -69,6 +74,9 @@ class Issue:
 
         if self.assignees:
             lines.append(f"**Assignees**: {', '.join(self.assignees)}")
+
+        if self.milestone:
+            lines.append(f"**Milestone**: {self.milestone}")
 
         lines.extend(["", "---", "", self.body])
 

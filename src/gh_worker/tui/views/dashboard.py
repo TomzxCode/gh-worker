@@ -72,6 +72,7 @@ class DashboardView(Container):
                         yield Input(placeholder="Title", id="filter-title")
                         yield Input(placeholder="Author", id="filter-author")
                         yield Input(placeholder="Assignee", id="filter-assignee")
+                        yield Input(placeholder="Milestone", id="filter-milestone")
                         yield Select(
                             PLAN_OPTIONS, prompt="Plan", allow_blank=True, id="filter-plan"
                         )
@@ -126,6 +127,9 @@ class DashboardView(Container):
             assignee_input = self.query_one("#filter-assignee", Input)
             if state.get("assignee_filter"):
                 assignee_input.value = state["assignee_filter"]
+            milestone_input = self.query_one("#filter-milestone", Input)
+            if state.get("milestone_filter"):
+                milestone_input.value = state["milestone_filter"]
         except Exception:
             pass
         self.refresh_data()
@@ -160,6 +164,7 @@ class DashboardView(Container):
             assignee_filter=state.get("assignee_filter"),
             author_filter=state.get("author_filter"),
             state_filter=state.get("state_filter"),
+            milestone_filter=state.get("milestone_filter"),
             config_path=self.config_path,
         )
         rows = [
@@ -172,6 +177,7 @@ class DashboardView(Container):
                 plan_status,
                 impl_status,
                 state,
+                milestone,
             )
             for (
                 repo,
@@ -182,6 +188,7 @@ class DashboardView(Container):
                 plan_status,
                 impl_status,
                 state,
+                milestone,
             ) in issues
         ]
         self._issues_table.clear_and_populate(rows)
@@ -204,6 +211,7 @@ class DashboardView(Container):
             title_filter=self.query_one("#filter-title", Input).value.strip() or None,
             author_filter=self.query_one("#filter-author", Input).value.strip() or None,
             assignee_filter=self.query_one("#filter-assignee", Input).value.strip() or None,
+            milestone_filter=self.query_one("#filter-milestone", Input).value.strip() or None,
         )
         self._refresh_issues()
 

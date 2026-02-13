@@ -11,6 +11,7 @@ COL_REPOSITORY = "Repository"
 COL_TITLE = "Title"
 COL_AUTHOR = "Author"
 COL_ASSIGNEES = "Assignees"
+COL_MILESTONE = "Milestone"
 COL_STATE = "State"
 COL_PLAN = "Plan"
 COL_IMPLEMENTATION = "Implementation"
@@ -46,6 +47,7 @@ class IssueTable(DataTable):
             ("Title", COL_TITLE),
             ("Author", COL_AUTHOR),
             ("Assignees", COL_ASSIGNEES),
+            ("Milestone", COL_MILESTONE),
             ("State", COL_STATE),
             ("Plan", COL_PLAN),
             ("Implementation", COL_IMPLEMENTATION),
@@ -64,13 +66,13 @@ class IssueTable(DataTable):
 
     def clear_and_populate(
         self,
-        rows: list[tuple[str, int, str, str | None, list[str], str, str, str | None]],
+        rows: list[tuple[str, int, str, str | None, list[str], str, str, str | None, str | None]],
     ) -> None:
         """Clear table and populate with issue rows.
 
         Args:
             rows: List of (repo_full_name, issue_number, title, author, assignees,
-                  plan_status, impl_status, state)
+                  plan_status, impl_status, state, milestone)
         """
         self.clear()
         for (
@@ -82,11 +84,15 @@ class IssueTable(DataTable):
             plan_status,
             impl_status,
             state,
+            milestone,
         ) in rows:
             author_str = author or "—"
             assignees_str = ", ".join(assignees) if assignees else "—"
             if len(assignees_str) > 20:
                 assignees_str = assignees_str[:17] + "..."
+            milestone_display = milestone or "—"
+            if len(milestone_display) > 15:
+                milestone_display = milestone_display[:12] + "..."
             plan_display = "—" if plan_status == "none" else plan_status
             impl_display = "—" if impl_status == "none" else impl_status
             state_display = state or "—"
@@ -103,6 +109,7 @@ class IssueTable(DataTable):
                 title,
                 author_str,
                 assignees_str,
+                milestone_display,
                 state_display,
                 plan_display,
                 impl_display,

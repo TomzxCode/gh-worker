@@ -20,7 +20,7 @@ def load_state() -> dict:
 
     Returns:
         Dict with keys: last_repo, title_filter, plan_filter, implementation_filter,
-        assignee_filter, author_filter, state_filter
+        assignee_filter, author_filter, state_filter, milestone_filter
     """
     path = _state_path()
     if not path.exists():
@@ -32,6 +32,7 @@ def load_state() -> dict:
             "assignee_filter": None,
             "author_filter": None,
             "state_filter": None,
+            "milestone_filter": None,
             "last_tab": None,
         }
 
@@ -45,6 +46,7 @@ def load_state() -> dict:
             "assignee_filter": data.get("assignee_filter"),
             "author_filter": data.get("author_filter"),
             "state_filter": data.get("state_filter"),
+            "milestone_filter": data.get("milestone_filter"),
             "last_tab": data.get("last_tab"),
         }
     except (json.JSONDecodeError, OSError):
@@ -56,6 +58,7 @@ def load_state() -> dict:
             "assignee_filter": None,
             "author_filter": None,
             "state_filter": None,
+            "milestone_filter": None,
             "last_tab": None,
         }
 
@@ -68,6 +71,7 @@ def save_state(
     assignee_filter: str | None = _UNCHANGED,
     author_filter: str | None = _UNCHANGED,
     state_filter: str | None = _UNCHANGED,
+    milestone_filter: str | None = _UNCHANGED,
     last_tab: str | None = _UNCHANGED,
 ) -> None:
     """Save session state to disk.
@@ -80,6 +84,7 @@ def save_state(
         assignee_filter: Last assignee filter
         author_filter: Last author filter
         state_filter: Last issue state filter (open/closed), or None for "all"
+        milestone_filter: Last milestone filter (substring match), or None for "all"
         last_tab: Last active tab id
     """
     path = _state_path()
@@ -105,6 +110,8 @@ def save_state(
         data["author_filter"] = author_filter
     if state_filter is not _UNCHANGED:
         data["state_filter"] = state_filter
+    if milestone_filter is not _UNCHANGED:
+        data["milestone_filter"] = milestone_filter
     if last_tab is not _UNCHANGED:
         data["last_tab"] = last_tab
 

@@ -20,8 +20,10 @@ Represents a GitHub issue with all metadata, located in [src/gh_worker/models/is
 - `updated_at: datetime` - Last update timestamp
 - `author: str` - Issue author username
 - `labels: list[str]` - List of label names
+- `assignees: list[str]` - List of assignee usernames
 - `url: str` - GitHub URL for the issue
 - `repository: str` - Repository in "owner/repo" format
+- `milestone: str | None` - Milestone title (optional)
 
 **Methods:**
 
@@ -50,6 +52,8 @@ Parses GitHub CLI JSON output:
 **Updated**: {updated_at}
 **URL**: {url}
 **Labels**: {label1, label2, ...}
+**Assignees**: {assignee1, assignee2, ...}
+**Milestone**: {milestone}
 
 ---
 

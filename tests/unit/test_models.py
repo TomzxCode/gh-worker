@@ -77,6 +77,27 @@ class TestIssue:
         assert issue.assignees == ["alice", "bob"]
         assert issue.url == "https://github.com/owner/repo/issues/123"
         assert issue.repository == "owner/repo"
+        assert issue.milestone is None
+
+    def test_from_gh_json_with_milestone(self):
+        """Test creating Issue from GitHub JSON with milestone."""
+        data = {
+            "number": 123,
+            "title": "Test Issue",
+            "body": "Issue description",
+            "state": "open",
+            "createdAt": "2024-01-01T12:00:00Z",
+            "updatedAt": "2024-01-02T12:00:00Z",
+            "author": {"login": "testuser"},
+            "labels": [],
+            "assignees": [],
+            "url": "https://github.com/owner/repo/issues/123",
+            "milestone": {"title": "v1.0", "number": 1},
+        }
+
+        issue = Issue.from_gh_json(data, "owner/repo")
+
+        assert issue.milestone == "v1.0"
 
     def test_from_gh_json_missing_optional_fields(self):
         """Test creating Issue with missing optional fields."""
@@ -122,6 +143,27 @@ class TestIssue:
         assert "**Labels**: bug" in markdown
         assert "**Assignees**: alice, bob" in markdown
         assert "Issue description" in markdown
+
+    def test_to_markdown_with_milestone(self):
+        """Test converting Issue with milestone to markdown."""
+        issue = Issue(
+            number=123,
+            title="Test Issue",
+            body="Issue description",
+            state="open",
+            created_at=datetime(2024, 1, 1, 12, 0, 0),
+            updated_at=datetime(2024, 1, 2, 12, 0, 0),
+            author="testuser",
+            labels=[],
+            assignees=[],
+            url="https://github.com/owner/repo/issues/123",
+            repository="owner/repo",
+            milestone="v1.0",
+        )
+
+        markdown = issue.to_markdown()
+
+        assert "**Milestone**: v1.0" in markdown
 
 
 class TestPlanMetadata:

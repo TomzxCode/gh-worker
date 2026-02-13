@@ -138,6 +138,33 @@ class TestIssueStore:
         author = issue_store.get_issue_author(sample_repo, 999)
         assert author is None
 
+    def test_get_issue_milestone(self, issue_store, sample_repo):
+        """Test getting milestone from issue description."""
+        issue_with_milestone = Issue(
+            number=42,
+            title="Test",
+            body="Body",
+            state="open",
+            created_at=datetime(2024, 1, 1, 12, 0, 0),
+            updated_at=datetime(2024, 1, 2, 12, 0, 0),
+            author="alice",
+            labels=[],
+            assignees=[],
+            url="https://github.com/owner/repo/issues/42",
+            repository="owner/repo",
+            milestone="v1.0",
+        )
+        issue_store.save_issue(issue_with_milestone)
+
+        milestone = issue_store.get_issue_milestone(sample_repo, 42)
+        assert milestone == "v1.0"
+
+    def test_get_issue_milestone_not_found(self, issue_store, sample_issue, sample_repo):
+        """Test getting milestone when issue has none."""
+        issue_store.save_issue(sample_issue)
+        milestone = issue_store.get_issue_milestone(sample_repo, 123)
+        assert milestone is None
+
     def test_set_repo_updated_at(self, issue_store, sample_repo):
         """Test setting repository updated timestamp."""
         timestamp = datetime(2024, 1, 1, 12, 0, 0)

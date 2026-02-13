@@ -33,10 +33,11 @@ def get_issues(
     assignee_filter: str | None = None,
     author_filter: str | None = None,
     state_filter: str | None = None,
+    milestone_filter: str | None = None,
     config_path: Path | None = None,
-) -> list[tuple[Repository, int, str, str | None, list[str], str, str, str | None]]:
+) -> list[tuple[Repository, int, str, str | None, list[str], str, str, str | None, str | None]]:
     """Get issues as (repo, issue_number, title, author, assignees, plan_status,
-    impl_status, state).
+    impl_status, state, milestone).
     """
     config = ConfigManager(config_path)
     app_config = config.load()
@@ -57,7 +58,9 @@ def get_issues(
     else:
         return []
 
-    result: list[tuple[Repository, int, str, str | None, list[str], str, str, str | None]] = []
+    result: list[
+        tuple[Repository, int, str, str | None, list[str], str, str, str | None, str | None]
+    ] = []
     for repository in sorted(repositories, key=lambda r: r.full_name):
         for issue_number in sorted(issue_store.list_issues(repository)):
             issue_dir = issue_store.get_issue_dir(repository, issue_number)
@@ -67,6 +70,7 @@ def get_issues(
             plan_status = _get_plan_status(plan_store, repository, issue_number)
             impl_status = _get_implementation_status(plan_store, repository, issue_number)
             state = issue_store.get_issue_state(repository, issue_number)
+            milestone = issue_store.get_issue_milestone(repository, issue_number)
 
             if not _matches_filters(
                 title,
@@ -75,12 +79,14 @@ def get_issues(
                 plan_status,
                 impl_status,
                 state,
+                milestone,
                 title_filter,
                 author_filter,
                 assignee_filter,
                 plan_filter,
                 implementation_filter,
                 state_filter,
+                milestone_filter,
             ):
                 continue
 
@@ -94,6 +100,7 @@ def get_issues(
                     plan_status,
                     impl_status,
                     state,
+                    milestone,
                 )
             )
 

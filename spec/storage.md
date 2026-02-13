@@ -72,6 +72,8 @@ Issues saved using `Issue.to_markdown()` method, preserving:
 - State
 - Labels
 - Author
+- Assignees
+- Milestone
 - Creation and update timestamps
 - Full body content
 

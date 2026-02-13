@@ -71,6 +71,7 @@ class IssuesView(Container):
                 yield Input(placeholder="Title", id="filter-title")
                 yield Input(placeholder="Author", id="filter-author")
                 yield Input(placeholder="Assignee", id="filter-assignee")
+                yield Input(placeholder="Milestone", id="filter-milestone")
                 yield Select(PLAN_OPTIONS, prompt="Plan", allow_blank=True, id="filter-plan")
                 yield Select(IMPL_OPTIONS, prompt="Impl", allow_blank=True, id="filter-impl")
                 yield Select(STATE_OPTIONS, prompt="State", allow_blank=True, id="filter-state")
@@ -146,6 +147,9 @@ class IssuesView(Container):
             assignee_input = self.query_one("#filter-assignee", Input)
             if state.get("assignee_filter"):
                 assignee_input.value = state["assignee_filter"]
+            milestone_input = self.query_one("#filter-milestone", Input)
+            if state.get("milestone_filter"):
+                milestone_input.value = state["milestone_filter"]
         except Exception:
             pass
 
@@ -154,16 +158,25 @@ class IssuesView(Container):
     def _get_filter_values(
         self,
     ) -> tuple[
-        str | None, bool, str | None, str | None, str | None, str | None, str | None, str | None
+        str | None,
+        bool,
+        str | None,
+        str | None,
+        str | None,
+        str | None,
+        str | None,
+        str | None,
+        str | None,
     ]:
         """Get filter values. Returns (repo, all_repos, title, plan, impl, assignee,
-        author, state).
+        author, state, milestone).
         """
         try:
             repo_select = self.query_one("#filter-repo", Select)
             title_input = self.query_one("#filter-title", Input)
             author_input = self.query_one("#filter-author", Input)
             assignee_input = self.query_one("#filter-assignee", Input)
+            milestone_input = self.query_one("#filter-milestone", Input)
             plan_select = self.query_one("#filter-plan", Select)
             impl_select = self.query_one("#filter-impl", Select)
             state_select = self.query_one("#filter-state", Select)
@@ -173,6 +186,7 @@ class IssuesView(Container):
             title_val = title_input.value.strip() or None
             author_val = author_input.value.strip() or None
             assignee_val = assignee_input.value.strip() or None
+            milestone_val = milestone_input.value.strip() or None
             plan_val = plan_select.value
             if plan_val is Select.BLANK or plan_val is None:
                 plan_val = None
@@ -191,11 +205,13 @@ class IssuesView(Container):
                 assignee_val,
                 author_val,
                 str(state_val) if state_val else None,
+                milestone_val,
             )
         except Exception:
             return (
                 self._selected_repo,
                 not bool(self._selected_repo),
+                None,
                 None,
                 None,
                 None,
@@ -215,6 +231,7 @@ class IssuesView(Container):
             assignee_filter,
             author_filter,
             state_filter,
+            milestone_filter,
         ) = self._get_filter_values()
         issues = get_issues(
             repo=repo,
@@ -225,12 +242,23 @@ class IssuesView(Container):
             assignee_filter=assignee_filter,
             author_filter=author_filter,
             state_filter=state_filter,
+            milestone_filter=milestone_filter,
             config_path=self.config_path,
         )
         self._issue_status.clear()
         table = self.query_one("#issues-table", IssueTable)
         rows = []
-        for repo, issue_number, title, author, assignees, plan_status, impl_status, state in issues:
+        for (
+            repo,
+            issue_number,
+            title,
+            author,
+            assignees,
+            plan_status,
+            impl_status,
+            state,
+            milestone,
+        ) in issues:
             row_key = f"{repo.full_name}#{issue_number}"
             self._issue_status[row_key] = (plan_status, impl_status)
             rows.append(
@@ -243,6 +271,7 @@ class IssuesView(Container):
                     plan_status,
                     impl_status,
                     state,
+                    milestone,
                 )
             )
         table.clear_and_populate(rows)
@@ -359,11 +388,12 @@ class IssuesView(Container):
         self._refresh_issues()
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
-        """Handle filter input (title, author, assignee)."""
+        """Handle filter input (title, author, assignee, milestone)."""
         save_state(
             title_filter=self.query_one("#filter-title", Input).value.strip() or None,
             author_filter=self.query_one("#filter-author", Input).value.strip() or None,
             assignee_filter=self.query_one("#filter-assignee", Input).value.strip() or None,
+            milestone_filter=self.query_one("#filter-milestone", Input).value.strip() or None,
         )
         self._refresh_issues()
 
@@ -380,6 +410,7 @@ class IssuesView(Container):
                 title_filter=self.query_one("#filter-title", Input).value.strip() or None,
                 author_filter=self.query_one("#filter-author", Input).value.strip() or None,
                 assignee_filter=self.query_one("#filter-assignee", Input).value.strip() or None,
+                milestone_filter=self.query_one("#filter-milestone", Input).value.strip() or None,
                 state_filter=state_filter,
             )
             self._refresh_issues()

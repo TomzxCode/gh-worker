@@ -150,6 +150,29 @@ class IssueStore:
 
         return [a.strip() for a in match.group(1).split(",") if a.strip()]
 
+    def get_issue_milestone(self, repository: Repository, issue_number: int) -> str | None:
+        """Get milestone for an issue from its description file.
+
+        Args:
+            repository: Repository object
+            issue_number: Issue number
+
+        Returns:
+            Milestone title or None if not found
+        """
+        issue_dir = self.get_issue_dir(repository, issue_number)
+        description_file = issue_dir / "description.md"
+
+        if not description_file.exists():
+            return None
+
+        content = description_file.read_text()
+        match = re.search(r"\*\*Milestone\*\*:\s*(.+)", content)
+        if not match:
+            return None
+
+        return match.group(1).strip() or None
+
     def get_updated_at(self, repository: Repository, issue_number: int) -> datetime | None:
         """Get the last updated timestamp for an issue.
 

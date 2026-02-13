@@ -72,12 +72,14 @@ def _matches_filters(
     plan_status: str,
     implementation_status: str,
     state: str | None,
+    milestone: str | None,
     title_filter: str | None,
     author_filter: str | None,
     assignee_filter: str | None,
     plan_filter: str | None,
     implementation_filter: str | None,
     state_filter: str | None,
+    milestone_filter: str | None,
 ) -> bool:
     """Check if issue matches all specified filters (case-insensitive substring match)."""
     if title_filter and title_filter.lower() not in (title or "").lower():
@@ -96,6 +98,10 @@ def _matches_filters(
         return False
     if state_filter and (state or "").lower() != state_filter.lower():
         return False
+    if milestone_filter:
+        milestone_str = (milestone or "").lower()
+        if milestone_filter.lower() not in milestone_str:
+            return False
     return True
 
 
@@ -217,6 +223,7 @@ def issues_list_command(
             implementation_status = _get_implementation_status(plan_store, repository, issue_number)
             issue_state = issue_store.get_issue_state(repository, issue_number)
 
+            issue_milestone = issue_store.get_issue_milestone(repository, issue_number)
             if not _matches_filters(
                 issue_title,
                 issue_author,
@@ -224,12 +231,14 @@ def issues_list_command(
                 plan_status,
                 implementation_status,
                 issue_state,
+                issue_milestone,
                 title,
                 author_filter,
                 assignee_filter,
                 plan,
                 implementation,
                 None,  # state_filter - CLI doesn't support state filter yet
+                None,  # milestone_filter - CLI doesn't support milestone filter yet
             ):
                 continue
 
