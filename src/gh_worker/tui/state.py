@@ -20,7 +20,8 @@ def load_state() -> dict:
 
     Returns:
         Dict with keys: last_repo, title_filter, plan_filter, implementation_filter,
-        assignee_filter, author_filter, state_filter, milestone_filter
+        assignee_filter, author_filter, state_filter, milestone_filter, last_tab,
+        issue_columns
     """
     path = _state_path()
     if not path.exists():
@@ -34,6 +35,7 @@ def load_state() -> dict:
             "state_filter": None,
             "milestone_filter": None,
             "last_tab": None,
+            "issue_columns": None,
         }
 
     try:
@@ -48,6 +50,7 @@ def load_state() -> dict:
             "state_filter": data.get("state_filter"),
             "milestone_filter": data.get("milestone_filter"),
             "last_tab": data.get("last_tab"),
+            "issue_columns": data.get("issue_columns"),
         }
     except (json.JSONDecodeError, OSError):
         return {
@@ -60,6 +63,7 @@ def load_state() -> dict:
             "state_filter": None,
             "milestone_filter": None,
             "last_tab": None,
+            "issue_columns": None,
         }
 
 
@@ -73,6 +77,7 @@ def save_state(
     state_filter: str | None = _UNCHANGED,
     milestone_filter: str | None = _UNCHANGED,
     last_tab: str | None = _UNCHANGED,
+    issue_columns: list[str] | None = _UNCHANGED,
 ) -> None:
     """Save session state to disk.
 
@@ -86,6 +91,7 @@ def save_state(
         state_filter: Last issue state filter (open/closed), or None for "all"
         milestone_filter: Last milestone filter (substring match), or None for "all"
         last_tab: Last active tab id
+        issue_columns: List of column keys to show in issues table, or None for all
     """
     path = _state_path()
     data: dict = {}
@@ -114,5 +120,7 @@ def save_state(
         data["milestone_filter"] = milestone_filter
     if last_tab is not _UNCHANGED:
         data["last_tab"] = last_tab
+    if issue_columns is not _UNCHANGED:
+        data["issue_columns"] = issue_columns
 
     path.write_text(json.dumps(data, indent=2))

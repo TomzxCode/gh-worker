@@ -16,6 +16,19 @@ COL_STATE = "State"
 COL_PLAN = "Plan"
 COL_IMPLEMENTATION = "Implementation"
 
+# (label, key) in display order - used for column config
+ALL_COLUMN_SPECS: list[tuple[str, str]] = [
+    ("#", COL_ISSUE_NUM),
+    ("Repository", COL_REPOSITORY),
+    ("Title", COL_TITLE),
+    ("Author", COL_AUTHOR),
+    ("Assignees", COL_ASSIGNEES),
+    ("Milestone", COL_MILESTONE),
+    ("State", COL_STATE),
+    ("Plan", COL_PLAN),
+    ("Implementation", COL_IMPLEMENTATION),
+]
+
 
 def _numeric_sort_key(val: str) -> int:
     """Sort key for issue numbers - parses as int for correct ordering."""
@@ -35,25 +48,21 @@ class _ReverseStr:
         return self.value > other.value
 
 
+def _default_visible_columns() -> list[str]:
+    """Default list of visible column keys."""
+    return [key for _, key in ALL_COLUMN_SPECS]
+
+
 class IssueTable(DataTable):
     """DataTable for displaying issues with status columns."""
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self.cursor_type = "cell"
-        self.add_columns(
-            ("#", COL_ISSUE_NUM),
-            ("Repository", COL_REPOSITORY),
-            ("Title", COL_TITLE),
-            ("Author", COL_AUTHOR),
-            ("Assignees", COL_ASSIGNEES),
-            ("Milestone", COL_MILESTONE),
-            ("State", COL_STATE),
-            ("Plan", COL_PLAN),
-            ("Implementation", COL_IMPLEMENTATION),
-        )
+        self._visible_columns: list[str] = _default_visible_columns()
         self._sort_columns: list[tuple[str, bool]] = []  # (column_key, reverse)
         self._last_header_click_shift = False
+        self._apply_columns(self._visible_columns)
 
     async def _on_click(self, event: events.Click) -> None:
         """Capture shift state for header clicks before delegating."""
@@ -64,16 +73,46 @@ class IssueTable(DataTable):
                 self._last_header_click_shift = event.shift
         await super()._on_click(event)
 
+    def _apply_columns(self, visible_columns: list[str]) -> None:
+        """Set visible columns. Removes all columns and re-adds only visible ones."""
+        valid = {key for _, key in ALL_COLUMN_SPECS}
+        visible = [k for k in visible_columns if k in valid]
+        if not visible:
+            visible = _default_visible_columns()
+        self._visible_columns = visible
+        # Remove existing columns (snapshot keys before mutating)
+        for col in list(self.ordered_columns):
+            self.remove_column(col.key)
+        # Add visible columns in spec order
+        for label, key in ALL_COLUMN_SPECS:
+            if key in self._visible_columns:
+                self.add_column(label, key=key)
+
+    def get_visible_columns(self) -> list[str]:
+        """Return the list of visible column keys."""
+        return list(self._visible_columns)
+
+    def set_visible_columns(self, visible_columns: list[str] | None) -> None:
+        """Update visible columns. None means all columns."""
+        if visible_columns is None:
+            visible_columns = _default_visible_columns()
+        if visible_columns != self._visible_columns:
+            self._apply_columns(visible_columns)
+
     def clear_and_populate(
         self,
         rows: list[tuple[str, int, str, str | None, list[str], str, str, str | None, str | None]],
+        visible_columns: list[str] | None = None,
     ) -> None:
         """Clear table and populate with issue rows.
 
         Args:
             rows: List of (repo_full_name, issue_number, title, author, assignees,
                   plan_status, impl_status, state, milestone)
+            visible_columns: Column keys to show, or None to keep current
         """
+        if visible_columns is not None and visible_columns != self._visible_columns:
+            self._apply_columns(visible_columns)
         self.clear()
         for (
             repo_full_name,
@@ -103,18 +142,19 @@ class IssueTable(DataTable):
             else:
                 repo_display = repo_full_name
             row_key = f"{repo_full_name}#{issue_number}"
-            self.add_row(
-                str(issue_number),
-                repo_display,
-                title,
-                author_str,
-                assignees_str,
-                milestone_display,
-                state_display,
-                plan_display,
-                impl_display,
-                key=row_key,
-            )
+            all_values = {
+                COL_ISSUE_NUM: str(issue_number),
+                COL_REPOSITORY: repo_display,
+                COL_TITLE: title,
+                COL_AUTHOR: author_str,
+                COL_ASSIGNEES: assignees_str,
+                COL_MILESTONE: milestone_display,
+                COL_STATE: state_display,
+                COL_PLAN: plan_display,
+                COL_IMPLEMENTATION: impl_display,
+            }
+            row_values = [all_values[k] for k in self._visible_columns]
+            self.add_row(*row_values, key=row_key)
         self._apply_sort()
 
     def on_data_table_header_selected(self, event: DataTable.HeaderSelected) -> None:

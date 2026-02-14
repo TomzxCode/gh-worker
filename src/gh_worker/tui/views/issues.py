@@ -21,6 +21,7 @@ from gh_worker.commands.issues_list import (
     PLAN_WAITING_FOR_REVIEW,
 )
 from gh_worker.tui.data import get_issues, get_repositories
+from gh_worker.tui.screens.column_config import ColumnConfigModal
 from gh_worker.tui.state import load_state, save_state
 from gh_worker.tui.widgets.activity_log import ActivityLog
 from gh_worker.tui.widgets.issue_table import IssueTable
@@ -59,6 +60,7 @@ class IssuesView(Container):
         self._selected_repo: str | None = None
         self._selected_issue: tuple[str, int] | None = None
         self._issue_status: dict[str, tuple[str, str]] = {}  # row_key -> (plan_status, impl_status)
+        self._visible_columns: list[str] | None = None  # None = all
 
     def compose(self):
         """Compose issues view."""
@@ -75,6 +77,7 @@ class IssuesView(Container):
                 yield Select(PLAN_OPTIONS, prompt="Plan", allow_blank=True, id="filter-plan")
                 yield Select(IMPL_OPTIONS, prompt="Impl", allow_blank=True, id="filter-impl")
                 yield Select(STATE_OPTIONS, prompt="State", allow_blank=True, id="filter-state")
+                yield Button("Columns", id="filter-columns")
                 yield Button("Sync", id="filter-sync")
                 yield Button("Refresh", id="filter-refresh")
         yield Label("Issues", classes="section-title")
@@ -150,6 +153,9 @@ class IssuesView(Container):
             milestone_input = self.query_one("#filter-milestone", Input)
             if state.get("milestone_filter"):
                 milestone_input.value = state["milestone_filter"]
+            cols = state.get("issue_columns")
+            if isinstance(cols, list) and cols:
+                self._visible_columns = cols
         except Exception:
             pass
 
@@ -274,7 +280,7 @@ class IssuesView(Container):
                     milestone,
                 )
             )
-        table.clear_and_populate(rows)
+        table.clear_and_populate(rows, visible_columns=self._visible_columns)
         self._update_action_buttons()
 
     def _show_issue_description(self, row_key) -> None:
@@ -399,6 +405,9 @@ class IssuesView(Container):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button presses."""
+        if event.button.id == "filter-columns":
+            self._open_column_config()
+            return
         if event.button.id == "filter-sync":
             self._run_sync()
             return
@@ -434,6 +443,21 @@ class IssuesView(Container):
             self._run_unapprove_plan(repo_name, issue_number)
         elif bid == "action-review-impl":
             self._run_review_implementation(repo_name, issue_number)
+
+    def _open_column_config(self) -> None:
+        """Open column configuration modal."""
+        table = self.query_one("#issues-table", IssueTable)
+        visible = table.get_visible_columns()
+
+        async def _config() -> None:
+            result = await self.app.push_screen_wait(ColumnConfigModal(visible_columns=visible))
+            if result is not None:
+                self._visible_columns = result
+                save_state(issue_columns=result)
+                self._refresh_issues()
+                self.notify("Columns updated")
+
+        self.run_worker(_config(), name="column-config", exit_on_error=False, exclusive=False)
 
     def _run_sync(self) -> None:
         """Run sync for filtered repositories."""
