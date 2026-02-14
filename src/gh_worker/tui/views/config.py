@@ -120,10 +120,19 @@ class ConfigView(Container):
             else:
                 widget = Input(value=value_str, id=row_id)
 
+            # Create a container for this config entry (row + optional description)
+            entry = Container(classes="config-entry")
+            container.mount(entry)
+
             row = Horizontal(classes="config-row")
-            container.mount(row)
+            entry.mount(row)
             row.mount(Label(key, classes="config-key"))
             row.mount(widget)
+
+            # Get field description from schema and display below the row
+            description = self._config_manager.get_description(key)
+            if description:
+                entry.mount(Label(description, classes="config-description"))
 
     def _id_to_key(self, widget_id: str) -> str | None:
         """Convert widget id back to config key."""

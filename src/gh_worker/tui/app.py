@@ -120,14 +120,25 @@ class GhWorkerApp(App):
         min-height: 5;
     }
 
-    #config-view .config-row {
+    #config-view .config-entry {
         height: auto;
         margin-bottom: 1;
+    }
+
+    #config-view .config-row {
+        height: auto;
     }
 
     #config-view .config-key {
         width: 25;
         min-width: 20;
+    }
+
+    #config-view .config-description {
+        color: $text-muted;
+        text-style: italic;
+        margin-left: 1;
+        margin-bottom: 1;
     }
 
     /* Select dropdown: show full text without wrapping */

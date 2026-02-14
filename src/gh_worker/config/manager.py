@@ -4,6 +4,8 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from pydantic import BaseModel
+from pydantic.fields import FieldInfo
 
 from .schema import AppConfig
 
@@ -142,3 +144,32 @@ class ConfigManager:
             else:
                 result[key] = v
         return result
+
+    def get_description(self, key: str) -> str | None:
+        """Get the description for a configuration key from the Pydantic schema.
+
+        Args:
+            key: Dotted key path (e.g., 'plan.parallelism')
+
+        Returns:
+            Field description if available, None otherwise
+        """
+        if self._config is None:
+            self._config = self.load()
+
+        parts = key.split(".")
+        obj: Any = self._config
+        for part in parts[:-1]:
+            if hasattr(obj, part):
+                obj = getattr(obj, part)
+            else:
+                return None
+
+        if not isinstance(obj, BaseModel):
+            return None
+
+        field_name = parts[-1]
+        field_info = obj.model_fields.get(field_name)
+        if field_info and isinstance(field_info, FieldInfo):
+            return field_info.description
+        return None
