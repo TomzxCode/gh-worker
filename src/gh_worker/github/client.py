@@ -294,17 +294,39 @@ class GHClient:
             if not base_branch:
                 raise RuntimeError("Could not determine base branch for worktree") from err
 
-        # Check if branch already exists
+        # Check if branch already exists locally or on remote
+        branch_exists = False
+        remote_branch = None
+
         try:
             self._run_git_command(["rev-parse", "--verify", branch_name], cwd=repo_path)
             branch_exists = True
         except RuntimeError:
-            branch_exists = False
+            # Check if branch exists on remote (origin/branch_name)
+            try:
+                self._run_git_command(
+                    ["rev-parse", "--verify", f"origin/{branch_name}"], cwd=repo_path
+                )
+                branch_exists = True
+                remote_branch = f"origin/{branch_name}"
+            except RuntimeError:
+                pass
 
         # Create worktree with branch
         if branch_exists:
-            # Branch exists, checkout existing branch in worktree
-            args = ["worktree", "add", str(worktree_path), branch_name]
+            if remote_branch:
+                # Branch exists on remote, track it in worktree
+                args = [
+                    "worktree",
+                    "add",
+                    str(worktree_path),
+                    remote_branch,
+                    "--track",
+                    branch_name,
+                ]
+            else:
+                # Branch exists locally, checkout existing branch in worktree
+                args = ["worktree", "add", str(worktree_path), branch_name]
         else:
             # Branch doesn't exist, create new branch in worktree from base branch
             args = ["worktree", "add", "-b", branch_name, str(worktree_path), base_branch]
@@ -414,6 +436,57 @@ class GHClient:
                 error=str(e),
             )
             raise RuntimeError(f"Failed to fetch repository: {e}") from e
+
+    def fetch_pr_ref(self, repository: Repository, pr_number: int, branch_name: str) -> None:
+        """Fetch a specific PR ref from GitHub.
+
+        This fetches the PR branch specifically using the GitHub refspec
+        for pull requests.
+
+        Args:
+            repository: Repository object
+            pr_number: Pull request number
+            branch_name: The branch name to track
+
+        Raises:
+            RuntimeError: If fetch fails
+        """
+        repo_path = self._get_repo_path(repository)
+
+        if not repo_path.exists():
+            raise FileNotFoundError(f"Repository not found at {repo_path}")
+
+        try:
+            # First try to fetch the PR ref using GitHub's special ref
+            # This handles PRs from forks automatically
+            self._run_git_command(
+                ["fetch", "origin", f"pull/{pr_number}/head:{branch_name}"],
+                cwd=repo_path,
+            )
+            logger.info(
+                "PR ref fetched",
+                repository=repository.full_name,
+                pr_number=pr_number,
+                branch=branch_name,
+            )
+        except RuntimeError as e:
+            logger.debug(
+                "PR ref fetch failed, trying normal fetch",
+                repository=repository.full_name,
+                pr_number=pr_number,
+                error=str(e),
+            )
+            # Fall back to normal fetch which might work for same-repo PRs
+            try:
+                self._run_git_command(["fetch", "origin"], cwd=repo_path)
+            except RuntimeError as fetch_error:
+                logger.error(
+                    "PR ref fetch failed",
+                    repository=repository.full_name,
+                    pr_number=pr_number,
+                    error=str(fetch_error),
+                )
+                raise RuntimeError(f"Failed to fetch PR ref: {fetch_error}") from fetch_error
 
     def create_planning_worktree(self, repository: Repository, worktree_path: Path) -> Path:
         """Create a git worktree checked out to origin/main for planning.

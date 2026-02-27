@@ -399,6 +399,124 @@ class CursorAgent(BaseAgent):
                 metadata={"session_id": session_id, "error": str(e)},
             )
 
+    async def review(
+        self,
+        issue_content: str,
+        plan_content: str,
+        repository_path: str,
+        issue_number: int,
+        branch_name: str,
+    ) -> AsyncIterator[AgentEvent]:
+        """Review the implemented code against the plan.
+
+        Args:
+            issue_content: The full issue description
+            plan_content: The generated plan
+            repository_path: Path to the repository with implemented code
+            issue_number: Issue number
+            branch_name: Branch name
+
+        Yields:
+            AgentEvent objects as the review progresses
+        """
+        logger.info(
+            "Starting review",
+            issue_number=issue_number,
+            branch_name=branch_name,
+            repository_path=repository_path,
+        )
+
+        prompt = self._build_review_prompt(issue_content, plan_content, issue_number, branch_name)
+        logger.debug(
+            "Review prompt built",
+            issue_number=issue_number,
+            branch_name=branch_name,
+            prompt_length=len(prompt),
+            plan_length=len(plan_content),
+        )
+
+        try:
+            event_count = 0
+            last_output = ""
+            async for event in self._run_cursor_agent_streaming(prompt, repository_path):
+                event_count += 1
+                logger.debug(
+                    "Streaming event received",
+                    issue_number=issue_number,
+                    event_type=event.type.value,
+                    event_count=event_count,
+                )
+                # Track the last output content for completion message
+                if event.content:
+                    last_output = event.content
+                yield event
+
+            logger.debug(
+                "Streaming completed",
+                issue_number=issue_number,
+                total_events=event_count,
+            )
+            yield AgentEvent(
+                type=AgentEventType.COMPLETION,
+                content=last_output or "Review completed",
+                metadata={"issue_number": issue_number, "branch": branch_name},
+            )
+
+        except Exception as e:
+            logger.error("Review failed", error=str(e), issue_number=issue_number)
+            logger.debug("Review exception", exc_info=True)
+            yield AgentEvent(
+                type=AgentEventType.FAILURE,
+                content=f"Review failed: {e}",
+                metadata={"issue_number": issue_number, "error": str(e)},
+            )
+
+    def _build_review_prompt(
+        self, issue_content: str, plan_content: str, issue_number: int, branch_name: str
+    ) -> str:
+        """Build the prompt for code review.
+
+        Args:
+            issue_content: The issue description
+            plan_content: The generated plan
+            issue_number: Issue number
+            branch_name: Branch name
+
+        Returns:
+            Formatted prompt string
+        """
+        prompt = (
+            f"""Please review the code implementation for the """
+            f"""following GitHub issue against the plan:
+
+Issue #{issue_number}:
+{issue_content}
+
+Implementation Plan:
+{plan_content}
+
+Your review should:
+1. Verify that the implementation matches the plan
+2. Check for code quality issues (bugs, security vulnerabilities, performance problems)
+3. Identify any missing features or incomplete implementations
+4. Test the implementation if possible
+5. Provide a summary of findings
+
+Note: You are reviewing code on branch {branch_name}.
+
+Please proceed with the review.
+"""
+        )
+        logger.debug(
+            "Review prompt built",
+            issue_number=issue_number,
+            branch_name=branch_name,
+            issue_content_length=len(issue_content),
+            plan_content_length=len(plan_content),
+            prompt_length=len(prompt),
+        )
+        return prompt
+
     def _build_plan_prompt(self, issue_content: str, plan_file_path: str) -> str:
         """Build the prompt for plan generation.
 

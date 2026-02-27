@@ -2,13 +2,13 @@
 
 ## Overview
 
-The workflow orchestrator manages the complete automation cycle: syncing issues from GitHub, generating implementation plans using LLM agents, and executing those plans to create pull requests. It supports both single-shot and continuous execution modes with configurable frequency.
+The workflow orchestrator manages the complete automation cycle: syncing issues from GitHub, generating implementation plans using LLM agents, executing those plans to create pull requests, and reviewing code implementations. It supports both single-shot and continuous execution modes with configurable frequency.
 
 ## Architecture
 
 ### WorkOrchestrator Class
 
-Central coordinator for the sync → plan → implement workflow, located in [src/gh_worker/executor/orchestrator.py](src/gh_worker/executor/orchestrator.py).
+Central coordinator for the sync → plan → implement → review workflow, located in [src/gh_worker/executor/orchestrator.py](src/gh_worker/executor/orchestrator.py).
 
 **Initialization Parameters:**
 
@@ -84,6 +84,28 @@ Executes plans and creates pull requests.
 - Streams progress to console
 - Logs implementation results and PR URLs
 
+### Phase 4: Review
+
+Reviews code implementations using LLM agents.
+
+**Operations:**
+
+1. Call `review_command_async()` for each repository (or all)
+1. Use `parallelism` from configuration (if not overridden)
+1. Fetch PR information from GitHub (branch name, description)
+1. Stream agent output during review
+1. Write review outcome to review.md
+1. Update plan metadata with review status
+
+**Behavior:**
+
+- Only reviews issues with COMPLETED implementation status
+- Respects `issue_numbers` filter if provided
+- Parallelizes reviews based on config
+- Streams progress to console
+- Logs review results
+- A plan does not need to exist for review
+
 ## Execution Modes
 
 ### Single-Shot Mode
@@ -94,7 +116,7 @@ Executes one complete cycle and exits.
 
 **Behavior:**
 
-1. Run one sync → plan → implement cycle
+1. Run one sync → plan → implement → review cycle
 1. Log completion
 1. Return control to caller
 
@@ -207,6 +229,7 @@ Phase transitions printed to stdout:
 === Syncing issues ===
 === Generating plans ===
 === Implementing plans ===
+=== Reviewing implementations ===
 === Work cycle completed ===
 ```
 
@@ -244,7 +267,7 @@ Continuous mode includes:
 
 **MUST:**
 
-- Execute phases in order: sync → plan → implement
+- Execute phases in order: sync → plan → implement → review
 - Load configuration at start of each cycle
 - Validate required configuration (issues_path)
 - Pass filters (repos, since, issue_numbers) to all phases

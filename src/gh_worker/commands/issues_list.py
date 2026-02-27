@@ -26,9 +26,12 @@ PLAN_APPROVED = "approved"
 IMPL_NONE = "none"
 IMPL_BEING_GENERATED = "being generated"
 IMPL_WAITING_FOR_REVIEW = "waiting for local review"
+IMPL_REVIEW_IN_PROGRESS = "review in progress"
+IMPL_REVIEWED = "reviewed"
 IMPL_PR_OPENED = "PR opened"
 IMPL_MERGED = "merged"
 IMPL_FAILED = "failed"
+IMPL_REVIEW_FAILED = "review failed"
 
 
 def _get_plan_status(plan_store: PlanStore, repository: Repository, issue_number: int) -> str:
@@ -52,11 +55,18 @@ def _get_implementation_status(
     if not plan_result:
         return IMPL_NONE
     _, metadata = plan_result
-    if metadata.status.value == "in_progress":
+    status = metadata.status.value
+    if status == "in_progress":
         return IMPL_BEING_GENERATED
-    if metadata.status.value == "failed":
+    if status == "failed":
         return IMPL_FAILED
-    if metadata.status.value == "completed":
+    if status == "review_in_progress":
+        return IMPL_REVIEW_IN_PROGRESS
+    if status == "review_completed":
+        return IMPL_REVIEWED
+    if status == "review_failed":
+        return IMPL_REVIEW_FAILED
+    if status == "completed":
         if getattr(metadata, "merged_at", None):
             return IMPL_MERGED
         if metadata.pr_url:

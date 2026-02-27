@@ -83,7 +83,7 @@ repositories_app = cyclopts.App(name="repositories", help="Manage tracked reposi
 app.command(repositories_app)
 app["repositories"].sort_key = 2
 
-plans_app = cyclopts.App(name="plans", help="Approve or unapprove implementation plans")
+plans_app = cyclopts.App(name="plans", help="Review, approve, or unapprove implementation plans")
 app.command(plans_app)
 app["plans"].sort_key = 4
 
@@ -339,8 +339,8 @@ def unapprove(
     )
 
 
-@plans_app.command
-def review(
+@plans_app.command(name="review")
+def plans_review(
     repo: Annotated[str, Parameter(help="Repository (e.g., 'owner/repo')")],
     issue_number: Annotated[int, Parameter(help="Issue number to review")],
     *,
@@ -387,6 +387,57 @@ def implementations_review(
         push_branch=push,
         create_pr=pr,
         config_path=config_path,
+    )
+
+
+@issues_app.command(name="review", sort_key=6)
+def issues_review(
+    repo: Annotated[str | None, Parameter(help="Repository (e.g., 'owner/repo')")] = None,
+    issue_numbers: Annotated[
+        list[int] | None, Parameter(help="Specific issue numbers to review")
+    ] = None,
+    *,
+    all_repos: Annotated[
+        bool, Parameter(help="Review implementations for all repositories")
+    ] = False,
+    parallelism: Annotated[int | None, Parameter(help="Number of parallel executions")] = None,
+    force: Annotated[bool, Parameter(help="Review even if already reviewed")] = False,
+    assignee: Annotated[
+        str | None,
+        Parameter(help="Filter by assignee (substring match). Use @me for current user"),
+    ] = None,
+    config_path: Annotated[
+        Path | None,
+        Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
+    ] = None,
+    agent: Annotated[
+        str | None,
+        Parameter(
+            help="Override agent to use. Choices: "
+            + available_agents
+            + ". Uses config default if None."
+        ),
+    ] = None,
+    model: Annotated[
+        str | None,
+        Parameter(
+            help="Override model to use (agent-specific). Uses config default if None.",
+        ),
+    ] = None,
+) -> None:
+    """Review completed implementations."""
+    from gh_worker.commands.review_issues import review_command
+
+    review_command(
+        repo=repo,
+        issue_numbers=issue_numbers,
+        all_repos=all_repos,
+        parallelism=parallelism,
+        force=force,
+        assignee=assignee,
+        config_path=config_path,
+        agent=agent,
+        model=model,
     )
 
 

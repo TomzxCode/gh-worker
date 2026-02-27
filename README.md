@@ -7,10 +7,11 @@ Automated GitHub issue handling with LLM agents. This CLI tool syncs issues from
 - **Automated Issue Sync**: Sync GitHub issues to local files for processing
 - **LLM-Powered Planning**: Generate comprehensive implementation plans using AI agents
 - **Automated Implementation**: Execute plans and create pull requests automatically
+- **Code Review**: Review implementations using LLM agents to ensure quality
 - **Git Worktree Support**: Isolated implementation branches using git worktree for parallel development
 - **PR Automation**: Automated branch pushing and pull request creation
 - **Parallel Execution**: Process multiple issues concurrently with configurable parallelism
-- **Continuous Workflow**: Run sync → plan → implement cycles continuously or on-demand
+- **Continuous Workflow**: Run sync → plan → implement → review cycles continuously or on-demand
 - **Pluggable Agents**: Support for multiple LLM agents (Claude Code, Cursor Agent, Mock, OpenCode, Gemini, Codex)
 - **Interactive Setup**: Quick configuration with the `init` command
 - **Agent Override**: Switch between agents at runtime for different tasks
@@ -54,10 +55,10 @@ ghw repositories add             Add repositories to track
 ghw repositories list            List tracked repositories
 ghw repositories remove          Remove repositories from tracking
 ghw issues sync                  Sync issues from GitHub
-ghw issues list                  List synced issues with plan/implementation status
+ghw issues list                  List synced issues with plan/implementation/review status
 ghw issues plan                  Generate implementation plans
-ghw issues review plan            Review and approve plans
-ghw issues review implementation Review implementations (push branch, create PR)
+ghw plans review                  Review and approve plans
+ghw issues review                Review code implementations using LLM agents
 ghw issues implement             Implement plans and create PRs
 ghw monitor                      Monitor ongoing plan or implementation progress
 ghw work                         Run sync → plan → implement workflow
@@ -206,7 +207,19 @@ ghw issues plan --repo owner/repo --issue-numbers 42 --force
 ghw issues plan --repo owner/repo --agent cursor-agent
 ```
 
-### 8. Implement Plans
+### 8. Review Plans (Optional)
+
+Review and approve plans before implementation:
+
+```bash
+# Review a plan (creates worktree with plan symlinked)
+ghw plans review --repo owner/repo 42
+
+# Approve a plan
+ghw plans review --repo owner/repo 42 --approve
+```
+
+### 9. Implement Plans
 
 Execute plans and create pull requests with git worktree support:
 
@@ -233,19 +246,30 @@ ghw issues implement --repo owner/repo --delete-worktree=false
 ghw issues implement --repo owner/repo --issue-numbers 42 --force
 ```
 
-### 9. Review Implementations (Optional)
+### 10. Review Implementations
 
-If implementation completes without auto-push/PR, review and push:
+Review code implementations using LLM agents to ensure quality:
 
 ```bash
-# Push branch and create PR
-ghw issues review implementation --repo owner/repo 42
+# Review all implementations
+ghw issues review --repo owner/repo
 
-# Push only (no PR)
-ghw issues review implementation --repo owner/repo 42 --no-pr
+# Review specific issue
+ghw issues review --repo owner/repo --issue-numbers 42
+
+# Use custom parallelism
+ghw issues review --repo owner/repo --parallelism 2
+
+# Use different agent
+ghw issues review --repo owner/repo --agent cursor-agent
+
+# Force re-review even if already reviewed
+ghw issues review --repo owner/repo --issue-numbers 42 --force
 ```
 
-### 10. Monitor Progress
+**Note**: The review outcome is written to `review.md` in the issue's directory.
+
+### 11. Monitor Progress
 
 Monitor an ongoing plan or implementation:
 
@@ -253,7 +277,7 @@ Monitor an ongoing plan or implementation:
 ghw monitor --repo owner/repo --issue-number 42
 ```
 
-### 11. Run Full Workflow
+### 12. Run Full Workflow
 
 Run the complete sync → plan → implement workflow:
 
@@ -343,7 +367,8 @@ gh-worker uses a file-based storage system:
 │               ├── description.md   # Issue content
 │               ├── .updated-at      # Issue update timestamp
 │               ├── plan-<timestamp>.md  # Implementation plan
-│               └── .plan-<timestamp>.yaml  # Plan metadata
+│               ├── .plan-<timestamp>.yaml  # Plan metadata
+│               └── review.md        # Review outcome (after review)
 └── repos/
     └── owner/
         └── repo/                    # Cloned repository

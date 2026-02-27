@@ -130,3 +130,29 @@ Use a real agent (e.g., claude-code) for actual plan generation.
             content="Mock agent does not support monitoring. Use a real agent for monitoring.",
             metadata={"agent": "mock", "session_id": session_id},
         )
+
+    async def review(
+        self,
+        issue_content: str,
+        plan_content: str,
+        repository_path: str,
+        issue_number: int,
+        branch_name: str,
+    ) -> AsyncIterator[AgentEvent]:
+        """Review the implemented code (mock implementation).
+
+        Args:
+            issue_content: The full issue description
+            plan_content: The generated plan
+            repository_path: Path to the repository with implemented code
+            issue_number: Issue number
+            branch_name: Branch name
+
+        Yields:
+            AgentEvent objects as the review progresses
+        """
+        yield AgentEvent(
+            type=AgentEventType.ERROR,
+            content="Mock agent does not support reviewing. Use a real agent for reviewing.",
+            metadata={"agent": "mock", "issue_number": issue_number},
+        )

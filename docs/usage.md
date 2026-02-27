@@ -196,7 +196,7 @@ ghw issues sync [--repo REPO | --all-repos] [OPTIONS]
 ghw issues list [--repo REPO | --all-repos] [OPTIONS]
 ghw issues plan [--repo REPO] [OPTIONS]
 ghw plans review [--repo REPO] <issue-number> [OPTIONS]
-ghw implementations review [--repo REPO] <issue-number> [OPTIONS]
+ghw issues review [--repo REPO] [OPTIONS]
 ghw issues implement [--repo REPO] [OPTIONS]
 ```
 
@@ -379,23 +379,41 @@ Review and approve implementation plans before running the implement step.
 ghw plans review --repo owner/repo 42
 
 # Approve a plan
-ghw plans approve --repo owner/repo 42
+ghw plans review --repo owner/repo 42 --approve
 ```
 
-#### review implementation
+#### review
 
-Approve implementations that completed without auto-push/PR: push the branch and create a pull request.
+Review code implementations using LLM agents to ensure quality.
 
 ```bash
-# Push branch and create PR (default)
-ghw implementations review --repo owner/repo 42
+# Review all implementations
+ghw issues review --repo owner/repo
 
-# Push branch only (no PR)
-ghw implementations review --repo owner/repo 42 --no-pr
+# Review specific issue
+ghw issues review --repo owner/repo --issue-numbers 42
 
-# Create PR only (branch already pushed)
-ghw implementations review --repo owner/repo 42 --no-push
+# Use custom parallelism
+ghw issues review --repo owner/repo --parallelism 2
+
+# Use different agent
+ghw issues review --repo owner/repo --agent cursor-agent
+
+# Force re-review even if already reviewed
+ghw issues review --repo owner/repo --issue-numbers 42 --force
 ```
+
+**What Happens During Review**:
+
+1. Agent validation checks if required CLI tools are available
+1. Creates a git worktree for the PR branch (if needed)
+1. Fetches PR information from GitHub (branch name, description)
+1. Agent reads the issue and plan (if available)
+1. Reviews the code implementation against the plan/issue
+1. Writes the review outcome to `review.md` in the issue's directory
+1. Updates plan metadata with review status
+
+**Note**: A plan does not need to exist for review. If no plan is available, the review uses the PR description from GitHub.
 
 #### implement
 

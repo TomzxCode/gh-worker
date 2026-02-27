@@ -127,6 +127,29 @@ class BaseAgent(ABC):
         """
         pass
 
+    @abstractmethod
+    async def review(
+        self,
+        issue_content: str,
+        plan_content: str,
+        repository_path: str,
+        issue_number: int,
+        branch_name: str,
+    ) -> AsyncIterator[AgentEvent]:
+        """Review the implemented code against the plan.
+
+        Args:
+            issue_content: The full issue description
+            plan_content: The generated plan
+            repository_path: Path to the repository with implemented code
+            issue_number: Issue number
+            branch_name: Branch name
+
+        Yields:
+            AgentEvent objects as the review progresses
+        """
+        pass
+
     @property
     @abstractmethod
     def name(self) -> str:

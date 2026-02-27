@@ -251,14 +251,14 @@ Reviews and approves implementation plans.
 **Operations:**
 
 - Create worktree with plan symlinked for review
-- Use `plans approve` to mark plan as approved, `plans unapprove` to revert
+- Use `--approve` flag to mark plan as approved
 - Updates plan metadata status to APPROVED
 
 **Example:**
 
 ```bash
 gh-worker plans review --repo octocat/hello-world 42
-gh-worker plans approve --repo octocat/hello-world 42
+gh-worker plans review --repo octocat/hello-world 42 --approve
 ```
 
 **Flow:**
@@ -266,39 +266,55 @@ gh-worker plans approve --repo octocat/hello-world 42
 1. Load configuration and validate issues_path
 1. Initialize IssueStore and PlanStore
 1. Find plan with status PENDING and existing plan file
-1. `plans approve`: Update metadata status to APPROVED
-1. `plans review`: Create worktree, symlink plan, open for editing
+1. With `--approve`: Update metadata status to APPROVED
+1. Without `--approve`: Create worktree, symlink plan, open for editing
 
-#### implementations review
+#### issues review
 
-Approves implementations waiting for review: push branch and create PR.
+Reviews code implementations using LLM agents.
 
-**Location:** [src/gh_worker/commands/review.py](src/gh_worker/commands/review.py)
+**Location:** [src/gh_worker/commands/review_issues.py](src/gh_worker/commands/review_issues.py)
 
 **Operations:**
 
-- Find implementations with status COMPLETED, no PR URL, and branch name
-- Push branch to remote
-- Create pull request via GitHub CLI
-- Update plan metadata with PR URL
+- Find implementations with COMPLETED status and branch name
+- Fetch PR information from GitHub (branch name, description)
+- Use agent to review code against plan/issue
+- Write review outcome to review.md in issue directory
+- Update plan metadata with review status
+
+**CLI Flags:**
+
+- `--parallelism` - Number of parallel reviews (default: from config)
+- `--force` - Review even if already reviewed
+- `--assignee` - Filter by assignee (use @me for current user)
+- `--agent` - Override agent to use (e.g., "cursor-agent", "mock")
 
 **Example:**
 
 ```bash
-gh-worker implementations review --repo octocat/hello-world 42
-gh-worker implementations review --repo octocat/hello-world 42 --no-pr
+gh-worker issues review --repo octocat/hello-world
+gh-worker issues review --repo octocat/hello-world --issue-numbers 42
+gh-worker issues review --repo octocat/hello-world --parallelism 2
 ```
 
 **Flow:**
 
 1. Load configuration and validate issues_path
 1. Initialize IssueStore, PlanStore, GHClient
-1. Find implementation with COMPLETED status, branch_name, no pr_url
-1. Create worktree at branch
-1. Push branch to remote (if `--push`)
-1. Create PR via gh CLI (if `--pr`)
-1. Update metadata with PR URL
-1. Remove worktree
+1. Resolve repositories and find implementations waiting review
+1. For each implementation:
+   - Fetch PR info from GitHub (branch name, description)
+   - Clone repository if not exists
+   - Create worktree for PR branch
+   - Load issue content and plan (if available)
+   - Call agent.review() (streaming)
+   - Capture completion content
+   - Write review to review.md
+   - Update metadata with review status
+1. Report success/failure counts
+
+**Note**: A plan does not need to exist for review. If no plan is available, the review uses the PR description from GitHub.
 
 #### issues implement
 

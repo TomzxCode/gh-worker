@@ -17,6 +17,10 @@ class PlanStatus(Enum):
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
     FAILED = "failed"
+    REVIEW_PENDING = "review_pending"
+    REVIEW_IN_PROGRESS = "review_in_progress"
+    REVIEW_COMPLETED = "review_completed"
+    REVIEW_FAILED = "review_failed"
 
 
 @dataclass

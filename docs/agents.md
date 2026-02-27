@@ -8,6 +8,7 @@ Agents are LLM-powered assistants that:
 
 - **Plan**: Analyze issues and generate implementation plans
 - **Implement**: Execute plans by writing code, running tests, and creating pull requests
+- **Review**: Review code implementations to ensure quality
 - **Monitor**: Provide real-time feedback during execution
 
 ## Architecture
@@ -272,6 +273,33 @@ async for event in agent.implement(
     print(f"{event.type}: {event.content}")
 ```
 
+#### `review(issue_content, plan_content, repository_path, issue_number, branch_name)`
+
+Review a code implementation to ensure quality.
+
+**Parameters**:
+
+- `issue_content` (str): Full issue description
+- `plan_content` (str): Generated plan (optional, empty string if not available)
+- `repository_path` (str): Path to cloned repository
+- `issue_number` (int): Issue number
+- `branch_name` (str): Branch to review
+
+**Yields**: `AgentEvent` objects during execution
+
+**Example**:
+
+```python
+async for event in agent.review(
+    issue_content="Fix login bug",
+    plan_content="1. Update auth.py...",
+    repository_path="/path/to/repo",
+    issue_number=42,
+    branch_name="issue-42-fix-login"
+):
+    print(f"{event.type}: {event.content}")
+```
+
 #### `commit(repository_path, issue_number, branch_name)`
 
 Commit changes with a descriptive message.
@@ -507,6 +535,27 @@ class MyCustomAgent(BaseAgent):
         yield AgentEvent(
             type=AgentEventType.COMPLETION,
             content="Implementation complete"
+        )
+
+    async def review(
+        self,
+        issue_content: str,
+        plan_content: str,
+        repository_path: str,
+        issue_number: int,
+        branch_name: str,
+    ) -> AsyncIterator[AgentEvent]:
+        # Review the implementation
+        yield AgentEvent(
+            type=AgentEventType.STATUS,
+            content="Starting review..."
+        )
+
+        # ... review code ...
+
+        yield AgentEvent(
+            type=AgentEventType.COMPLETION,
+            content="Review complete: Code looks good"
         )
 
     async def commit(
