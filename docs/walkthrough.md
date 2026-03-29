@@ -257,10 +257,10 @@ Use `ghw work` to run sync → plan → implement in one command:
 
 ```bash
 # Run once
-ghw work --once --repos owner/repo
+ghw work --once --repo owner/repo
 
 # Run continuously (checks every 30 minutes)
-ghw work --repos owner/repo --frequency 30m
+ghw work --repo owner/repo --frequency 30m
 ```
 
 ### Process Multiple Repositories
@@ -308,7 +308,7 @@ ghw config implement.create_pr true
 | `ghw issues implement --repo owner/repo` | Implement plans |
 | `ghw implementations review --repo owner/repo 42` | Push & create PR |
 | `ghw monitor --repo owner/repo --issue-number 42` | Monitor progress |
-| `ghw work --once --repos owner/repo` | Full workflow |
+| `ghw work --once --repo owner/repo` | Full workflow |
 
 ---
 

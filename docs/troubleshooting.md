@@ -517,10 +517,10 @@ Remove `--once` flag for continuous mode:
 
 ```bash
 # This runs once and exits
-ghw work --once --repos owner/repo
+ghw work --once --repo owner/repo
 
 # This runs continuously
-ghw work --repos owner/repo
+ghw work --repo owner/repo
 ```
 
 ### Work Command Frequency Not Respected
@@ -538,7 +538,7 @@ ghw config sync.frequency
 2. Specify frequency explicitly:
 
 ```bash
-ghw work --repos owner/repo --frequency 30m
+ghw work --repo owner/repo --frequency 30m
 ```
 
 3. Monitor logs to verify timing:

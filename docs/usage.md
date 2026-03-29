@@ -380,11 +380,14 @@ ghw issues plan --repo owner/repo --assignee @me
 Review and approve implementation plans before running the implement step.
 
 ```bash
-# Review a plan (creates worktree with plan symlinked)
+# Review a plan (creates worktree with plan symlinked for editing)
 ghw plans review --repo owner/repo 42
 
 # Approve a plan
-ghw plans review --repo owner/repo 42 --approve
+ghw plans approve --repo owner/repo 42
+
+# Unapprove a plan (revert to pending)
+ghw plans unapprove --repo owner/repo 42
 ```
 
 #### review
@@ -588,23 +591,23 @@ Run the complete workflow: sync → plan → implement.
 Process all pending issues once and exit:
 
 ```bash
-ghw work --once --repos owner/repo
+ghw work --once --repo owner/repo
 ```
 
 **Examples**:
 
 ```bash
 # Process one repository
-ghw work --once --repos owner/repo
+ghw work --once --repo owner/repo
 
-# Process multiple repositories
-ghw work --once --repos owner/repo1 owner/repo2
+# Process all repositories (omit --repo)
+ghw work --once
 
 # Process recent issues only
-ghw work --once --repos owner/repo --since 1d
+ghw work --once --repo owner/repo --since 1d
 
 # Process specific issues
-ghw work --once --repos owner/repo --issue-numbers 42 43
+ghw work --once --repo owner/repo --issue-numbers 42 43
 ```
 
 #### Continuous Mode
@@ -612,20 +615,20 @@ ghw work --once --repos owner/repo --issue-numbers 42 43
 Run continuously, processing issues at regular intervals:
 
 ```bash
-ghw work --repos owner/repo
+ghw work --repo owner/repo
 ```
 
 **Examples**:
 
 ```bash
 # Use default frequency (from config)
-ghw work --repos owner/repo
+ghw work --repo owner/repo
 
 # Use custom frequency
-ghw work --repos owner/repo --frequency 30m
+ghw work --repo owner/repo --frequency 30m
 
-# Process multiple repositories
-ghw work --repos owner/repo1 owner/repo2 --frequency 15m
+# Run across all repositories
+ghw work --frequency 15m
 ```
 
 In continuous mode, gh-worker will:
@@ -674,14 +677,14 @@ Process new issues from the last day:
 
 ```bash
 # Sync, plan, and implement recent issues
-ghw work --once --repos owner/repo --since 1d
+ghw work --once --repo owner/repo --since 1d
 ```
 
 **Schedule with Cron**:
 
 ```bash
 # Add to crontab (run daily at 9 AM)
-0 9 * * * /path/to/ghw work --once --repos owner/repo --since 1d
+0 9 * * * /path/to/ghw work --once --repo owner/repo --since 1d
 ```
 
 ### Continuous Monitoring
@@ -690,7 +693,7 @@ Monitor and process issues continuously:
 
 ```bash
 # Check every 30 minutes
-ghw work --repos owner/repo --frequency 30m
+ghw work --repo owner/repo --frequency 30m
 ```
 
 **Run as a Service** (systemd example):
@@ -704,7 +707,7 @@ After=network.target
 [Service]
 Type=simple
 User=youruser
-ExecStart=/path/to/ghw work --repos owner/repo --frequency 30m
+ExecStart=/path/to/ghw work --repo owner/repo --frequency 30m
 Restart=on-failure
 
 [Install]

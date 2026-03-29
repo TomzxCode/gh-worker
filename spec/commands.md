@@ -244,21 +244,19 @@ Generates implementation plans using LLM agents.
 
 #### plans review
 
-Reviews and approves implementation plans.
+Creates a worktree with the plan symlinked for editing.
 
 **Location:** [src/gh_worker/commands/review.py](src/gh_worker/commands/review.py)
 
 **Operations:**
 
-- Create worktree with plan symlinked for review
-- Use `--approve` flag to mark plan as approved
-- Updates plan metadata status to APPROVED
+- Create worktree with plan symlinked for review/editing
+- Only applies to plans with status PENDING and an existing plan file
 
 **Example:**
 
 ```bash
 gh-worker plans review --repo octocat/hello-world 42
-gh-worker plans review --repo octocat/hello-world 42 --approve
 ```
 
 **Flow:**
@@ -266,8 +264,7 @@ gh-worker plans review --repo octocat/hello-world 42 --approve
 1. Load configuration and validate issues_path
 1. Initialize IssueStore and PlanStore
 1. Find plan with status PENDING and existing plan file
-1. With `--approve`: Update metadata status to APPROVED
-1. Without `--approve`: Create worktree, symlink plan, open for editing
+1. Create worktree, symlink plan file for editing
 
 #### issues review
 

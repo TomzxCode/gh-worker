@@ -19,6 +19,7 @@ CLI implemented using cyclopts framework in [src/gh_worker/cli.py](src/gh_worker
 **Global Options:**
 
 - `--log-level` - Logging level (DEBUG, INFO, WARNING, ERROR) - default: INFO
+- `--config-path` - Path to config file (default: `~/.config/gh-worker/config.yaml`)
 
 **Help Flags:**
 
@@ -29,22 +30,24 @@ CLI implemented using cyclopts framework in [src/gh_worker/cli.py](src/gh_worker
 
 ```
 gh-worker
+├── tui               - Launch the TUI dashboard
 ├── init              - Initialize configuration interactively
 ├── repositories      - Manage tracked repositories
 │   ├── add           - Add repositories to track
 │   ├── list          - List all repositories under management
 │   └── remove        - Remove repositories from tracking
-├── plans             - Approve or unapprove implementation plans
-│   ├── approve       - Mark plan as approved
-│   └── unapprove     - Revert plan to pending
 ├── issues            - Sync, plan, review, and implement issues
 │   ├── sync          - Sync issues from GitHub
 │   ├── list          - List synced issues with plan/implementation status
 │   ├── plan          - Generate implementation plans
-│   ├── review        - Review plans or implementations
-│   │   ├── plan      - Create worktree with plan for editing
-│   │   └── implementation - Push branch and create PR for implementations
+│   ├── review        - Review completed implementations with LLM agent
 │   └── implement     - Implement plans and create PRs
+├── plans             - Review, approve, or unapprove implementation plans
+│   ├── approve       - Mark plan as approved
+│   ├── review        - Create worktree with plan symlinked for editing
+│   └── unapprove     - Revert plan to pending
+├── implementations   - Review implementations (push branch, create PR)
+│   └── review        - Approve implementation: push branch and create PR
 ├── monitor           - Monitor agent sessions (plan or implement)
 ├── work              - Run complete workflow (sync → plan → implement)
 └── config            - Manage configuration
@@ -533,7 +536,7 @@ gh-worker work [--once | --frequency FREQ] [OPTIONS]
 
 **Options:**
 
-- `--repos REPO...` - Specific repositories to process
+- `--repo REPO` - Specific repository to process (format: "owner/repo")
 - `--since TIMESTAMP` - Only process issues updated after timestamp
 - `--issue-numbers NUM...` - Specific issue numbers to process
 - `--agent AGENT` - Override agent to use
@@ -548,11 +551,11 @@ gh-worker work --once
 # Continuous mode, 30 minute intervals
 gh-worker work --frequency 30m
 
-# Specific repositories, hourly
-gh-worker work --frequency 1h --repos octocat/hello-world octocat/spoon-knife
+# Specific repository, hourly
+gh-worker work --frequency 1h --repo octocat/hello-world
 
 # Single cycle with filters
-gh-worker work --once --repos octocat/hello-world --issue-numbers 42 73
+gh-worker work --once --repo octocat/hello-world --issue-numbers 42 73
 ```
 
 **Behavior:**
