@@ -45,7 +45,7 @@ def _print_all_help() -> None:
             # (e.g. "plans-review" under "plans"). Strip the prefix to get the CLI token.
             if path:
                 parent = path[-1]
-                cli_name = name[len(parent) + 1:] if name.startswith(parent + "-") else name
+                cli_name = name[len(parent) + 1 :] if name.startswith(parent + "-") else name
             else:
                 cli_name = name
             paths.extend(_collect_paths(sub, path + [cli_name]))
@@ -587,16 +587,17 @@ def tui(
 
 @app.command(sort_key=7)
 def work(
+    repo: Annotated[str | None, Parameter(help="Repository (e.g., 'owner/repo')")] = None,
+    issue_numbers: Annotated[
+        list[int] | None, Parameter(help="Specific issue numbers to process")
+    ] = None,
+    *,
     once: Annotated[bool, Parameter(help="Run once and exit (default: continuous mode)")] = False,
     frequency: Annotated[
         str | None, Parameter(help="Sync frequency (e.g., '10m', '1h', '1d')")
     ] = None,
-    repos: Annotated[list[str] | None, Parameter(help="Repositories to process")] = None,
     since: Annotated[
         str | None, Parameter(help="Only process issues updated since this timestamp")
-    ] = None,
-    issue_numbers: Annotated[
-        list[int] | None, Parameter(help="Specific issue numbers to process")
     ] = None,
     config_path: Annotated[
         Path | None,
@@ -617,7 +618,7 @@ def work(
     work_command(
         once=once,
         frequency=frequency,
-        repos=repos,
+        repos=[repo] if repo else None,
         since=since,
         issue_numbers=issue_numbers,
         config_path=config_path,
