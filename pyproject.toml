@@ -27,8 +27,8 @@ dev = [
 ]
 
 [project.scripts]
-gh-worker = "gh_worker.cli:app.meta"
-ghw = "gh_worker.cli:app.meta"
+gh-worker = "gh_worker.cli:cli"
+ghw = "gh_worker.cli:cli"
 
 [build-system]
 requires = ["hatchling"]

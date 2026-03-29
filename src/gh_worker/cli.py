@@ -1,6 +1,7 @@
 """CLI entry point using cyclopts."""
 
 import argparse
+import sys
 from pathlib import Path
 from typing import Annotated
 
@@ -26,6 +27,38 @@ setup_logging(_parse_log_level())
 available_agents = ", ".join(sorted(get_registry().list_agents()))
 
 app = cyclopts.App(name="gh-worker", help="Automated GitHub issue handling with LLM agents")
+
+
+def _print_all_help() -> None:
+    """Print help for every command and subcommand."""
+    HELP_INTERNAL = {"help-print", "version-print"}
+
+    def _collect_paths(a: cyclopts.App, path: list[str]) -> list[list[str]]:
+        paths: list[list[str]] = []
+        if path:
+            paths.append(path)
+        for sub in a.subapps:
+            name = sub.name[0] if sub.name else None
+            if name is None or name in HELP_INTERNAL:
+                continue
+            # Subapp names for nested commands are prefixed with the parent name
+            # (e.g. "plans-review" under "plans"). Strip the prefix to get the CLI token.
+            if path:
+                parent = path[-1]
+                cli_name = name[len(parent) + 1:] if name.startswith(parent + "-") else name
+            else:
+                cli_name = name
+            paths.extend(_collect_paths(sub, path + [cli_name]))
+        return paths
+
+    app.help_print(tokens=[])
+    for sub in app.subapps:
+        name = sub.name[0] if sub.name else None
+        if name is None or name in HELP_INTERNAL:
+            continue
+        for path in _collect_paths(sub, [name]):
+            print()
+            app.help_print(tokens=path)
 
 
 @app.meta.default
@@ -592,5 +625,14 @@ def work(
     )
 
 
+def cli() -> None:
+    """Entry point that handles --help --all before cyclopts processes flags."""
+    argv = sys.argv[1:]
+    if ("--help" in argv or "-h" in argv) and "--all" in argv:
+        _print_all_help()
+    else:
+        app.meta()
+
+
 if __name__ == "__main__":
-    app.meta()
+    cli()
