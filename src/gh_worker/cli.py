@@ -2,6 +2,7 @@
 
 import argparse
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated
 
@@ -10,6 +11,15 @@ from cyclopts import Parameter
 
 from gh_worker.agents.registry import get_registry
 from gh_worker.utils.logging import setup_logging
+
+
+@dataclass
+class CLIContext:
+    config_path: Path | None = None
+    log_level: str = "INFO"
+
+
+_ctx = CLIContext()
 
 
 def _parse_log_level() -> str:
@@ -65,23 +75,24 @@ def _print_all_help() -> None:
 def main(
     *tokens: Annotated[str, Parameter(show=False, allow_leading_hyphen=True)],
     log_level: Annotated[str, Parameter(help="Log level (DEBUG, INFO, WARNING, ERROR)")] = "INFO",
-) -> None:
-    """gh-worker: Automated GitHub issue handling with LLM agents."""
-    setup_logging(log_level)
-    app(tokens)
-
-
-@app.command(sort_key=1)
-def init(
     config_path: Annotated[
         Path | None,
         Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
     ] = None,
 ) -> None:
+    """gh-worker: Automated GitHub issue handling with LLM agents."""
+    _ctx.log_level = log_level
+    _ctx.config_path = config_path
+    setup_logging(log_level)
+    app(tokens)
+
+
+@app.command(sort_key=1)
+def init() -> None:
     """Initialize configuration interactively."""
     from gh_worker.commands.init import init_command
 
-    init_command(config_path=config_path)
+    init_command(config_path=_ctx.config_path)
 
 
 @app.command(sort_key=8)
@@ -96,10 +107,6 @@ def config(
     list_: Annotated[
         bool, Parameter(name="--list", help="List all set configuration values")
     ] = False,
-    config_path: Annotated[
-        Path | None,
-        Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
-    ] = None,
 ) -> None:
     """Manage configuration."""
     from gh_worker.commands.config import config_command
@@ -108,7 +115,7 @@ def config(
         key=key,
         value=value,
         list_all=list_,
-        config_path=config_path,
+        config_path=_ctx.config_path,
     )
 
 
@@ -124,10 +131,6 @@ app["plans"].sort_key = 4
 @repositories_app.command
 def add(
     repos: Annotated[list[str], Parameter(help="Repository names (e.g., 'owner/repo')")],
-    config_path: Annotated[
-        Path | None,
-        Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
-    ] = None,
     clone: Annotated[
         bool,
         Parameter(help="Clone the repository to repository-path (default: no)"),
@@ -138,31 +141,22 @@ def add(
 
     add_command(
         repos=repos,
-        config_path=config_path,
+        config_path=_ctx.config_path,
         clone=clone,
     )
 
 
 @repositories_app.command
-def list_(
-    config_path: Annotated[
-        Path | None,
-        Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
-    ] = None,
-) -> None:
+def list_() -> None:
     """List all repositories under management."""
     from gh_worker.commands.list import list_command
 
-    list_command(config_path=config_path)
+    list_command(config_path=_ctx.config_path)
 
 
 @repositories_app.command
 def remove(
     repos: Annotated[list[str], Parameter(help="Repository names (e.g., 'owner/repo')")],
-    config_path: Annotated[
-        Path | None,
-        Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
-    ] = None,
     keep_clone: Annotated[
         bool,
         Parameter(help="Keep the cloned repository in repository-path"),
@@ -173,7 +167,7 @@ def remove(
 
     remove_command(
         repos=repos,
-        config_path=config_path,
+        config_path=_ctx.config_path,
         keep_clone=keep_clone,
     )
 
@@ -203,10 +197,6 @@ def sync(
         bool,
         Parameter(help="Refresh all issues (re-fetch and update description.md)"),
     ] = False,
-    config_path: Annotated[
-        Path | None,
-        Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
-    ] = None,
 ) -> None:
     """Sync GitHub issues to local files."""
     from gh_worker.commands.sync import sync_command
@@ -219,7 +209,7 @@ def sync(
         search=search,
         assignee=assignee,
         force=force,
-        config_path=config_path,
+        config_path=_ctx.config_path,
     )
 
 
@@ -254,10 +244,6 @@ def issues_list(
             "PR opened, merged, failed"
         ),
     ] = None,
-    config_path: Annotated[
-        Path | None,
-        Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
-    ] = None,
 ) -> None:
     """List synced issues with plan and implementation status."""
     from gh_worker.commands.issues_list import issues_list_command
@@ -271,7 +257,7 @@ def issues_list(
         assignee=assignee,
         plan=plan,
         implementation=implementation,
-        config_path=config_path,
+        config_path=_ctx.config_path,
     )
 
 
@@ -288,10 +274,6 @@ def plan(
     assignee: Annotated[
         str | None,
         Parameter(help="Filter by assignee (substring match). Use @me for current user"),
-    ] = None,
-    config_path: Annotated[
-        Path | None,
-        Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
     ] = None,
     agent: Annotated[
         str | None,
@@ -318,7 +300,7 @@ def plan(
         parallelism=parallelism,
         force=force,
         assignee=assignee,
-        config_path=config_path,
+        config_path=_ctx.config_path,
         agent=agent,
         model=model,
     )
@@ -335,11 +317,6 @@ app["implementations"].sort_key = 5
 def approve(
     repo: Annotated[str, Parameter(help="Repository (e.g., 'owner/repo')")],
     issue_number: Annotated[int, Parameter(help="Issue number to approve")],
-    *,
-    config_path: Annotated[
-        Path | None,
-        Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
-    ] = None,
 ) -> None:
     """Mark the plan as approved."""
     from gh_worker.commands.review import review_plan_command
@@ -348,7 +325,7 @@ def approve(
         repo=repo,
         issue_number=issue_number,
         approve=True,
-        config_path=config_path,
+        config_path=_ctx.config_path,
     )
 
 
@@ -356,11 +333,6 @@ def approve(
 def unapprove(
     repo: Annotated[str, Parameter(help="Repository (e.g., 'owner/repo')")],
     issue_number: Annotated[int, Parameter(help="Issue number to unapprove")],
-    *,
-    config_path: Annotated[
-        Path | None,
-        Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
-    ] = None,
 ) -> None:
     """Revert plan status to pending (waiting for review)."""
     from gh_worker.commands.review import unapprove_plan_command
@@ -368,7 +340,7 @@ def unapprove(
     unapprove_plan_command(
         repo=repo,
         issue_number=issue_number,
-        config_path=config_path,
+        config_path=_ctx.config_path,
     )
 
 
@@ -376,11 +348,6 @@ def unapprove(
 def plans_review(
     repo: Annotated[str, Parameter(help="Repository (e.g., 'owner/repo')")],
     issue_number: Annotated[int, Parameter(help="Issue number to review")],
-    *,
-    config_path: Annotated[
-        Path | None,
-        Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
-    ] = None,
 ) -> None:
     """Create worktree with plan symlinked for editing."""
     from gh_worker.commands.review import review_plan_command
@@ -389,7 +356,7 @@ def plans_review(
         repo=repo,
         issue_number=issue_number,
         approve=False,
-        config_path=config_path,
+        config_path=_ctx.config_path,
     )
 
 
@@ -406,10 +373,6 @@ def implementations_review(
         bool,
         Parameter(help="Create pull request"),
     ] = True,
-    config_path: Annotated[
-        Path | None,
-        Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
-    ] = None,
 ) -> None:
     """Approve implementations: push branch and create PR."""
     from gh_worker.commands.review import review_implementation_command
@@ -419,7 +382,7 @@ def implementations_review(
         issue_number=issue_number,
         push_branch=push,
         create_pr=pr,
-        config_path=config_path,
+        config_path=_ctx.config_path,
     )
 
 
@@ -438,10 +401,6 @@ def issues_review(
     assignee: Annotated[
         str | None,
         Parameter(help="Filter by assignee (substring match). Use @me for current user"),
-    ] = None,
-    config_path: Annotated[
-        Path | None,
-        Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
     ] = None,
     agent: Annotated[
         str | None,
@@ -468,7 +427,7 @@ def issues_review(
         parallelism=parallelism,
         force=force,
         assignee=assignee,
-        config_path=config_path,
+        config_path=_ctx.config_path,
         agent=agent,
         model=model,
     )
@@ -504,10 +463,6 @@ def implement(
         bool | None,
         Parameter(help="Delete worktree after implementation (overrides config)"),
     ] = None,
-    config_path: Annotated[
-        Path | None,
-        Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
-    ] = None,
     agent: Annotated[
         str | None,
         Parameter(
@@ -537,7 +492,7 @@ def implement(
         push_branch=push_branch,
         create_pr=create_pr,
         delete_worktree=delete_worktree,
-        config_path=config_path,
+        config_path=_ctx.config_path,
         agent=agent,
         model=model,
     )
@@ -547,10 +502,6 @@ def implement(
 def monitor(
     repo: Annotated[str, Parameter(help="Repository (e.g., 'owner/repo')")],
     issue_number: Annotated[int, Parameter(help="Issue number to monitor")],
-    config_path: Annotated[
-        Path | None,
-        Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
-    ] = None,
     agent: Annotated[
         str | None,
         Parameter(
@@ -566,22 +517,17 @@ def monitor(
     monitor_command(
         repo=repo,
         issue_number=issue_number,
-        config_path=config_path,
+        config_path=_ctx.config_path,
         agent=agent,
     )
 
 
 @app.command(sort_key=0)
-def tui(
-    config_path: Annotated[
-        Path | None,
-        Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
-    ] = None,
-) -> None:
+def tui() -> None:
     """Launch the TUI dashboard."""
     from gh_worker.tui.app import GhWorkerApp
 
-    app = GhWorkerApp(config_path=config_path)
+    app = GhWorkerApp(config_path=_ctx.config_path)
     app.run()
 
 
@@ -598,10 +544,6 @@ def work(
     ] = None,
     since: Annotated[
         str | None, Parameter(help="Only process issues updated since this timestamp")
-    ] = None,
-    config_path: Annotated[
-        Path | None,
-        Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
     ] = None,
     agent: Annotated[
         str | None,
@@ -621,7 +563,7 @@ def work(
         repos=[repo] if repo else None,
         since=since,
         issue_numbers=issue_numbers,
-        config_path=config_path,
+        config_path=_ctx.config_path,
         agent=agent,
     )
 
