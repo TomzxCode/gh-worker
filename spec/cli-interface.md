@@ -20,6 +20,11 @@ CLI implemented using cyclopts framework in [src/gh_worker/cli.py](src/gh_worker
 
 - `--log-level` - Logging level (DEBUG, INFO, WARNING, ERROR) - default: INFO
 
+**Help Flags:**
+
+- `--help` / `-h` - Display help for the current command
+- `--help --all` / `-h --all` - Print help for all commands and subcommands at once
+
 ### Command Hierarchy
 
 ```
@@ -598,6 +603,7 @@ All commands load configuration from:
 - Provide help text for all commands and options
 - Accept `--config-path` option on all commands
 - Return non-zero exit code on errors
+- Support `--help --all` to print help for every command and subcommand
 
 **SHOULD:**
 

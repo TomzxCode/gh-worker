@@ -8,6 +8,8 @@ All commands support the following global options:
 
 - `--log-level` - Set logging level (DEBUG, INFO, WARNING, ERROR). Default: INFO
 - `--config-path` - Path to config file (default: `~/.config/gh-worker/config.yaml`)
+- `--help` / `-h` - Display help for the current command
+- `--help --all` / `-h --all` - Print help for all commands and subcommands at once
 
 **Examples**:
 
@@ -17,6 +19,9 @@ ghw --log-level DEBUG issues sync --repo owner/repo
 
 # Use custom config file
 ghw issues sync --repo owner/repo --config-path /path/to/config.yaml
+
+# Print help for every command
+ghw --help --all
 ```
 
 ## Commands Overview
