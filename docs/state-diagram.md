@@ -2,46 +2,15 @@
 
 This document describes the transitions a user goes through while using the gh-worker CLI, including both the setup workflow and the issue lifecycle.
 
-## Mermaid: Issue Lifecycle (Plan + Implementation)
-
-```mermaid
-stateDiagram-v2
-    [*] --> PlanNone: issues sync
-    PlanNone --> PlanBeingGenerated: issues plan / work
-    PlanBeingGenerated --> PlanWaitingReview: plan completes
-    PlanBeingGenerated --> PlanNone: (retry)
-    PlanWaitingReview --> PlanApproved: plans review
-    PlanApproved --> ImplNone: (ready for implement)
-
-    ImplNone --> ImplBeingGenerated: issues implement / work
-    ImplBeingGenerated --> ImplWaitingReview: implementation completes (no push)
-    ImplBeingGenerated --> ImplPROpened: implementation completes (push+PR)
-    ImplBeingGenerated --> ImplFailed: implementation fails
-    ImplFailed --> ImplBeingGenerated: issues implement --force
-    ImplWaitingReview --> ImplPROpened: implementations review
-    ImplPROpened --> ImplMerged: merge on GitHub
-    ImplMerged --> [*]
-```
-
 ## 1. Setup & Configuration Flow
 
-```
-┌─────────────┐     init      ┌──────────────┐    repositories add    ┌─────────────────┐
-│ Uninitialized│──────────────▶│  Configured   │─────────────────────▶│ Repos Tracked   │
-└─────────────┘               └──────────────┘                       └────────┬────────┘
-                     config                                                  │
-                     (optional)                                              │ issues sync
-                                                                            ▼
-┌─────────────┐     config     ┌──────────────┐                       ┌─────────────────┐
-│   Any state  │◀──────────────▶│  Configured   │                       │ Issues Synced   │
-└─────────────┘               └──────────────┘                       └────────┬────────┘
-                                                                             │
-                                                                             │ issues list
-                                                                             │ (inspect)
-                                                                             ▼
-                                                                      ┌─────────────────┐
-                                                                      │  Ready to Plan   │
-                                                                      └─────────────────┘
+```mermaid
+flowchart LR
+    A[Uninitialized] -->|init| B[Configured]
+    B -->|repositories add| C[Repos Tracked]
+    C -->|issues sync| D[Issues Synced]
+    D -->|issues list| E[Ready to Plan]
+    B <-->|config| F[Any State]
 ```
 
 ## 2. Issue Lifecycle (Plan & Implementation States)
@@ -64,77 +33,62 @@ Each synced issue progresses through plan and implementation states. The user in
 | **none** | No implementation | (initial) | being generated |
 | **being generated** | LLM is implementing | `issues implement` or `work` | waiting for local review / PR opened / failed |
 | **waiting for local review** | Code done locally, no PR yet | (automatic when implementation completes without push) | PR opened |
+| **review in progress** | LLM is reviewing the implementation | `issues review` | reviewed / review failed |
+| **reviewed** | Review completed | (automatic when review completes) | PR opened |
 | **PR opened** | Branch pushed, PR created | `implementations review` or auto from implement | merged |
 | **merged** | PR merged to main | (external: merge on GitHub) | — |
-| **failed** | Implementation failed | (automatic on error) | — |
+| **failed** | Implementation failed | (automatic on error) | being generated |
+| **review failed** | Review failed | (automatic on error) | — |
 
 ### State Diagram (Issue Lifecycle)
 
-```
-                                    PLAN PHASE
-┌──────────┐   issues plan    ┌──────────────────┐   plan completes   ┌─────────────────────────┐
-│  none    │─────────────────▶│ being generated  │──────────────────▶│ waiting for local review │
-└──────────┘   or work        └──────────────────┘                   └───────────┬─────────────┘
-                                                                                   │
-                                                                   plans review   │
-                                                                                   ▼
-                                                                            ┌──────────┐
-                                                                            │ approved │
-                                                                            └─────┬────┘
-                                                                                  │
-                                    IMPLEMENTATION PHASE                         │
-                                                                                  │
-┌──────────┐   issues implement   ┌──────────────────┐   implementation completes   ┌──────┴──────────────────┐
-│  none    │◀─────────────────────│ being generated  │──────────────────▶│ waiting for local review│
-└──────────┘   or work (approved) └────────┬─────────┘   (no push)        └───────────┬──────────────┘
-       ▲                                   │                                                         │
-       │                                   │ implementation fails                                               │
-       │                                   ▼                                                          │
-       │                            ┌──────────┐                                                      │
-       └────────────────────────────│  failed  │                                                      │
-                                    └──────────┘                                                      │
-                                                                                                      │
-                                    implementations review                                      │
-                                    (push + create PR)                                                │
-                                                                                                      ▼
-                                                                                             ┌─────────────┐
-                                                                                             │ PR opened   │
-                                                                                             └──────┬──────┘
-                                                                                                    │
-                                                                                    merge on GitHub  │
-                                                                                                    ▼
-                                                                                             ┌─────────────┐
-                                                                                             │   merged    │
-                                                                                             └─────────────┘
+```mermaid
+flowchart TD
+    subgraph PLAN["PLAN PHASE"]
+        P1[none] -->|issues plan / work| P2[being generated]
+        P2 -->|plan completes| P3[waiting for local review]
+        P3 -->|plans approve| P4[approved]
+        P4 -->|plans unapprove| P3
+    end
+
+    subgraph IMPL["IMPLEMENTATION PHASE"]
+        I1[none] -->|issues implement / work| I2[being generated]
+        I2 -->|completes, no push| I3[waiting for local review]
+        I2 -->|implementation fails| I6[failed]
+        I6 -->|issues implement --force| I2
+        I3 -->|issues review| I4[review in progress]
+        I4 -->|review completes| I5[reviewed]
+        I4 -->|review fails| I7[review failed]
+        I5 -->|implementations review| I8[PR opened]
+        I2 -->|completes with push + PR| I8
+        I8 -->|merge on GitHub| I9[merged]
+    end
+
+    P4 --> I1
 ```
 
 ## 3. User Command Flow (Typical Workflow)
 
-```
-                    ┌─────────────────────────────────────────────────────────────────┐
-                    │                     TYPICAL USER JOURNEY                          │
-                    └─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph Setup["First-time setup"]
+        direction TD
+        S1[init] --> S2[config] --> S3[repositories add] --> S4["config issues-path / repository-path"]
+    end
 
-  First-time setup:
-  ─────────────────
-  init  →  config  →  repositories add  →  config issues-path  →  config repository-path
+    subgraph Manual["Per-issue workflow (manual)"]
+        direction TD
+        M1[issues sync] --> M2[issues list] --> M3[issues plan] --> M4[plans approve] --> M5[issues implement]
+        M5 -->|no push/PR| M6[issues review]
+        M6 --> M7[implementations review] --> M8[PR opened on GitHub]
+        M5 -->|auto push/PR| M8
+        M8 --> M9[merge on GitHub] --> M10[merged]
+    end
 
-  Per-issue workflow (manual):
-  ────────────────────────────
-  issues sync  →  issues list  →  issues plan  →  plans review  →  issues implement
-                                                                              │
-                    ┌─────────────────────────────────────────────────────────┘
-                    │
-                    ▼
-  (if implement doesn't push/PR)  implementations review  →  PR opened on GitHub
-                    │
-                    │ (if implement pushes/PR automatically)
-                    ▼
-  PR opened on GitHub  →  merge on GitHub  →  merged
-
-  Automated workflow:
-  ───────────────────
-  work  →  (runs sync → plan → implement in a loop; user still runs review commands for plans/implementations)
+    subgraph Auto["Automated workflow"]
+        direction TD
+        A1[work] -->|"sync → plan → implement loop"| A1
+    end
 ```
 
 ## 4. Monitor & Work Commands
@@ -153,7 +107,8 @@ Each synced issue progresses through plan and implementation states. The user in
 | **Sync** | `issues sync` | Repos → Issues Synced |
 | **Inspect** | `issues list` | View current plan/implementation state |
 | **Plan** | `issues plan` | none → being generated → waiting for review |
-| **Review** | `plans approve`, `plans review`, `implementations review` | waiting for review → approved / PR opened |
+| **Review** | `plans review`, `plans approve`, `plans unapprove` | waiting for review ↔ approved |
 | **Implement** | `issues implement` | approved → being generated → waiting for review / PR opened / failed |
+| **Review Impl** | `issues review`, `implementations review` | waiting for review → reviewed → PR opened |
 | **Automate** | `work` | Runs sync → plan → implement cycle |
 | **Monitor** | `monitor` | Observe being generated |
