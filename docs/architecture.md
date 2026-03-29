@@ -6,25 +6,39 @@ This document provides a technical overview of gh-worker's architecture, design 
 
 gh-worker is designed as a modular, layered system with clear separation of concerns:
 
-```
-┌─────────────────────────────────────┐
-│         CLI Layer (cyclopts)        │
-├─────────────────────────────────────┤
-│         Command Layer               │
-│  (sync, plan, implement, monitor)   │
-├─────────────────────────────────────┤
-│         Orchestration Layer         │
-│  (parallel execution, workflow)     │
-├─────────────────────────────────────┤
-│         Agent Layer                 │
-│  (LLM agent abstraction)            │
-├─────────────────────────────────────┤
-│         Storage Layer               │
-│  (file-based persistence)           │
-├─────────────────────────────────────┤
-│         GitHub Layer                │
-│  (GitHub CLI wrapper)               │
-└─────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph CLI["CLI Layer (cyclopts)"]
+        direction TB
+        CLI_Box[CLI Layer]
+    end
+    
+    subgraph Command["Command Layer"]
+        direction TB
+        Command_Box[Command Layer<br/>sync, plan, implement, monitor]
+    end
+    
+    subgraph Orchestration["Orchestration Layer"]
+        direction TB
+        Orchestration_Box[Orchestration Layer<br/>parallel execution, workflow]
+    end
+    
+    subgraph Agent["Agent Layer"]
+        direction TB
+        Agent_Box[Agent Layer<br/>LLM agent abstraction]
+    end
+    
+    subgraph Storage["Storage Layer"]
+        direction TB
+        Storage_Box[Storage Layer<br/>file-based persistence]
+    end
+    
+    subgraph GitHub["GitHub Layer"]
+        direction TB
+        GitHub_Box[GitHub Layer<br/>GitHub CLI wrapper]
+    end
+    
+    CLI_Box --> Command_Box --> Orchestration_Box --> Agent_Box --> Storage_Box --> GitHub_Box
 ```
 
 ## Core Components
@@ -339,10 +353,15 @@ class Issue(BaseModel):
 
 ### Sync Flow
 
-```
-User → CLI → sync_command → GitHubClient → gh CLI → GitHub API
-                    ↓
-              IssueStore → File System
+```mermaid
+flowchart LR
+    User[User] --> CLI[CLI]
+    CLI --> SyncCommand[sync_command]
+    SyncCommand --> GitHubClient[GitHubClient]
+    GitHubClient --> ghCLI[gh CLI]
+    ghCLI --> GitHubAPI[GitHub API]
+    SyncCommand --> IssueStore[Issue Store]
+    IssueStore --> FileSystem[File System]
 ```
 
 1. User invokes `ghw issues sync`
@@ -354,14 +373,16 @@ User → CLI → sync_command → GitHubClient → gh CLI → GitHub API
 
 ### Plan Flow
 
-```
-User → CLI → plan_command → ParallelExecutor
-                                    ↓
-                            AgentRegistry → Agent
-                                    ↓
-                               Agent.plan()
-                                    ↓
-                            PlanStore → File System
+```mermaid
+flowchart LR
+    User[User] --> CLI[CLI]
+    CLI --> PlanCommand[plan_command]
+    PlanCommand --> ParallelExecutor[ParallelExecutor]
+    ParallelExecutor --> AgentRegistry[Agent Registry]
+    AgentRegistry --> Agent[Agent]
+    Agent --> Plan[Agent plan]
+    Plan --> PlanStore[Plan Store]
+    PlanStore --> FileSystem[File System]
 ```
 
 1. User invokes `ghw issues plan`
@@ -374,16 +395,16 @@ User → CLI → plan_command → ParallelExecutor
 
 ### Implement Flow
 
-```
-User → CLI → implement_command → ParallelExecutor
-                                        ↓
-                                AgentRegistry → Agent
-                                        ↓
-                                  Agent.implement()
-                                        ↓
-                                   Git Operations
-                                        ↓
-                                  Pull Request
+```mermaid
+flowchart LR
+    User[User] --> CLI[CLI]
+    CLI --> ImplementCommand[implement_command]
+    ImplementCommand --> ParallelExecutor[Parallel Executor]
+    ParallelExecutor --> AgentRegistry[Agent Registry]
+    AgentRegistry --> Agent[Agent]
+    Agent --> Implement[Agent implement]
+    Implement --> GitOps[Git Operations]
+    GitOps --> PullRequest[Pull Request]
 ```
 
 1. User invokes `ghw issues implement`
