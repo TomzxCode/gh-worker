@@ -52,7 +52,20 @@ nav:
   - Reference:
     - Agents: agents.md
     - Architecture: architecture.md
+    - State Diagram: state-diagram.md
     - API Reference: api-reference.md
+    - Walkthrough: walkthrough.md
+  - Specifications:
+    - Agent Framework: spec/agent-framework.md
+    - CLI Interface: spec/cli-interface.md
+    - Commands: spec/commands.md
+    - Configuration: spec/configuration.md
+    - Data Models: spec/data-models.md
+    - Error Handling: spec/error-handling.md
+    - GitHub Integration: spec/github-integration.md
+    - Parallel Execution: spec/parallel-execution.md
+    - Storage: spec/storage.md
+    - Workflow Orchestration: spec/workflow-orchestration.md
   - Help:
     - Troubleshooting: troubleshooting.md
 
