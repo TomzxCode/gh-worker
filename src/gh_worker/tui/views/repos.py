@@ -34,27 +34,24 @@ class ReposView(Container):
         self._refresh_table()
 
     def _refresh_table(self) -> None:
-        """Refresh repos table."""
+        """Refresh repos table in a background thread."""
+        self.run_worker(self._load_repos_worker, thread=True, name="repos-load")
+
+    def _load_repos_worker(self) -> tuple[list, dict[str, bool], dict]:
+        """Load repo data in background thread."""
         config = ConfigManager(self.config_path)
         app_config = config.load()
         repos = get_repositories(self.config_path)
-        self._repos_cloned.clear()
-        table = self.query_one("#repos-table", DataTable)
-        table.clear(columns=True)
-        table.add_columns("Repository", "Clone path", "Cloned")
+        repos_cloned = {}
+        repo_rows = []
         for repo in repos:
             cloned = is_repo_cloned(repo, app_config.repository_path)
-            self._repos_cloned[repo.full_name] = cloned
+            repos_cloned[repo.full_name] = cloned
             path = ""
             if app_config.repository_path:
                 path = str(app_config.repository_path / repo.owner / repo.name)
-            table.add_row(
-                repo.full_name,
-                path or "(not configured)",
-                "yes" if cloned else "no",
-                key=repo.full_name,
-            )
-        self._update_action_buttons()
+            repo_rows.append((repo.full_name, path or "(not configured)", "yes" if cloned else "no"))
+        return repo_rows, repos_cloned
 
     def _update_action_buttons(self) -> None:
         """Enable/disable Clone and Remove based on selection."""
@@ -133,9 +130,21 @@ class ReposView(Container):
             self.notify(f"Error: {e}", severity="error")
 
     def on_worker_state_changed(self, event) -> None:
-        """Handle clone worker completion."""
+        """Handle worker completion."""
         from textual.worker import WorkerState
 
+        if event.worker.name == "repos-load" and event.worker.state == WorkerState.SUCCESS:
+            result = event.worker.result
+            if isinstance(result, tuple) and len(result) == 2:
+                repo_rows, repos_cloned = result
+                self._repos_cloned = repos_cloned
+                table = self.query_one("#repos-table", DataTable)
+                table.clear(columns=True)
+                table.add_columns("Repository", "Clone path", "Cloned")
+                for full_name, path, cloned_str in repo_rows:
+                    table.add_row(full_name, path, cloned_str, key=full_name)
+                self._update_action_buttons()
+            return
         if event.worker.name == "clone" and event.worker.state in (
             WorkerState.SUCCESS,
             WorkerState.ERROR,

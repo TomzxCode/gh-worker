@@ -71,8 +71,7 @@ class IssuesView(Container):
     def compose(self):
         """Compose issues view."""
         yield Label("Filters", classes="section-title")
-        repos = get_repositories(self.config_path)
-        repo_options = [("all", None)] + [(r.full_name, r.full_name) for r in repos]
+        repo_options = [("all", None)]
         with HorizontalScroll(id="filters-row"):
             with Horizontal():
                 yield Select(repo_options, prompt="Repo", allow_blank=True, id="filter-repo")
@@ -103,24 +102,9 @@ class IssuesView(Container):
         """Load issues on mount."""
         state = load_state()
         self._selected_repo = state.get("last_repo")
-        repos = get_repositories(self.config_path)
-        if not self._selected_repo and repos:
-            self._selected_repo = repos[0].full_name
 
-        # Refresh repo options (in case repos were added from Repos tab)
+        # Restore filter values from state immediately (no I/O needed)
         try:
-            repo_select = self.query_one("#filter-repo", Select)
-            repo_options = [("all", None)] + [(r.full_name, r.full_name) for r in repos]
-            repo_select.set_options(repo_options)
-        except Exception:
-            pass
-
-        # Restore filter values from state (only if valid)
-        try:
-            repo_select = self.query_one("#filter-repo", Select)
-            last_repo = state.get("last_repo")
-            if last_repo is None or (repos and any(r.full_name == last_repo for r in repos)):
-                repo_select.value = last_repo if last_repo else None
             title_input = self.query_one("#filter-title", Input)
             if state.get("title_filter"):
                 title_input.value = state["title_filter"]
@@ -165,7 +149,65 @@ class IssuesView(Container):
         except Exception:
             pass
 
-        self._refresh_issues()
+        self.run_worker(self._load_data_worker, thread=True, name="issues-load")
+
+    def _load_data_worker(self) -> tuple[list, list]:
+        """Load repos and issues in a background thread."""
+        repos = get_repositories(self.config_path)
+        state = load_state()
+        selected_repo = state.get("last_repo")
+        if not selected_repo and repos:
+            selected_repo = repos[0].full_name
+        (
+            repo,
+            all_repos,
+            title_filter,
+            plan_filter,
+            impl_filter,
+            assignee_filter,
+            author_filter,
+            state_filter,
+            milestone_filter,
+        ) = self._get_filter_values_from_state(selected_repo, state)
+        issues = get_issues(
+            repo=repo,
+            all_repos=all_repos,
+            title_filter=title_filter,
+            plan_filter=plan_filter,
+            implementation_filter=impl_filter,
+            assignee_filter=assignee_filter,
+            author_filter=author_filter,
+            state_filter=state_filter,
+            milestone_filter=milestone_filter,
+            config_path=self.config_path,
+        )
+        return repos, issues, selected_repo
+
+    def _get_filter_values_from_state(
+        self, selected_repo: str | None, state: dict
+    ) -> tuple[
+        str | None,
+        bool,
+        str | None,
+        str | None,
+        str | None,
+        str | None,
+        str | None,
+        str | None,
+        str | None,
+    ]:
+        """Get filter values from saved state (no widget access needed)."""
+        return (
+            selected_repo,
+            selected_repo is None,
+            state.get("title_filter"),
+            state.get("plan_filter"),
+            state.get("implementation_filter"),
+            state.get("assignee_filter"),
+            state.get("author_filter"),
+            state.get("state_filter"),
+            state.get("milestone_filter"),
+        )
 
     def _get_filter_values(
         self,
@@ -233,30 +275,38 @@ class IssuesView(Container):
             )
 
     def _refresh_issues(self) -> None:
-        """Refresh issues table."""
-        (
-            repo,
-            all_repos,
-            title_filter,
-            plan_filter,
-            impl_filter,
-            assignee_filter,
-            author_filter,
-            state_filter,
-            milestone_filter,
-        ) = self._get_filter_values()
-        issues = get_issues(
-            repo=repo,
-            all_repos=all_repos,
-            title_filter=title_filter,
-            plan_filter=plan_filter,
-            implementation_filter=impl_filter,
-            assignee_filter=assignee_filter,
-            author_filter=author_filter,
-            state_filter=state_filter,
-            milestone_filter=milestone_filter,
-            config_path=self.config_path,
-        )
+        """Fetch issues in a background thread and populate the table."""
+        filters = self._get_filter_values()
+
+        def _fetch() -> list:
+            (
+                repo,
+                all_repos,
+                title_filter,
+                plan_filter,
+                impl_filter,
+                assignee_filter,
+                author_filter,
+                state_filter,
+                milestone_filter,
+            ) = filters
+            return get_issues(
+                repo=repo,
+                all_repos=all_repos,
+                title_filter=title_filter,
+                plan_filter=plan_filter,
+                implementation_filter=impl_filter,
+                assignee_filter=assignee_filter,
+                author_filter=author_filter,
+                state_filter=state_filter,
+                milestone_filter=milestone_filter,
+                config_path=self.config_path,
+            )
+
+        self.run_worker(_fetch, thread=True, name="issues-refresh")
+
+    def _populate_issues_table(self, issues: list) -> None:
+        """Populate the issues table from a list of issue tuples."""
         self._issue_status.clear()
         table = self.query_one("#issues-table", IssueTable)
         rows = []
@@ -669,6 +719,27 @@ class IssuesView(Container):
             WorkerState.ERROR,
             WorkerState.CANCELLED,
         ):
+            return
+        if event.worker.name == "issues-load" and event.worker.state == WorkerState.SUCCESS:
+            result = event.worker.result
+            if isinstance(result, tuple) and len(result) == 3:
+                repos, issues, selected_repo = result
+                self._selected_repo = selected_repo
+                try:
+                    repo_select = self.query_one("#filter-repo", Select)
+                    repo_options = [("all", None)] + [(r.full_name, r.full_name) for r in repos]
+                    repo_select.set_options(repo_options)
+                    last_repo = load_state().get("last_repo")
+                    if last_repo is None or any(r.full_name == last_repo for r in repos):
+                        repo_select.value = last_repo if last_repo else None
+                except Exception:
+                    pass
+                self._populate_issues_table(issues)
+            return
+        if event.worker.name == "issues-refresh" and event.worker.state == WorkerState.SUCCESS:
+            issues = event.worker.result
+            if isinstance(issues, list):
+                self._populate_issues_table(issues)
             return
         if event.worker.name == "sync":
             if event.worker.state == WorkerState.SUCCESS:

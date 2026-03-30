@@ -135,38 +135,66 @@ class DashboardView(Container):
         self.refresh_data()
 
     def refresh_data(self) -> None:
-        """Refresh repositories and issues."""
+        """Refresh repositories and issues in a background thread."""
+        self.run_worker(self._load_data_worker, thread=True, name="dashboard-load")
+
+    def _load_data_worker(self) -> tuple[list[str], str | None, list]:
+        """Load repos and issues data in a background thread."""
         state = load_state()
         repos = get_repositories(self.config_path)
-        self._repos = [r.full_name for r in repos]
-        self._selected_repo = state.get("last_repo")
-        if self._selected_repo not in self._repos and self._repos:
-            self._selected_repo = self._repos[0]
+        repo_names = [r.full_name for r in repos]
+        selected_repo = state.get("last_repo")
+        if selected_repo not in repo_names and repo_names:
+            selected_repo = repo_names[0]
+        issues = []
+        if selected_repo:
+            issues = get_issues(
+                repo=selected_repo,
+                title_filter=state.get("title_filter"),
+                plan_filter=state.get("plan_filter"),
+                implementation_filter=state.get("implementation_filter"),
+                assignee_filter=state.get("assignee_filter"),
+                author_filter=state.get("author_filter"),
+                state_filter=state.get("state_filter"),
+                milestone_filter=state.get("milestone_filter"),
+                config_path=self.config_path,
+            )
+        return repo_names, selected_repo, issues
 
+    def _refresh_issues(self) -> None:
+        """Refresh issues table for selected repo in a background thread."""
+        if not self._selected_repo:
+            return
+        selected_repo = self._selected_repo
+
+        def _fetch() -> list:
+            state = load_state()
+            return get_issues(
+                repo=selected_repo,
+                title_filter=state.get("title_filter"),
+                plan_filter=state.get("plan_filter"),
+                implementation_filter=state.get("implementation_filter"),
+                assignee_filter=state.get("assignee_filter"),
+                author_filter=state.get("author_filter"),
+                state_filter=state.get("state_filter"),
+                milestone_filter=state.get("milestone_filter"),
+                config_path=self.config_path,
+            )
+
+        self.run_worker(_fetch, thread=True, name="dashboard-issues")
+
+    def _populate_repos_table(self, repo_names: list[str]) -> None:
+        """Populate the repos list table."""
         repos_table = self.query_one("#repos-list", DataTable)
         repos_table.clear(columns=True)
         repos_table.add_column("Repository")
-        for repo_name in self._repos:
+        for repo_name in repo_names:
             repos_table.add_row(repo_name, key=repo_name)
 
-        self._refresh_issues()
-
-    def _refresh_issues(self) -> None:
-        """Refresh issues table for selected repo."""
-        if not self._issues_table or not self._selected_repo:
+    def _populate_issues_table(self, issues: list) -> None:
+        """Populate the issues table."""
+        if not self._issues_table:
             return
-        state = load_state()
-        issues = get_issues(
-            repo=self._selected_repo,
-            title_filter=state.get("title_filter"),
-            plan_filter=state.get("plan_filter"),
-            implementation_filter=state.get("implementation_filter"),
-            assignee_filter=state.get("assignee_filter"),
-            author_filter=state.get("author_filter"),
-            state_filter=state.get("state_filter"),
-            milestone_filter=state.get("milestone_filter"),
-            config_path=self.config_path,
-        )
         rows = [
             (
                 repo.full_name,
@@ -395,6 +423,20 @@ class DashboardView(Container):
             WorkerState.ERROR,
             WorkerState.CANCELLED,
         ):
+            return
+        if event.worker.name == "dashboard-load" and event.worker.state == WorkerState.SUCCESS:
+            result = event.worker.result
+            if isinstance(result, tuple) and len(result) == 3:
+                repo_names, selected_repo, issues = result
+                self._repos = repo_names
+                self._selected_repo = selected_repo
+                self._populate_repos_table(repo_names)
+                self._populate_issues_table(issues)
+            return
+        if event.worker.name == "dashboard-issues" and event.worker.state == WorkerState.SUCCESS:
+            issues = event.worker.result
+            if isinstance(issues, list):
+                self._populate_issues_table(issues)
             return
         self._set_running(False)
         if event.worker.state == WorkerState.SUCCESS:
