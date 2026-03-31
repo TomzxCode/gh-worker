@@ -7,15 +7,19 @@ from pathlib import Path
 from typing import Annotated
 
 import cyclopts
-from cyclopts import Parameter
+from cyclopts import Group, Parameter
 
 from gh_worker.agents.registry import get_registry
 from gh_worker.utils.logging import setup_logging
+from gh_worker.utils.paths import get_config_dir
+
+
+DEFAULT_CONFIG_PATH = get_config_dir() / "config.yaml"
 
 
 @dataclass
 class CLIContext:
-    config_path: Path | None = None
+    config_path: Path = DEFAULT_CONFIG_PATH
     log_level: str = "INFO"
 
 
@@ -37,6 +41,8 @@ setup_logging(_parse_log_level())
 available_agents = ", ".join(sorted(get_registry().list_agents()))
 
 app = cyclopts.App(name="gh-worker", help="Automated GitHub issue handling with LLM agents")
+
+_global_params_group = Group("Global Parameters", sort_key=-1)
 
 
 def _print_all_help() -> None:
@@ -74,11 +80,13 @@ def _print_all_help() -> None:
 @app.meta.default
 def main(
     *tokens: Annotated[str, Parameter(show=False, allow_leading_hyphen=True)],
-    log_level: Annotated[str, Parameter(help="Log level (DEBUG, INFO, WARNING, ERROR)")] = "INFO",
+    log_level: Annotated[
+        str, Parameter(help="Log level (DEBUG, INFO, WARNING, ERROR)", group=_global_params_group)
+    ] = "INFO",
     config_path: Annotated[
-        Path | None,
-        Parameter(help="Path to config file (default: ~/.config/gh-worker/config.yaml)"),
-    ] = None,
+        Path,
+        Parameter(help="Path to config file", group=_global_params_group),
+    ] = DEFAULT_CONFIG_PATH,
 ) -> None:
     """gh-worker: Automated GitHub issue handling with LLM agents."""
     _ctx.log_level = log_level
