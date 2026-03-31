@@ -320,6 +320,10 @@ implementations_app = cyclopts.App(
 app.command(implementations_app)
 app["implementations"].sort_key = 5
 
+agents_app = cyclopts.App(name="agents", help="Manage LLM agent configurations")
+app.command(agents_app)
+app["agents"].sort_key = 1.5
+
 
 @plans_app.command
 def approve(
@@ -366,6 +370,74 @@ def plans_review(
         approve=False,
         config_path=_ctx.config_path,
     )
+
+
+@agents_app.command(sort_key=0)
+def default(
+    agent: Annotated[str | None, Parameter(help="Agent type (e.g., 'claude-code')")] = None,
+    model: Annotated[str | None, Parameter(help="Model to set as default")] = None,
+    list_: Annotated[bool, Parameter(name="--list", help="List all default models")] = False,
+) -> None:
+    """Set or list default models per agent type."""
+    from gh_worker.commands.agents import default_command
+
+    default_command(
+        agent=agent,
+        model=model,
+        list_all=list_,
+        config_path=_ctx.config_path,
+    )
+
+
+@agents_app.command(name="list", sort_key=1)
+def agents_list() -> None:
+    """List all named agent configurations."""
+    from gh_worker.commands.agents import list_command
+
+    list_command(config_path=_ctx.config_path)
+
+
+@agents_app.command(sort_key=2)
+def create(
+    name: Annotated[str, Parameter(help="Name for the agent configuration")],
+    agent: Annotated[str, Parameter(help="Base agent type (e.g., 'claude-code')")],
+    model: Annotated[
+        str | None, Parameter(help="Model to use (optional, uses agent default if not set)")
+    ] = None,
+) -> None:
+    """Create a named agent configuration."""
+    from gh_worker.commands.agents import create_command
+
+    create_command(
+        name=name,
+        agent=agent,
+        model=model,
+        config_path=_ctx.config_path,
+    )
+
+
+@agents_app.command(sort_key=3)
+def update(
+    name: Annotated[str, Parameter(help="Name of the agent configuration to update")],
+    agent: Annotated[
+        str | None, Parameter(help="New base agent type (e.g., 'claude-code')")
+    ] = None,
+    model: Annotated[str | None, Parameter(help="New model to use")] = None,
+) -> None:
+    """Update a named agent configuration."""
+    from gh_worker.commands.agents import update_command
+
+    update_command(name=name, agent=agent, model=model, config_path=_ctx.config_path)
+
+
+@agents_app.command(sort_key=4)
+def delete(
+    name: Annotated[str, Parameter(help="Name of the agent configuration to delete")],
+) -> None:
+    """Delete a named agent configuration."""
+    from gh_worker.commands.agents import delete_command
+
+    delete_command(name=name, config_path=_ctx.config_path)
 
 
 @implementations_app.command(name="review")

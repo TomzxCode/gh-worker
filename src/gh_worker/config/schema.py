@@ -5,6 +5,13 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 
 
+class NamedAgent(BaseModel):
+    """A named agent configuration combining an agent type with a model."""
+
+    agent: str = Field(description="Base agent type (e.g., 'claude-code', 'cursor-agent')")
+    model: str | None = Field(default=None, description="Model to use (agent-specific)")
+
+
 class PlanConfig(BaseModel):
     """Configuration for plan command."""
 
@@ -53,9 +60,16 @@ class AgentConfig(BaseModel):
     """Configuration for LLM agents."""
 
     default: str = Field(default="claude-code", description="Default agent to use")
-    model: str | None = Field(default=None, description="Default model to use (agent-specific)")
     claude_code_path: str | None = Field(default=None, description="Path to claude-code binary")
     opencode_path: str | None = Field(default=None, description="Path to opencode binary")
+    defaults: dict[str, str] = Field(
+        default_factory=dict,
+        description="Default models per agent type (e.g., {'claude-code': 'sonnet-4.6'})",
+    )
+    named: dict[str, NamedAgent] = Field(
+        default_factory=dict,
+        description="Named agent configurations for quick reference",
+    )
 
 
 class AppConfig(BaseModel):
